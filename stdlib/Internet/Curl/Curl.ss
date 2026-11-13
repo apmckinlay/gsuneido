@@ -613,4 +613,22 @@ class
 			}
 		return quoteStr $ str
 		}
+
+	GetLinuxVersion()
+		{
+		res = ""
+		try
+			res = RunPipedOutput.WithExitValue("curl --version")
+		catch (e)
+			SuneidoLog("ERROR (CAUGHT): failed while getting curl version - " $ e,
+				caughtMsg: "No action needed")
+		if Object?(res) and res.exitValue is 0 and not res.output.Lines().Empty?()
+			{
+			line = res.output.Lines()[0].Trim()
+			if false isnt match = line.Extract(`(?i)curl [^)]+\)`)
+				return match.Replace("(?i)curl ", "curl version: ")
+			return line
+			}
+		return ""
+		}
 	}

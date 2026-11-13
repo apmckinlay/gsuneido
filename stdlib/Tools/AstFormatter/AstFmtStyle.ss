@@ -214,6 +214,18 @@ class
 		return .src[e..s].Has?('\n')
 		}
 
+	// did the source break between cond/t or t/f of a ternary?
+	TrinaryBrokeInSrc?(node)
+		{
+		if node.cond.end not in (0, false) and node.t.pos not in (0, false)
+			if .src[node.cond.end .. node.t.pos].Has?('\n')
+				return true
+		if node.t.end not in (0, false) and node.f.pos not in (0, false)
+			if .src[node.t.end .. node.f.pos].Has?('\n')
+				return true
+		return false
+		}
+
 	spanStart(e)
 		{
 		if Type(e) isnt #AstNode

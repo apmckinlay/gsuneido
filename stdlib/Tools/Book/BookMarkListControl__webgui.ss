@@ -1,53 +1,34 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 Control
 	{
-	Name: "BookMarkList"
-	ComponentName: "BookMarkList"
-	ComponentArgs: #()
-	New()
+	Name:          #BookMarkList
+	ComponentName: #BookMarkList
+	ComponentArgs: ()
+	New(book)
 		{
-		.marks = Object()
-		}
-
-	GetState()
-		{
-		return .marks
-		}
-
-	SetState(stateobject)
-		{
-		.marks = Object()
-		stateobject.Each()
-			{
-			if not String?(it)
-				.marks.Add(it)
-			else
-				.marks.Add(Object(path: it, color: CLR.YELLOW))
-			}
-		.Act(#SetState, .marks)
-		.GotoPath(.Controller.CurrentPage())
+		.marks = BookMarks(book)
+		.Act(#Sync, .marks.ListAll())
 		}
 
 	UpdateColor(mark)
 		{
-		if false is i = .findMark(mark.path)
-			return
-		.marks[i].color = mark.color
+		if false isnt idx = .marks.Find(mark.path)
+			.marks.SetColor(idx, mark.color)
 		}
 
 	Click(path)
 		{
-		if false is i = .findMark(path)
+		if false is idx = .marks.Find(path)
 			return
-		bookmark = .marks[i].path
-		if false is .Send('ValidBookmark?', bookmark)
+		if not .marks.Valid?(bookmark = .marks.Get(idx).path)
 			{
 			.RemoveMark(bookmark)
-			.AlertInfo('Bookmark Removed', 'Page ' $ bookmark $ ' not found.\n' $
-				'Page may have been deleted or renamed.\nBookmark has been removed')
+			.AlertInfo("Bookmark Removed",
+				"Page " $ bookmark $ " not found.\n" $
+					"Page may have been deleted or renamed.\nBookmark has been removed")
 			}
 		else
-			.Send('Goto', bookmark)
+			.Send(#Goto, bookmark)
 		}
 
 	DoubleClick()
@@ -57,22 +38,20 @@ Control
 
 	RemoveMark(path)
 		{
-		if false is x = .findMark(path)
+		if false is idx = .marks.Find(path)
 			{
 			.AlertInfo("Remove Mark", "There is no bookmark currently selected.")
 			return false
 			}
-		.marks.Delete(x)
+		.marks.Remove(idx)
 		.Act(#RemoveMark, path)
 		}
 
 	AddMark(path)
 		{
-		if path is "" or .findMark(path) isnt false
+		if path is "" or .marks.Find(path) isnt false
 			return
-		mark = Object(:path, color: CLR.YELLOW)
-		.marks.Add(mark)
-		.Act(#AddMark, mark)
+		.Act(#AddMark, .marks.Add(path))
 		.GotoPath(path)
 		}
 
@@ -81,13 +60,8 @@ Control
 		.Act(#GotoPath, path)
 		}
 
-	findMark(path)
-		{
-		return .marks.FindIf({ it.path is path })
-		}
-
 	UpdateMarks(marks)
 		{
-		.marks = marks.DeepCopy()
+		.marks.Set(marks)
 		}
 	}

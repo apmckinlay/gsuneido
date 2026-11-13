@@ -1,18 +1,8 @@
 ### Schema
 
 ``` suneido
-( tablename ) => string
+(table) => string
 ```
 
-Returns the database table specification in the same format as required by the table creation requests.
-
-For example:
-
-``` suneido
-Schema('tables') =>
-
-"tables
-    (nextfield, nrows, table, tablename, totalsize)
-    key(table)
-    key(tablename)"
-```
+Returns the table schema as a formatted string.
+For the unformatted version, see [Database.Schema](<Database/Database.Schema.md>)

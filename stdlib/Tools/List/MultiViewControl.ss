@@ -92,8 +92,13 @@ CommandParent
 		return super.Msg(args)
 		}
 
+	InMultiView()
+		{
+		return true
+		}
+
 	PrintReport(reportClass, source, data = false, permission = false,
-		additionalArgs = false)
+		additionalArgs = false, alwaysRefresh = false)
 		{
 		if permission isnt false and AccessPermissions(permission) isnt true
 			{
@@ -108,7 +113,7 @@ CommandParent
 		if additionalArgs isnt false
 			args.Merge(additionalArgs)
 		ToolDialog(.Window.Hwnd, reportClass(@args))
-		if .AccessMode?()
+		if .AccessMode?() or alwaysRefresh
 			.Refresh()
 		}
 
@@ -401,7 +406,6 @@ CommandParent
 			.redirToAccess()
 		else
 			.redirToList()
-		.checkControlCustomization()
 		}
 
 	redirToList()
@@ -442,21 +446,6 @@ CommandParent
 		.total.AfterChanged(saved?, .list.GetQuery(), listDirty?, .list.Select_vals)
 		}
 
-	checkControlCustomization()
-		{
-		// excludeCustomize? can be set in args, accessArgs, or listArgs, (setting the
-		// controls accordingly). If .accessArgs has "excludeCustomize?: true",
-		// then Customizable is NOT required.
-		if .accessArgs.GetDefault(#excludeCustomize?, false)
-			return
-
-		if .listArgs.GetDefault(#protectField, false) is false
-			return
-
-		if not .access.AllowCustomTabs?() and false is .access.FindControl(#Customizable)
-			ProgrammerError("Multiview Access is not Customizable")
-		}
-
 	VirtualList_SwitchToForm()
 		{
 		.On_Flip_To_Access()
@@ -495,7 +484,7 @@ CommandParent
 
 	getGoToField()
 		{
-		sort = QueryGetSort(.query).RemovePrefix("reverse ")
+		sort = Query.GetSort(.query).RemovePrefix("reverse ")
 		keys = .access.GetKeys()
 		if sort.Split(',').Size() is 1 and keys.Has?(sort)
 			return sort
@@ -710,9 +699,24 @@ CommandParent
 		.calculateTotal(true, false)
 		}
 
-	UseSubTableFilters?()
+	GetLinkedBrowseTabs()
 		{
-		return .access.UseSubTableFilters?()
+		return .access.GetLinkedBrowseTabs()
+		}
+
+	SubTablesConfig()
+		{
+		return .access.SubTablesConfig()
+		}
+
+	SetSubtableSelectFields(@args)
+		{
+		return .access.SetSubtableSelectFields(@args)
+		}
+
+	SetSubtableSelectMgr(@args)
+		{
+		return .access.SetSubtableSelectMgr(@args)
 		}
 
 	WithLinkedBrowses(block)

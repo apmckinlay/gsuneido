@@ -1,7 +1,7 @@
 // Copyright (C) 2021 Axon Development Corporation All rights reserved worldwide.
 class
 	{
-	styles: '
+	styles: "
 		.su-taskbar {
 			position: fixed;
 			left: 0px;
@@ -47,21 +47,21 @@ class
 			animation-name: su-flashing;
 			animation-duration: 2s;
 			animation-iteration-count: infinite;
-		}'
+		}"
 	New()
 		{
-		LoadCssStyles('su-taskbar', .styles)
+		LoadCssStyles("su-taskbar", .styles)
 		body = SuUI.GetCurrentDocument().body
-		.taskbar = CreateElement('div', parent: body, className: 'su-taskbar')
+		.taskbar = CreateElement(#div, parent: body, className: "su-taskbar")
 		.windows = Object()
 		.flashingWindows = Object()
 		}
 
-	taskbarHeight: '0px'
-	allMinimized: false
+	taskbarHeight: "0px"
+	allMinimized:  false
 	Update(titles)
 		{
-		.taskbar.innerText = ''
+		.taskbar.innerText = ""
 		oldFlashingWindows = .flashingWindows
 		.windows = Object()
 		.flashingWindows = Object()
@@ -70,17 +70,16 @@ class
 			{
 			if false is window = SuRender().GetRegisteredComponent(title.id)
 				{
-				SuRender().Event(false, 'ProgrammerError', [
-					msg: 'SuTaskbar - window not found',
-					params: titles.Copy().Add(title, at: 'title'),
-					caughtMsg: 'ignored'])
+				SuneidoLog("ERROR: (CAUGHT) SuTaskbar - window not found",
+					params: titles.Copy().Add(title, at: #title),
+					caughtMsg: #ignored)
 				continue
 				}
-			item = CreateElement('div', parent: .taskbar,
-				className: 'su-taskbar-item' $ (title.active? ? ' selected' : ''))
+			item = CreateElement(#div, parent: .taskbar,
+				className: "su-taskbar-item" $ (title.active? ? " selected" : ""))
 			item.innerText = title.title
-			item.AddEventListener('click', .factory(title.id))
-			item.AddEventListener('contextmenu', .contextmenuFactory(title.id))
+			item.AddEventListener(#click, .factory(title.id))
+			item.AddEventListener(#contextmenu, .contextmenuFactory(title.id))
 			.windows[title.id] = item
 			.SetFlashing(title.id, oldFlashingWindows.Has?(title.id), skipShowHide?:)
 			if window.State isnt WindowPlacement.minimized
@@ -93,13 +92,13 @@ class
 		{
 		if .windows.Size() <= 1 and .flashingWindows.Empty?() and .allMinimized is false
 			{
-			.taskbarHeight = '0px'
-			.taskbar.SetStyle('display', 'none')
+			.taskbarHeight = "0px"
+			.taskbar.SetStyle(#display, #none)
 			}
 		else
 			{
-			.taskbarHeight = '1.5rem + 10px'
-			.taskbar.SetStyle("display", '')
+			.taskbarHeight = "1.5rem + 10px"
+			.taskbar.SetStyle(#display, "")
 			}
 		.windows.Members().Each()
 			{
@@ -121,13 +120,16 @@ class
 
 	contextmenuFactory(id)
 		{
-		return {
-			|event|
+		return {|event|
 			item = event.target
 			rect = SuRender.GetClientRect(item)
-			SuRender().RunWhenNotFrozen(
-				{ SuRender().Event(false, 'SuTaskbarContextMenu',
-					[id, event.clientX, event.clientY, rect], showOverlay?:) })
+			SuRender().
+				RunWhenNotFrozen(
+					{
+					SuRender().
+						Event(false, #SuTaskbarContextMenu,
+							[id, event.clientX, event.clientY, rect], showOverlay?:)
+					})
 			event.StopPropagation()
 			event.PreventDefault()
 			}
@@ -150,12 +152,12 @@ class
 		if flashing?
 			{
 			.flashingWindows.AddUnique(id)
-			.windows[id].classList.Add('su-taskbar-item-flashing')
+			.windows[id].classList.Add("su-taskbar-item-flashing")
 			}
 		else
 			{
 			.flashingWindows.Remove(id)
-			.windows[id].classList.Remove('su-taskbar-item-flashing')
+			.windows[id].classList.Remove("su-taskbar-item-flashing")
 			}
 		if not skipShowHide?
 			.updateShowHide()

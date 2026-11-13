@@ -11,27 +11,29 @@ ReportBase
 		x = Params.Get_devmode(args)
 		.initDimens(x, args)
 		.Data = Object()
-		.Params = args.GetDefault(#paramsdata, Record())
-		if args.Member?("title")
-			.header = Object('PageHead', args.title)
-		if args.Member?("header")
+		.Params = args.GetDefault(#paramsdata, [])
+// ISSUE 38099 - passing original paramsdata down
+		.OrigParams = args.GetDefault(#origparams, [])
+		if args.Member?(#title)
+			.header = [#PageHead, args.title]
+		if args.Member?(#header)
 			{
 			.header = args.header
-			args.Delete("header")
+			args.Delete(#header)
 			}
-		if args.Member?("footer")
+		if args.Member?(#footer)
 			.footer = args.footer
-		if args.Member?("printParams")
+		if args.Member?(#printParams)
 			.Params.printParams = args.printParams
 		.page = 0
 		.npages = 0
-		.pageRange = args.GetDefault('pageRange', Object(from: 0, to: 9999))
+		.pageRange = args.GetDefault(#pageRange, Object(from: 0, to: 9999))
 		.input = InputFormat(@args)
 		.toclose = Object()
 
-		rptName = args.GetDefault(#title, '')
+		rptName = args.GetDefault(#title, "")
 		if rptName is ""
-			rptName = args.GetDefault('name', '')
+			rptName = args.GetDefault(#name, "")
 		BookLog(rptName $ ':' $ .Params.ReportDestination,
 			params: .buildBookLogParams(.Params))
 		}
@@ -41,10 +43,10 @@ ReportBase
 		params = rptParams.DeepCopy()
 		filterWheres = Object()
 		for m in params.Members()
-			if m.Suffix?('Filters')
+			if m.Suffix?(#Filters)
 				filterWheres[m] = GetParamsWhere(m, data: params)
-		params.Delete('printParams')
-		params.DeleteIf({ it.Suffix?('Filters') })
+		params.Delete(#printParams)
+		params.DeleteIf({ it.Suffix?(#Filters) })
 		if not filterWheres.Empty?()
 			params.filterWheres = filterWheres
 		return params
@@ -53,7 +55,7 @@ ReportBase
 	initDimens(x, args)
 		{
 		minBorder = Object().Set_default(.25) /*= default min Border*/
-		if args.Member?("minBorder") and Object?(args.minBorder)
+		if args.Member?(#minBorder) and Object?(args.minBorder)
 			for side in args.minBorder.Members()
 				minBorder[side] = args.minBorder[side]
 		.dimens = Object(
@@ -63,19 +65,24 @@ ReportBase
 			bottom: Max(minBorder.bottom, x.bottom),
 			width: x.width,
 			height: x.height)
-		.SetDimens(args.GetDefault('margins', false))
+		.SetDimens(args.GetDefault(#margins, false))
 		}
 
 	query1(query)
 		{
 		return Query1(query)
 		}
+
 	GetReportArgs()
 		{
 		return .args
 		}
+
 	GetDimens()
-		{ return .dimens }
+		{
+		return .dimens
+		}
+
 	SetDimens(margins = false)
 		{
 		if margins isnt false
@@ -88,6 +95,7 @@ ReportBase
 		.dimens.W = (.dimens.width - .dimens.left - .dimens.right).InchesInTwips()
 		.dimens.H = (.dimens.height - .dimens.top - .dimens.bottom).InchesInTwips()
 		}
+
 	GetParamsWhere(@fields)
 		{
 		fields.data = .Params
@@ -96,9 +104,9 @@ ReportBase
 
 	GetUserDefinedLayout(report)
 		{
-		if not .Params.Member?('params_report_layout')
+		if not .Params.Member?(#params_report_layout)
 			return []
-		layout = Query1('report_layout_designs',
+		layout = Query1(#report_layout_designs,
 			:report, rptdesign_name: .Params.params_report_layout)
 		return layout isnt false and Object?(layout.rptdesign_layout)
 			? layout.rptdesign_layout
@@ -110,11 +118,13 @@ ReportBase
 		.SetDriver(GdiPrinterDriver(dc))
 		.print(quiet?: false)
 		}
+
 	ExportCSV(file, quiet? = false, fileCl = false)
 		{
 		.SetDriver(CsvDriver(file, fileCl))
 		return .processWithoutPage(quiet?)
 		}
+
 	processWithoutPage(quiet? = false)
 		{
 		_tran = .t
@@ -127,7 +137,7 @@ ReportBase
 
 		status = .doWithGeneratingReportErrors()
 			{
-			while (false isnt (fmt = .input.Next()))
+			while false isnt (fmt = .input.Next())
 				{
 				.Driver.Process(fmt)
 				if not (Instance?(fmt) and
@@ -140,6 +150,7 @@ ReportBase
 		.DisplayAlert(status, quiet?)
 		return .Close(status)
 		}
+
 	processFooter()
 		{
 		if false isnt footer = .input.PageFooter()
@@ -147,6 +158,7 @@ ReportBase
 		if .footer isnt false
 			.Driver.Process(.Construct(.footer))
 		}
+
 	Run(driver = false, quiet? = false)
 		{
 		if driver is false
@@ -154,34 +166,35 @@ ReportBase
 		.SetDriver(driver)
 		return .processWithoutPage(:quiet?)
 		}
-	alerts: #(
+
+	alerts: (
 		// NODATA
-		1: (msg: 'No data found for report - are your options correct?',
-			flag: #ICONQUESTION)
+		1: (msg: "No data found for report - are your options correct?",
+			flag: ICONQUESTION),
 		// NOFIT
 		2: (msg: 'The report cannot be displayed because one of the items is ' $
 			'too big for the page. This is sometimes caused by too much ' $
 			'information being entered in a field',
-			flag: #ICONINFORMATION)
-		3: (msg: 'Invalid matcher',
-			flag: #ICONINFORMATION)
+			flag: ICONINFORMATION),
+		3: (msg: "Invalid matcher",
+			flag: ICONINFORMATION),
 		4: (msg: 'The report cannot be displayed because one of the items has ' $
 			'too much information to sort on',
-			flag: #ICONINFORMATION)
+			flag: ICONINFORMATION),
 		5: (msg: 'Too much data for the report to process. ' $
 			'Consider adjusting the report options to filter the data.',
-			flag: #ICONINFORMATION)
-		6: (msg: 'There was a problem accessing the file', flag: #ICONINFORMATION)
-		7: (msg: 'Report has been aborted', flag: #ICONINFORMATION)
+			flag: ICONINFORMATION),
+		6: (msg: "There was a problem accessing the file", flag: ICONINFORMATION),
+		7: (msg: "Report has been aborted", flag: ICONINFORMATION),
 		8: (msg: 'Too many records to summarize. ' $
 			'Consider adjusting the report options to filter the data.',
-			flag: #ICONINFORMATION)
+			flag: ICONINFORMATION)
 		)
 	DisplayAlert(status, quiet? = false, noDelay? = false, _fromGenerateParams = false)
 		{
 		if quiet? is true or status is ReportStatus.SUCCESS
 			return
-		if  Suneido.GetDefault('CheckReports', false) is true
+		if Suneido.GetDefault(#CheckReports, false) is true
 			return
 		alert = .alerts[status]
 		if status is ReportStatus.TOOLARGE
@@ -189,30 +202,33 @@ ReportBase
 			alert = alert.Copy()
 			if fromGenerateParams is true
 				{
-				alert.msg = 'Partially Generated.\n\n' $
-					'Too much data for the report to process. ' $
-					'Consider adjusting the report options to filter the data.'
-				alert.flag = 'ICONERROR'
+				alert.msg = "Partially Generated.\n\n" $
+					"Too much data for the report to process. " $
+					"Consider adjusting the report options to filter the data."
+				alert.flag = #ICONERROR
 				}
-			else if fromGenerateParams is 'all_generated'
-				alert.msg = 'Generate Complete.\n\n' $
-					'Too much data for the report to output a PDF file.\n' $
-					'Please use the reprint screen and ' $
-					'adjust the report options to filter the data.'
+			else if fromGenerateParams is #all_generated
+				alert.msg = "Generate Complete.\n\n" $
+					"Too much data for the report to output a PDF file.\n" $
+					"Please use the reprint screen and " $
+					"adjust the report options to filter the data."
 			}
 		fn = noDelay? is true ? Alert : AlertDelayed
-		fn(alert.msg, 'Report', flags: MB[alert.flag], uniqueId: 'ReportAlert' $ status)
+		fn(alert.msg, #Report, flags: MB[alert.flag], uniqueId: "ReportAlert" $ status)
 		}
+
 	GetStatusMsg(status)
 		{
 		if not .IsReportError?(status) and status isnt ReportStatus.ABORT
-			return ''
+			return ""
 		return .alerts[status].msg
 		}
+
 	IsReportError?(status)
 		{
 		return status is ReportStatus.NODATA or .IsGeneratingReportError?(status)
 		}
+
 	PrintPDF(filename, quiet? = false, maxPages = false)
 		{
 		.SetDriver(PdfDriver(filename))
@@ -226,7 +242,7 @@ ReportBase
 		.SelectFont(.Driver.GetDefaultFont())
 
 		_env = Object(vbox: false, no_output?:, :maxPages)
-		finished? = DoTaskWithPause('Working...', .tryPrintNextPage)
+		finished? = DoTaskWithPause("Working...", .tryPrintNextPage)
 
 		// if merging pdfs' the base report has no return value.
 		if Params.HasIndividualReport?()
@@ -235,9 +251,9 @@ ReportBase
 		status = not finished?
 			? ReportStatus.ABORT
 			: _env.vbox isnt false
-				? _env.vbox 	// ReportStatus.NOFIT or INVALIDMATCHER or LONGTEMPINDEX
-						// or TOOLARGE
-				: _env.no_output?
+				? _env.vbox // ReportStatus.NOFIT or INVALIDMATCHER or LONGTEMPINDEX
+				: // or TOOLARGE
+				_env.no_output?
 					? ReportStatus.NODATA
 					: ReportStatus.SUCCESS
 
@@ -249,7 +265,7 @@ ReportBase
 		{
 		try
 			return .printNextPage(_env)
-		catch (unused, 'PDF too large')
+		catch (unused, "PDF too large")
 			{
 			env.vbox = ReportStatus.TOOLARGE
 			return false
@@ -273,8 +289,7 @@ ReportBase
 		.checkForMaxPages(env.maxPages)
 		.Driver.AddPage(.dimens)
 
-		env.vbox.Print(
-			.dimens.left.InchesInTwips(), .dimens.top.InchesInTwips(),
+		env.vbox.Print(.dimens.left.InchesInTwips(), .dimens.top.InchesInTwips(),
 			.dimens.W, .dimens.H)
 		.Driver.EndPage()
 		env.no_output? = false
@@ -282,7 +297,7 @@ ReportBase
 		}
 
 	// This MaxPagesMessagePrefix is used to detect these exceptions from CreateReportFile
-	MaxPagesMessagePrefix: 'Maximum pages reached'
+	MaxPagesMessagePrefix: "Maximum pages reached"
 	checkForMaxPages(maxPages)
 		{
 		if maxPages isnt false and .page > maxPages
@@ -302,15 +317,21 @@ ReportBase
 			(.dimens.width - .dimens.left - .dimens.right).InchesInTwips(),
 			(.dimens.height - .dimens.top - .dimens.bottom).InchesInTwips())
 		}
-	header: false
-	footer: false
-	skip_page: false
-	Abort: false
+
+	header:      false
+	footer:      false
+	skip_page:   false
+	Abort:       false
 	inputEmpty?: false
 	NextPage()
 		{
-		if (.skip_page)
-			{ .skip_page = false; ++.page; ++.npages; return VertFormat(); }
+		if .skip_page
+			{
+			.skip_page = false
+			++.page
+			++.npages
+			return VertFormat()
+			}
 
 		.vh = 0
 		++.page
@@ -326,7 +347,7 @@ ReportBase
 		if .IsGeneratingReportError?(item)
 			return item
 
-		if item is 'stop'
+		if item is #stop
 			return false
 
 		vbox.EraseTrailingHeader()
@@ -344,31 +365,25 @@ ReportBase
 		{
 		try
 			return block()
-		catch (err,
-'REPORT: NOFIT|*regex|temp index entry size|temp index: derived too large|File|DirExists|summarize')
-			{
-			if err.Prefix?('temp index: derived too large')
+		catch (err, "REPORT: NOFIT|*regex|temp index entry size|temp index: derived too large|File|DirExists|summarize")
+			if err.Prefix?("temp index: derived too large")
 				return ReportStatus.TOOLARGE
-			else if err.Prefix?('temp')
+			else if err.Prefix?(#temp)
 				return ReportStatus.LONGTEMPINDEX
-			else if err.Prefix?('REPORT: NOFIT')
+			else if err.Prefix?("REPORT: NOFIT")
 				return ReportStatus.NOFIT
-			else if err.Prefix?('File') or err.Prefix?('DirExists')
+			else if err.Prefix?(#File) or err.Prefix?(#DirExists)
 				return ReportStatus.FILEERROR
-			else if err.Prefix?('summarize')
+			else if err.Prefix?(#summarize)
 				return ReportStatus.SUMMARIZETOOLARGE
 			else // regex
 				return ReportStatus.INVALIDMATCHER
-			}
 		}
 
 	IsGeneratingReportError?(status)
 		{
-		return status in (ReportStatus.NOFIT,
-			ReportStatus.INVALIDMATCHER,
-			ReportStatus.LONGTEMPINDEX,
-			ReportStatus.TOOLARGE,
-			ReportStatus.FILEERROR,
+		return status in (ReportStatus.NOFIT, ReportStatus.INVALIDMATCHER,
+			ReportStatus.LONGTEMPINDEX, ReportStatus.TOOLARGE, ReportStatus.FILEERROR,
 			ReportStatus.SUMMARIZETOOLARGE)
 		}
 
@@ -380,39 +395,40 @@ ReportBase
 	addNextItems(vbox)
 		{
 		if false is item = .getNext()
-			return 'stop'
+			return #stop
 		do
 			{
-			if (.Abort is true)
-				return 'stop'
+			if .Abort is true
+				return #stop
 
-			if (item is "pg0")
+			if item is #pg0
 				.page = 0
-			if item in ('pg', 'pg0', 'pgo', 'pge')
+			if item in (#pg, #pg0, #pgo, #pge)
 				if vbox.ContentTally() > 0
 					break
 				else
 					continue // ignore pg at start of page
 			if false is .addItem(item, vbox)
 				break
-			}
-			while false isnt item = .getNext()
+			} while false isnt item = .getNext()
 		return item
 		}
+
 	getNext()
 		{
 		if false is item = .input.Next()
 			.inputEmpty? = true
 		return item
 		}
+
 	addItem(item, vbox)
 		{
 		h = item.GetSize().h
-		if (item.Member?("Y") and item.Y > .vh)
+		if item.Member?('Y') and item.Y > .vh
 			.vh = item.Y
-		if (.vh + h > .dimens.H and vbox.Tally() > 0)
+		if .vh + h > .dimens.H and vbox.Tally() > 0
 			{
-			if (not item.Header?)
+			if not item.Header?
 				.input.Pushback(item)
 			return false
 			}
@@ -421,16 +437,17 @@ ReportBase
 		.vh += h
 		return true
 		}
+
 	pageHeader(vbox)
 		{
-		if (.header isnt false)
+		if .header isnt false
 			{
 			hdr = .Construct(.header)
 			hdr.Header? = true
 			vbox.AddConstructed(hdr)
 			.vh += hdr.GetSize().h
 			}
-		if (false isnt hdr = .input.PageHeader())
+		if false isnt hdr = .input.PageHeader()
 			{
 			hdr = .Construct(hdr)
 			hdr.Header? = true
@@ -438,27 +455,29 @@ ReportBase
 			.vh += hdr.GetSize().h
 			}
 		}
+
 	pageFooter(vbox)
 		{
-		if (false isnt footer = .input.PageFooter())
+		if false isnt footer = .input.PageFooter()
 			{
 			footer = .Construct(footer)
 			footer.Y = .dimens.H
 			vbox.AddConstructed(footer)
 			}
-		if (.footer isnt false)
+		if .footer isnt false
 			{
 			footer = .Construct(.footer)
 			footer.Y = .dimens.H
 			vbox.AddConstructed(footer)
 			}
 		}
+
 	skipOnEvenOddPage(item)
 		{
-		if ((item is "pge" and .page % 2 is 0) or
-			(item is "pgo" and .page % 2 is 1))
-			{ .skip_page = true; }
+		if ((item is #pge and .page % 2 is 0) or (item is #pgo and .page % 2 is 1))
+			.skip_page = true
 		}
+
 	Remaining() // vertical amount remaining on page in twips
 		{
 		return .dimens.H - .vh
@@ -469,7 +488,7 @@ ReportBase
 		field = false
 		if String?(item) and item =~ "^[a-z]"
 			{
-			if (item =~ "^pg[0|e|o]?$")
+			if item =~ "^pg[0|e|o]?$"
 				return item
 			field = item
 			item = Datadict(item).Format
@@ -479,21 +498,23 @@ ReportBase
 			x = item
 			field = item[0]
 			item = Datadict(field).Format.Copy()
-			for (i in x.Members())
-				if (i isnt 0)
+			for i in x.Members()
+				if i isnt 0
 					item[i] = x[i]
 			}
-		fmt = Construct(item, "Format")
-		if (field isnt false)
+		fmt = Construct(item, #Format)
+		if field isnt false
 			fmt.Field = field
 		.applyProperies(item, fmt)
 		return fmt
 		}
+
 	fieldObject?(item)
 		{
 		return Object?(item) and item.Member?(0) and String?(item[0]) and
 			item[0] =~ "^[a-z]"
 		}
+
 	fmtMembers: (x, y, xmin, ymin, xstretch, ystretch, field, span, font, heading)
 	applyProperies(item, fmt)
 		{
@@ -505,28 +526,40 @@ ReportBase
 				continue
 			member = m.Capitalize()
 			fmt[member] = item[m]
-			if m in ('x', 'y', 'xmin', 'ymin')
+			if m in ('x', 'y', #xmin, #ymin)
 				fmt[member] = fmt[member].InchesInTwips()
 			}
 		}
+
 	GetPage()
-		{ return .page; }
+		{
+		return .page
+		}
+
 	GetGeneratedPages()
-		{ return .npages }
+		{
+		return .npages
+		}
+
 	GetWidth()
 		{
 		return (.dimens.width - .dimens.left - .dimens.right).InchesInTwips()
 		}
+
 	GetFont()
-		{ return .curfont; }
+		{
+		return .curfont
+		}
+
 	curfont: false
 	getCurFontSize()
 		{
 		defaultFont = .Driver.GetDefaultFont()
 		if not Object?(.curfont)
 			return defaultFont.size
-		return .curfont.GetDefault('size', defaultFont.size)
+		return .curfont.GetDefault(#size, defaultFont.size)
 		}
+
 	SelectFont(font)
 		{
 		if not Object?(font)
@@ -547,23 +580,26 @@ ReportBase
 		.curfont = font
 		return oldfont
 		}
+
 	RegisterForClose(ob)
 		{
 		.toclose.Add(ob)
 		}
+
 	UnregisterForClose(ob)
 		{
 		.toclose.Remove(ob)
 		}
+
 	Close(status)
 		{
 		if .Driver isnt false
 			status = .Driver.Finish(status)
-		for (ob in .toclose)
+		for ob in .toclose
 			ob.Close()
 		.t.Complete()
-		Suneido.Delete('ReportQueryCache')
-		BookLog('Report Closed')
+		Suneido.Delete(#ReportQueryCache)
+		BookLog("Report Closed")
 		return status
 		}
 	}

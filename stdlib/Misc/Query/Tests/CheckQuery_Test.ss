@@ -19,10 +19,10 @@ Test
 		Assert(CheckQuery("tables extend x=1 union tables")
 			is: "")
 
-		Assert(FormatQuery("tables rename table to t join tables")
+		query = "(views extend x=123) join (tables extend x=123)"
+		Assert(FormatQuery(query)
 			has: "MANY TO MANY")
-		Assert(CheckQuery("tables rename table to t join tables
-			/*CHECKQUERY SUPPRESS: JOIN MANY TO MANY*/")
+		Assert(CheckQuery(query $ " /*CHECKQUERY SUPPRESS: JOIN MANY TO MANY*/")
 			is: "")
 		Assert(CheckQuery("tables join tables")
 			is: "")

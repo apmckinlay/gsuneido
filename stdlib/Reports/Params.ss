@@ -280,7 +280,8 @@ Controller
 		extraButtons = .export?(report)
 			? .PreviewButtons.Copy().AddUnique(#Export)
 			: .PreviewButtons
-
+// ISSUE 38099 - passing original paramsdata down
+		report.origparams = .origparams
 		if report.Member?(#previewDialog) and report.previewDialog is true
 			{
 			keep_size = "Print Preview Dialog"
@@ -393,7 +394,9 @@ Controller
 		}
 
 	noPage: false
-	SetNoPage(.noPage = true) { }
+	SetNoPage(.noPage = true)
+		{
+		}
 
 	CloseDialog(report)
 		{
@@ -610,7 +613,9 @@ Controller
 		return .params_valid?()
 		}
 
-	SetExtraParamsData(paramsData/*unused*/) { }
+	SetExtraParamsData(paramsData/*unused*/)
+		{
+		}
 
 	On_Export(@report)
 		{
@@ -674,6 +679,8 @@ Controller
 		{
 		if report is false
 			report = .report
+// ISSUE 38099 - passing original paramsdata down
+		report.origparams = .origparams
 		Report(@report).Print(pdc)
 		}
 

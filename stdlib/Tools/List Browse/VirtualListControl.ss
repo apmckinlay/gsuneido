@@ -23,14 +23,15 @@ CommandParent
 		select = #(), .saveQuery = false, .hideColumnsNotSaved? = false,
 		enableDeleteBar = false, .linked? = false, .preventCustomExpand? = false,
 		switchToForm = false, .defaultColumns = false, .asof = false, .useQuery = #auto,
-		excludeCustomize? = false, .warningField = false)
+		excludeCustomize? = false, .warningField = false, subTableSelect = false)
 		{
 		super([#VirtualListView, menu, .headerSelectPrompt, headerMenu,
 			readonly, filterBy, .checkBoxColumn, checkBoxAmountField, disableSelectFilter,
 			thinBorder, .protectField, .validField, .title,
 			.option, historyFields, titleLeftCtrl, :hdrCornerCtrl, :expandExcludeFields,
 			:addons, filtersOnTop: .filtersOnTop, :select, :enableDeleteBar,
-			linked?: .linked?, :preventCustomExpand?, :switchToForm, :excludeCustomize?])
+			linked?: .linked?, :preventCustomExpand?, :switchToForm, :excludeCustomize?,
+			:subTableSelect])
 		.view = .VirtualListView
 		.baseQuery = query
 

@@ -17,6 +17,18 @@ AstFmtExpr
 		return .Cat(kw $ ' ', .Seq(docs, .Text(", ")))
 		}
 
+	MultiAssign(node, ctx, curr)
+		{
+		docs = Object()
+		for (i = 0; i < node.size - 1; ++i)
+			docs.Add(.Fmt(node[i], ctx, curr))
+		// The node's source span can include a statement terminator. Format its
+		// children so the body, not a verbatim slice, supplies the separator.
+		after = .Cm.SameLine(curr)
+		rhs = .Fmt(node[node.size - 1], ctx, curr)
+		return .Cat(.Seq(docs, .Text(", ")), " =", after, ' ', .Lead(rhs))
+		}
+
 	Throw(node, ctx, curr)
 		{
 		return .Cat("throw ", .Fmt(node.expr, ctx, curr))

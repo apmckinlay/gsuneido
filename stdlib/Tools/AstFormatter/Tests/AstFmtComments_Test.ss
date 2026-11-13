@@ -27,6 +27,15 @@ Test
 		Assert(cur.done, is: 16)
 		}
 
+	Test_leadingBlank()
+		{
+		src = "// note\n\ny"
+		cm = AstFmtComments(src)
+		Assert(.render(cm.Leading(.cursor(), src.Size() - 1)), is: "// note\n")
+		Assert(.render(cm.Leading(.cursor(), src.Size() - 1, allowBlank:)),
+			is: "// note\n\n")
+		}
+
 	Test_trailing()
 		{
 		cm = AstFmtComments("f() // note\ng()")

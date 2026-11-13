@@ -10,34 +10,34 @@
 // TODO: wipe out Summarize Field if you choose Function of "count"
 Controller
 	{
-	Title: Reporter
-	Xmin: 790
-	Ymin: 530
-	SortRows: 8
-	PortraitChars: 176
-	LandscapeChars: 123
-	DefaultColWidth: 15
+	Title:              #Reporter
+	Xmin:               790
+	Ymin:               530
+	SortRows:           8
+	PortraitChars:      176
+	LandscapeChars:     123
+	DefaultColWidth:    15
 
-	MaxSummarizeFields: 15	// if increased, create more Field_ definitions
-	Ncalcs: 20
+	MaxSummarizeFields: 15 // if increased, create more Field_ definitions
+	Ncalcs:             20
 
-	CallClass(hwnd /*unused*/ = 0, rpt = '', printMode = false, addButtons = false,
-		onDestroy = false, reporterMode = 'simple')
+	CallClass(hwnd/*unused*/ = 0, rpt = "", printMode = false, addButtons = false,
+		onDestroy = false, reporterMode = #simple)
 		{
-		if rpt isnt '' and QueryEmpty?("params", report: rpt)
+		if rpt isnt "" and QueryEmpty?(#params, report: rpt)
 			{
 			Alert("Reporter: Cannot find report. Has the report been renamed or deleted?",
-				'Reporter', flags: MB.ICONWARNING)
+				#Reporter, flags: MB.ICONWARNING)
 			return
 			}
-		BookLog('Reporter')
-		ModalWindow(Object(this, rpt, printMode, addButtons, dialog?:, :reporterMode),
+		BookLog(#Reporter)
+		ModalWindow([this, rpt, printMode, addButtons, dialog?:, :reporterMode],
 			keep_size:, :onDestroy)
 		return
 		}
 
-	New(rpt = '', .printMode = false, .addButtons = false, .dialog? = false,
-		.reporterMode = 'simple')
+	New(rpt = "", .printMode = false, .addButtons = false, .dialog? = false,
+		.reporterMode = #simple)
 		{
 		super(ReporterLayout(printMode, reporterMode))
 		.init(rpt)
@@ -45,18 +45,18 @@ Controller
 
 	init(rpt)
 		{
-		.Data.SetProtectField('reporter_protect')
+		.Data.SetProtectField(#reporter_protect)
 		.Tabs = .Data.Vert.Tabs
 		for i in .. .Tabs.GetTabCount()
 			.Tabs.ConstructTab(i)
 
-		.source = .FindControl('DataSource')
-		.select = .FindControl('Select2')
-		.schedWarn = .FindControl('schedWarn')
-		.reportHistory = .FindControl('reportHistory')
+		.source = .FindControl(#DataSource)
+		.select = .FindControl(#Select2)
+		.schedWarn = .FindControl(#schedWarn)
+		.reportHistory = .FindControl(#reportHistory)
 
-		.canvas = .FindControl('reporterCanvas')
-		.rc = .FindControl('ReporterColumns')
+		.canvas = .FindControl(#reporterCanvas)
+		.rc = .FindControl(#ReporterColumns)
 
 		if .reporterMode is #form
 			.rc.SetCanvas(.canvas)
@@ -77,21 +77,21 @@ Controller
 		{
 		// if user is going through book options too fast,
 		// sometimes this is destroyed already
-		if .Member?("Tabs")
+		if .Member?(#Tabs)
 			.Tabs.Select(.tabs.Select)
 		}
 
-	Record_NewValue(field, value /*unused*/)
+	Record_NewValue(field, value/*unused*/)
 		{
-		if field is 'Source'
+		if field is #Source
 			.setQuery()
-		else if field.Prefix?('sort')
+		else if field.Prefix?(#sort)
 			{
-			.Data.SetField(field.Replace('sort', 'total'),
+			.Data.SetField(field.Replace(#sort, #total),
 				.subtotal?(field))
 			.notifyDesignChange()
 			}
-		else if field is 'formulas' or field.Prefix?("summarize_")
+		else if field is #formulas or field.Prefix?(#summarize_)
 			.setQuery()
 		}
 
@@ -111,20 +111,21 @@ Controller
 
 	setFields()
 		{
-		.Data.SetField('allcols', .rpt.GetAllCols())
-		.Data.SetField('design_cols', .rpt.GetDesignCols())
-		.Data.SetField('summarize_func_cols', .rpt.GetSummarizeFuncCols())
-		.Data.SetField('nonsummarized_fields', .rpt.GetNonSummarizedFields())
-		.Data.SetField('selectFields', .rpt.GetSelectFields())
+		.Data.SetField(#allcols, .rpt.GetAllCols())
+		.Data.SetField(#design_cols, .rpt.GetDesignCols())
+		.Data.SetField(#summarize_func_cols, .rpt.GetSummarizeFuncCols())
+		.Data.SetField(#nonsummarized_fields, .rpt.GetNonSummarizedFields())
+		.Data.SetField(#selectFields, .rpt.GetSelectFields())
 		}
 
 	On_Help()
 		{
-		OpenBook(LastContribution('HelpBook'),
+		OpenBook(LastContribution(#HelpBook),
 			.reporterMode is #form
-				? #(name: 'Reporter Form', path: 'Reporter Form')
-				: #(name: 'Reporter', path: 'Reporter'))
+				? #(name: "Reporter Form", path: "Reporter Form")
+				: #(name: Reporter, path: Reporter))
 		}
+
 	On_New()
 		{
 		if false is .dirtysave()
@@ -138,33 +139,36 @@ Controller
 		if .canvas isnt false
 			.canvas.Set(#(), defaultHeader:)
 		}
+
 	clear()
 		{
-		.Data.Set(Record(columns: #(), coloptions: Object(), select: #{},
-			allcols: #(), design_cols: #(), heading1: PageHeadName()))
+		.Data.Set([columns: #(), coloptions: Object(), select: #{},
+			allcols: #(), design_cols: #(), heading1: PageHeadName()])
 		.rc.Set(#())
-		.select.Set(Record())
-		.Window.SetTitle('Reporter')
+		.select.Set([])
+		.Window.SetTitle(#Reporter)
 		}
+
 	dirtysave()
 		{
 		if not .Dirty?()
 			return true
-		result = Alert('Do you want to save your changes?', 'Reporter',
+		result = Alert("Do you want to save your changes?", #Reporter,
 			hwnd: .Window.Hwnd, flags: MB.ICONEXCLAMATION | MB.YESNOCANCEL)
-		switch (result)
+		switch result
 			{
-		case ID.CANCEL :
+		case ID.CANCEL:
 			return false
-		case ID.YES :
+		case ID.YES:
 			return .On_Save()
-		case ID.NO :
+		case ID.NO:
 			.Dirty?(false)
 			return true
-		default :
+		default:
 			return false
 			}
 		}
+
 	On_Open()
 		{
 		if not .dirtysave()
@@ -179,16 +183,16 @@ Controller
 		{
 		.clear()
 		.rpt = ReporterModel(rpt, defaultMode: .reporterMode)
-		if rpt is ''
+		if rpt is ""
 			{
 			.Defer(.updateWindowTitle)
 			return
 			}
 		if not .source.Authorized?() or
-			not ReporterOpenDialog.HasPermission?(Record(params: .rpt.GetData()))
+			not ReporterActions.HasPermission?([params: .rpt.GetData()])
 			{
 			AlertDelayed("Sorry, you are not authorized to access this report.",
-				"Reporter", hwnd: .Window.Hwnd, flags: MB.ICONEXCLAMATION)
+				#Reporter, hwnd: .Window.Hwnd, flags: MB.ICONEXCLAMATION)
 			return
 			}
 
@@ -201,8 +205,9 @@ Controller
 		// making the comparison in .Dirty? irrelevant.
 		.rc.Set(.rpt.GetColumns().DeepCopy())
 		.select.ChangeSF(.rpt.GetSelectFields())
-		.select.Set(.rpt.GetData().select isnt ''
-			? .rpt.GetData().select.Copy() : Record())
+		.select.Set(.rpt.GetData().select isnt ""
+			? .rpt.GetData().select.Copy()
+			: [])
 
 		.setSchedWarning(.rpt)
 		.setReportHistory(.rpt)
@@ -214,17 +219,17 @@ Controller
 	setSchedWarning(rpt)
 		{
 		if false isnt .schedWarn
-			{
-			if .isScheduledReport?(rpt.GetSaveName().AfterFirst('Reporter - '))
-				.schedWarn.Set('Scheduled')
+			if .isScheduledReport?(rpt.GetSaveName().AfterFirst("Reporter - "))
+				.schedWarn.Set(#Scheduled)
 			else
-				.schedWarn.Set('')
-			}
+				.schedWarn.Set("")
 		}
 
 	isScheduledReport?(rpt_name)
 		{
-		return not QueryEmpty?('biz_scheduled_reports', bizrpt_name: rpt_name)
+		if not TableExists?(#biz_scheduled_reports)
+			return false
+		return not QueryEmpty?(#biz_scheduled_reports, bizrpt_name: rpt_name)
 		}
 
 	setReportHistory(rpt)
@@ -232,13 +237,13 @@ Controller
 		if false isnt .reportHistory
 			{
 			data = rpt.GetData()
-			created = .buildHistoryString('created', data)
-			lastMod = .buildHistoryString('last_modified', data)
+			created = .buildHistoryString(#created, data)
+			lastMod = .buildHistoryString(#last_modified, data)
 			for field in data.report_last_ran.Members()
 				data[field] = data.report_last_ran[field]
 			lastRan = data.last_ran_on isnt false
-				? .buildHistoryString('last_ran', data)
-				: ''
+				? .buildHistoryString(#last_ran, data)
+				: ""
 			.reportHistory.Set(created $ lastMod $ lastRan)
 			}
 		}
@@ -246,13 +251,13 @@ Controller
 	buildHistoryString(prefix, data)
 		{
 		str = prefix.CapitalizeWords().Replace('_', ' ')
-		date = data.GetDefault(prefix $ '_on', '')
+		date = data.GetDefault(prefix $ "_on", "")
 		if Date?(date)
 			date = date.ShortDate()
 		// cannot use Display due to '' => "''"
-		str $= Opt(' on ', String(date))
-		user = data.GetDefault(prefix $ '_by', '')
-		return Opt(str, ' by ', user, '\r\n')
+		str $= Opt(" on ", String(date))
+		user = data.GetDefault(prefix $ "_by", "")
+		return Opt(str, " by ", user, "\r\n")
 		}
 
 	updateWindowTitle()
@@ -266,13 +271,13 @@ Controller
 		if not .Dirty?()
 			return false
 
-		.report_name = .rpt.GetSaveName().Trim('Reporter - ')
+		.report_name = .rpt.GetSaveName().Trim("Reporter - ")
 		if true isnt valid = .check_valid(from_save?:)
 			{
-			Alert(valid, "Reporter", .Window.Hwnd, MB.ICONERROR)
+			Alert(valid, #Reporter, .Window.Hwnd, MB.ICONERROR)
 			return false
 			}
-		name = .Data.GetField('report_name')
+		name = .Data.GetField(#report_name)
 		save_name = .rpt.GetSaveName()
 		stdReportPrefix = .stdReportPrefix()
 		return .save?(name, save_name, stdReportPrefix)
@@ -282,12 +287,12 @@ Controller
 
 	stdReportPrefix()
 		{
-		return LastContribution('Reporter').StandardReportPrefix
+		return LastContribution(#Reporter).StandardReportPrefix
 		}
 
 	save?(name, save_name, stdReportPrefix)
 		{
-		if name is ''
+		if name is ""
 			return .On_Save_As()
 		else if .CheckName(name, stdReportPrefix) is false
 			return false
@@ -299,52 +304,53 @@ Controller
 	saveStandardReport(name, save_name, stdReportPrefix)
 		{
 		if stdReportPrefix isnt false and
-			save_name.Prefix?('Reporter - ~' $ stdReportPrefix)
+			save_name.Prefix?("Reporter - ~" $ stdReportPrefix)
 			{
 			.AlertInfo("Save As",
-				'Standard ' $ stdReportPrefix $
-				' reports cannot be modified.\n\nSaving as "' $ name $ '"')
+				"Standard " $ stdReportPrefix $
+					' reports cannot be modified.\n\nSaving as "' $ name $ '"')
 			.SetSaveName(name)
 			if false isnt overwrite? = .OverwriteReport?(name)
 				switch overwrite?
 					{
-				// Need to return save_name back to original value or else save will
-				// overwrite the report on next Save click without prompting
-				case ID.CANCEL :
-					.SetSaveName(save_name.RemovePrefix('Reporter - '))
+				case // Need to return save_name back to original value or else save will
+						// overwrite the report on next Save click without prompting
+						ID.CANCEL:
+					.SetSaveName(save_name.RemovePrefix("Reporter - "))
 					return false
-				case ID.YES :
+				case ID.YES:
 					return true
-				case ID.NO :
-					.SetSaveName(save_name.RemovePrefix('Reporter - '))
+				case ID.NO:
+					.SetSaveName(save_name.RemovePrefix("Reporter - "))
 					return .On_Save_As()
 					}
 			}
 		return true
 		}
 
-	InvalidMsg(type = 'load')
+	InvalidMsg(type = #load)
 		{
 		return "Unable to " $ type $ " report: Invalid Input Data Source" $
-			LastContribution('Reporter').ReporterInvalidMsg
+			LastContribution("Reporter").ReporterInvalidMsg
 		}
+
 	check_valid(from_save? = false)
 		{
-		if .rpt.GetQuery() is ''
+		if .rpt.GetQuery() is ""
 			{
 			.Tabs.Select(.tabs.Input)
-			return .InvalidMsg(from_save? ? 'save' : 'load')
+			return .InvalidMsg(from_save? ? #save : #load)
 			}
 		source = .source.Source()
 		if source.Empty?()
 			return "Please choose an Input Data Source"
 
-		if source.Member?('validField')
+		if source.Member?(#validField)
 			{
 			rec = .Data.Get().Copy()
 			rec.Invalidate(source.validField)
 			errs = rec[source.validField]
-			if errs isnt ''
+			if errs isnt ""
 				return errs
 			}
 		// use forceCheck to check valid even when not dirty in case invalid report
@@ -357,6 +363,7 @@ Controller
 
 		return .check_reporter_options() // select, formula, sort, summary
 		}
+
 	check_reporter_options()
 		{
 		if .select.Where() is false
@@ -364,16 +371,16 @@ Controller
 			.Tabs.Select(.tabs.Select)
 			return "Invalid Select"
 			}
-		if '' isnt msg = .validate_formula_menu_options()
+		if "" isnt msg = .validate_formula_menu_options()
 			return msg
 
-		if '' isnt msg = .checkAllowedSortSummaryFields()
+		if "" isnt msg = .checkAllowedSortSummaryFields()
 			return msg
 
-		if '' isnt msg = .checkSummaryInfo()
+		if "" isnt msg = .checkSummaryInfo()
 			return msg
 
-		if '' isnt msg = .checkCanvas()
+		if "" isnt msg = .checkCanvas()
 			return msg
 
 		return true
@@ -391,51 +398,49 @@ Controller
 			field = row.calc.Trim()
 			formula = row.formula.Trim()
 			form_val = row.form_val
-			if field isnt '' and (formula isnt '' or form_val is true)
-				{
-				if '' isnt result = .validFormula(row, field, prompts, orig_prompts,
+			if field isnt "" and (formula isnt "" or form_val is true)
+				if "" isnt result = .validFormula(row, field, prompts, orig_prompts,
 					form_ob)
 					return result
-				}
 			}
 		return .validateFormulaValues(form_ob)
 		}
 
 	validFormula(formula, prompt, prompts, orig_prompts, form_ob)
 		{
-		if formula.type is ''
-			return 'Format is required for formula: ' $ prompt
+		if formula.type is ""
+			return "Format is required for formula: " $ prompt
 
-		if '' isnt valid = .validateFormulaName(prompt, prompts, orig_prompts)
+		if "" isnt valid = .validateFormulaName(prompt, prompts, orig_prompts)
 			return valid
 
-		if '' isnt valid = .validateFormulaCode(formula, prompt)
+		if "" isnt valid = .validateFormulaCode(formula, prompt)
 			return valid
 
 		if formula.form_val is true
 			{
 			if not formula.formula.Blank?()
-				return 'Should not have both Formula and Menu Option'
+				return "Should not have both Formula and Menu Option"
 			form_ob.Add(formula.calc)
 			}
 		prompts.Add(formula.calc)
-		return ''
+		return ""
 		}
 
 	validateFormulaName(prompt, prompts, orig_prompts)
 		{
 		if prompts.Has?(prompt)
-			return 'Formula field name ' $ prompt $ ' is a duplicate. ' $
-				'Please rename one of the formulas.'
+			return "Formula field name " $ prompt $ " is a duplicate. " $
+				"Please rename one of the formulas."
 		if orig_prompts.Has?(prompt)
 			return .fieldNameInUseMsg(prompt)
-		return ''
+		return ""
 		}
 
 	fieldNameInUseMsg(prompt)
 		{
-		return 'Formula field name ' $ prompt $ ' is in use. ' $
-			'Please rename the formula.'
+		return "Formula field name " $ prompt $ " is in use. " $
+			"Please rename the formula."
 		}
 
 	validateFormulaCode(formula, prompt)
@@ -447,30 +452,30 @@ Controller
 		// original select fields (before joins, could be a _abbrev or _name field)
 		if field !~ "^calc\d+$"
 			return .fieldNameInUseMsg(prompt)
-		newFn = FormulaEditor.ConstructFormula(
-			sf, prompt, formula.type, formula.formula, field, quiet:)
+		newFn = FormulaEditor.ConstructFormula(sf, prompt, formula.type, formula.formula,
+			field, quiet:)
 		if newFn.formulaCode is false or
-			(newFn.formulaCode is '' and formula.form_val isnt true)
+			(newFn.formulaCode is "" and formula.form_val isnt true)
 			{
 			.DeleteDD(newFn.ddName)
 			return "Invalid or missing operators in formula " $ formula.calc $ '.'
 			}
-		if Object?(newFn.formulaCode) and newFn.formulaCode.Member?('err')
+		if Object?(newFn.formulaCode) and newFn.formulaCode.Member?(#err)
 			{
 			.DeleteDD(newFn.ddName)
 			return newFn.formulaCode.err
 			}
-		if '' isnt msg = CustomizeField.ExtraCheck(newFn.formulaCode)
+		if "" isnt msg = CustomizeField.ExtraCheck(newFn.formulaCode)
 			{
 			.DeleteDD(newFn.ddName)
 			return msg
 			}
-		return ''
+		return ""
 		}
 
 	DeleteDD(name)
 		{
-		QueryApply1('configlib where name is ' $ Display(name))
+		QueryApply1("configlib where name is " $ Display(name))
 			{
 			it.Delete()
 			}
@@ -480,10 +485,10 @@ Controller
 		{
 		sel = .select.Get()
 		for (i = 0; i < Select2Control.Numrows; ++i)
-			if sel['menu_option' $ i] is true and form_ob.Has?(sel['fieldlist' $ i])
-				return 'Formula Value can not used as Menu Option'
+			if sel["menu_option" $ i] is true and form_ob.Has?(sel["fieldlist" $ i])
+				return "Formula Value can not used as Menu Option"
 
-		return ''
+		return ""
 		}
 
 	checkAllowedSortSummaryFields()
@@ -491,19 +496,19 @@ Controller
 		data = .Data.Get()
 		for i in .. .SortRows
 			{
-			prompt = data['sort' $ i]
-			if prompt isnt '' and .editorCtrl?(prompt)
-				return 'Sorting on large text field is not allowed.\n' $
-					'Please remove the sort on ' $ prompt
+			prompt = data["sort" $ i]
+			if prompt isnt "" and .editorCtrl?(prompt)
+				return "Sorting on large text field is not allowed.\n" $
+					"Please remove the sort on " $ prompt
 			}
 
 		prompts = data.summarize_by.Split(',')
 		for prompt in prompts
 			if .editorCtrl?(prompt)
-				return 'Summarize by large text field is not allowed.\n' $
-					'Please remove ' $ prompt $ ' from Summarize By'
+				return "Summarize by large text field is not allowed.\n" $
+					"Please remove " $ prompt $ " from Summarize By"
 
-		return ''
+		return ""
 		}
 
 	editorCtrl?(prompt)
@@ -511,7 +516,7 @@ Controller
 		if false is (field = .rpt.GetSelectFields().PromptToField(prompt))
 			return false
 		dd = Datadict(field)
-		return dd.Control[0] is 'Editor' or dd.Control[0] is 'ScintillaAddonsEditor'
+		return dd.Control[0] is #Editor or dd.Control[0] is #ScintillaAddonsEditor
 		}
 
 	checkSummaryInfo()
@@ -525,24 +530,24 @@ Controller
 
 	reportHasInputSummary?(data)
 		{
-		if data['summarize_by'] isnt ''
+		if data.summarize_by isnt ""
 			return true
 		for (i = 0; i < .MaxSummarizeFields; ++i)
-			if data['summarize_func' $ i] isnt ''
+			if data["summarize_func" $ i] isnt ""
 				return true
 		return false
 		}
 
 	anyFieldHasSummaryOption?(data)
 		{
-		if not Object?(data.GetDefault('coloptions', false))
+		if not Object?(data.GetDefault(#coloptions, false))
 			return false
 
 		for fieldOptions in data.coloptions
 			{
 			if not Object?(fieldOptions)
 				continue
-			for summaryField in #(min max average)
+			for summaryField in #(min, max, average)
 				if fieldOptions.GetDefault(summaryField, false) is true
 					return true
 			}
@@ -552,7 +557,7 @@ Controller
 	checkCanvas()
 		{
 		if .canvas is false
-			return ''
+			return ""
 
 		return .canvas.CheckContent()
 		}
@@ -562,55 +567,56 @@ Controller
 		{
 		if true isnt (valid = .check_valid(from_save?:))
 			{
-			Alert(valid, "Reporter", .Window.Hwnd, MB.ICONERROR)
+			Alert(valid, #Reporter, .Window.Hwnd, MB.ICONERROR)
 			return false
 			}
 		forever
 			{
-			name = Ask('Save As', title: 'Reporter', hwnd: .Window.Hwnd)
+			name = Ask("Save As", title: #Reporter, hwnd: .Window.Hwnd)
 			if name is ""
 				{
-				Alert("Please enter a name to save as", "Reporter",
+				Alert("Please enter a name to save as", #Reporter,
 					.Window.Hwnd, MB.ICONWARNING)
 				continue
 				}
 			if .CheckName(name) is false
 				return false
 			if false isnt (overwrite? = .OverwriteReport?(name))
-				{
 				switch overwrite?
 					{
-				case ID.CANCEL :
+				case ID.CANCEL:
 					return false
-				case ID.YES :
+				case ID.YES:
 					break
-				case ID.NO :
+				case ID.NO:
 					continue
 					}
-				}
 			break
 			}
 		.report_name = .Data.Get().report_name
-		.Data.SetField('report_name', name)
+		.Data.SetField(#report_name, name)
 		.SetSaveName(name)
 		.setSchedWarning(.rpt)
 		.updateWindowTitle()
 		return .save()
 		}
+
 	SetSaveName(name)
 		{
-		.rpt.SetSaveName('Reporter - ' $ name)
+		.rpt.SetSaveName("Reporter - " $ name)
 		.resetKeys = .report_name isnt "" and .report_name isnt name
 		}
+
 	CheckName(name, stdReportPrefix = false)
 		{
 		if name is false
 			return false
 		if name =~ "[^a-zA-Z0-9 -]"
 			{
-			.AlertInfo("Save As", "You can only use alpha-numeric characters " $
-				"(letters and numbers) and spaces in the name.\n\n" $
-				"Please save as a different name.")
+			.AlertInfo("Save As",
+				"You can only use alpha-numeric characters " $
+					"(letters and numbers) and spaces in the name.\n\n" $
+					"Please save as a different name.")
 			return false
 			}
 
@@ -621,7 +627,7 @@ Controller
 			{
 			.AlertInfo("Save As",
 				"Reporter name cannot start with '" $ stdReportPrefix $ "'.\n\n" $
-				"Please save as a different name.")
+					"Please save as a different name.")
 			return false
 			}
 		return true
@@ -633,15 +639,16 @@ Controller
 			where report is ' $ Display('Reporter - ' $ name) $ ' sort user')
 			return false
 
-		if .reporterMode isnt mode = rec.params.GetDefault(#reporterMode, 'simple')
+		if .reporterMode isnt mode = rec.params.GetDefault(#reporterMode, #simple)
 			{
-			.AlertWarn('Reporter', 'Reporter ' $ (mode is #form ? 'Form' : 'Report') $
-				Display(name) $ ' already exists\nPlease save as a different name')
+			.AlertWarn(#Reporter,
+				"Reporter " $ (mode is #form ? "Form" : "Report") $ Display(name) $
+					" already exists\nPlease save as a different name")
 			return ID.NO
 			}
 
-		return Alert(
-			Display(name) $ ' already exists\nDo you want to overwrite it?', 'Reporter',
+		return Alert(Display(name) $ " already exists\nDo you want to overwrite it?",
+			#Reporter,
 			hwnd: .Window.Hwnd, flags: MB.ICONEXCLAMATION | MB.YESNOCANCEL)
 		}
 
@@ -651,16 +658,14 @@ Controller
 			return false
 
 		data = .prepare_to_save()
-		rpt_rec = Record(report: .rpt.GetSaveName(), params: data)
+		rpt_rec = [report: .rpt.GetSaveName(), params: data]
 
 		try
-			{
 			if false is .handleReportMenu(rpt_rec)
 				return false
-			}
-		catch (errs, 'Reporter:')
+		catch (errs, "Reporter:")
 			{
-			.AlertWarn('Reporter', errs.Replace('Reporter: ', ''))
+			.AlertWarn(#Reporter, errs.Replace("Reporter: ", ""))
 			return false
 			}
 
@@ -669,6 +674,7 @@ Controller
 		.Dirty?(false)
 		return true
 		}
+
 	changeWarningMsg: 'This Reporter Report has been set up as a Business - Scheduled ' $
 		'Reports. Making changes here could require changes to be made to the Scheduled' $
 		' Report for it to run correctly.\n\n' $
@@ -677,9 +683,10 @@ Controller
 		{
 		return OkCancel(.changeWarningMsg, .Title)
 		}
+
 	CheckScheduled(name)
 		{
-		if .isScheduledReport?(name.Replace('^Reporter - ', ''))
+		if .isScheduledReport?(name.Replace("^Reporter - ", ""))
 			if not .saveWarningMessage()
 				return true
 		return false
@@ -687,7 +694,7 @@ Controller
 
 	handleReportMenu(rpt_rec)
 		{
-		c = LastContribution('Reporter')
+		c = LastContribution(#Reporter)
 		return c.HandleReportMenu(rpt_rec, .source, .Dirty?(), .Data,
 			reporterMode: .reporterMode)
 		}
@@ -697,9 +704,9 @@ Controller
 		.clear_column_lists(rpt_rec.params)
 		ReporterDataConverter.ToFields(rpt_rec.params, .rpt.GetSelectFields())
 		RetryTransaction()
-			{ |t|
+			{|t|
 			t.QueryDo("delete params where report is " $ Display(.rpt.GetSaveName()))
-			t.QueryOutput("params", rpt_rec)
+			t.QueryOutput(#params, rpt_rec)
 			}
 		}
 
@@ -712,10 +719,10 @@ Controller
 		if .resetKeys is true
 			{
 			for m in data.formulas.Members()
-				origData.formulas[m].key = data.formulas[m].key =
-					Display(Timestamp()).Tr('#.')
+				origData.formulas[m].key =
+					data.formulas[m].key = Display(Timestamp()).Tr("#.")
 			.setQuery()
-			if Object?(items = data.GetDefault('reporterCanvas', []).items)
+			if Object?(items = data.GetDefault(#reporterCanvas, []).items)
 				{
 				sf = .rpt.GetSelectFields()
 				for item in items
@@ -732,30 +739,30 @@ Controller
 	prepare_data(data)
 		{
 		data = data.Copy()
-		data.Delete('allcols')
-		data.Delete('design_cols')
-		data.Delete('reporter_cols')
-		data.Delete('reporter_sortcolumns')
-		data.Delete('nonsummarized_fields')
-		data.Delete('summarize_func_cols')
-		data.Delete('reporter_permission_list')
-		data.Delete('reporter_summarizeby_cols')
-		if data.formulas is ''
+		data.Delete(#allcols)
+		data.Delete(#design_cols)
+		data.Delete(#reporter_cols)
+		data.Delete(#reporter_sortcolumns)
+		data.Delete(#nonsummarized_fields)
+		data.Delete(#summarize_func_cols)
+		data.Delete(#reporter_permission_list)
+		data.Delete(#reporter_summarizeby_cols)
+		if data.formulas is ""
 			data.formulas = #()
 		else
 			data.formulas = data.formulas.DeepCopy()
-		if data.coloptions is ''
+		if data.coloptions is ""
 			data.coloptions = #()
 		else
 			data.coloptions = data.coloptions.DeepCopy()
 		.clearHistoryFields(data)
 		for i in .. .MaxSummarizeFields
-			data.Delete('summarize_field' $ i $ '__protect')
+			data.Delete("summarize_field" $ i $ "__protect")
 
-		if .reporterMode is 'enhanced'
+		if .reporterMode is #enhanced
 			data.reporterCanvas = .canvas.Get()
 		data.reporterMode = .reporterMode
-		if not data.Member?('created_by')
+		if not data.Member?(#created_by)
 			{
 			data.created_by = Suneido.User
 			data.created_on = Timestamp()
@@ -770,37 +777,36 @@ Controller
 
 	clearHistoryFields(data)
 		{
-		data.Delete('report_last_ran')
-		data.Delete('last_ran_on')
-		data.Delete('last_ran_by')
-		data.Delete('lastRan')
-		data.Delete('last_modified_on')
-		data.Delete('last_modified_by')
+		data.Delete(#report_last_ran)
+		data.Delete(#last_ran_on)
+		data.Delete(#last_ran_by)
+		data.Delete(#lastRan)
+		data.Delete(#last_modified_on)
+		data.Delete(#last_modified_by)
 		if .resetKeys is true
 			{
-			data.Delete('created_on')
-			data.Delete('created_by')
+			data.Delete(#created_on)
+			data.Delete(#created_by)
 			}
 		}
 
 	clear_column_lists(data)
 		{
-		data.Delete('allcols')
-		data.Delete('reporter_cols')
-		data.Delete('selectFields')
-		data.Delete('design_cols')
-		data.Delete('reporter_summarizeby_cols')
-		data.Delete('summarize_func_cols')
-		data.Delete('nonsummarized_fields')
+		data.Delete(#allcols)
+		data.Delete(#reporter_cols)
+		data.Delete(#selectFields)
+		data.Delete(#design_cols)
+		data.Delete(#reporter_summarizeby_cols)
+		data.Delete(#summarize_func_cols)
+		data.Delete(#nonsummarized_fields)
 		}
 
-	Dirty?(dirty = '')
+	Dirty?(dirty = "")
 		{
 		if .Data.Dirty?(dirty)
 			return true
 		data = .Data.Get()
-		if data.columns isnt .rc.Get() or
-			data.select isnt .select.Get()
+		if data.columns isnt .rc.Get() or data.select isnt .select.Get()
 			return true
 		return false
 		}
@@ -810,13 +816,14 @@ Controller
 		{
 		.last_formula = idx
 		}
+
 	On_Add(option)
 		{
 		if .rpt.GetSelectFields().Fields.Empty?()
-			return Alert("Please choose an Input Data Source", 'Reporter'
+			return Alert("Please choose an Input Data Source", #Reporter
 				hwnd: .Window.Hwnd, flags: MB.ICONWARNING)
 
-		FormulaEditor['Add_a_' $ option.Tr(' ', '_')](.findControl(.last_formula),
+		FormulaEditor["Add_a_" $ option.Tr(' ', '_')](.findControl(.last_formula),
 			selectFields: .rpt.GetSelectFields(), hwnd: .Window.Hwnd)
 		}
 
@@ -833,10 +840,10 @@ Controller
 
 	findControl(pos)
 		{
-		rows = .Data.GetControl('formulas').GetRows()
+		rows = .Data.GetControl(#formulas).GetRows()
 		while pos >= 0 and not rows.Member?(pos)
-			pos--
-		return pos < 0 ? false : rows[pos].GetControl('formula')
+			pos -= 1
+		return pos < 0 ? false : rows[pos].GetControl(#formula)
 		}
 
 	FormulaEditor_Click(source)
@@ -847,19 +854,21 @@ Controller
 	ChooseField(prompts, hwnd)
 		{
 		return ToolDialog(hwnd,
-			Object(.choose_field, prompts.Sort!()),
+			[.choose_field, prompts.Sort!()],
 			border: 0)
 		}
+
 	choose_field: Controller
 		{
-		Title: 'Add a Field'
-		Xmin: 300
-		Ymin: 400
+		Title: "Add a Field"
+		Xmin:  300
+		Ymin:  400
 		New(list)
 			{
-			super(Object('ListBox', list))
+			super([#ListBox, list])
 			.list = list
 			}
+
 		ListBoxSelect(i)
 			{
 			if .list.Member?(i)
@@ -873,28 +882,30 @@ Controller
 		curlist = .rc.Get().Map({ it.text })
 		colwidths = Object()
 		for col in .rc.Get()
-			colwidths[col.text] = Object(width: col.GetDefault('width', false))
-		list = OkCancel(Object('TwoListDlg', .rpt.GetDesignCols(), curlist)
-			title: 'Add/Remove Columns', hwnd: .Window.Hwnd)
+			colwidths[col.text] = Object(width: col.GetDefault(#width, false))
+		list = OkCancel([#TwoListDlg, .rpt.GetDesignCols(), curlist]
+			title: "Add/Remove Columns", hwnd: .Window.Hwnd)
 		if list is false or list is curlist
 			return
 		list = list.Split(',')
 		if list is curlist
 			return
-		coloptions = .Data.GetField('coloptions')
+		coloptions = .Data.GetField(#coloptions)
 		for item in curlist.Difference(list)
 			coloptions.Delete(item)
 		.rc.Set(.buildColumns(list, colwidths, coloptions))
 		}
+
 	GetRPT()
 		{
 		return .rpt
 		}
+
 	GetRptSortCols()
 		{
 		try
 			return .rpt.GetSortCols().Map({ it.prompt })
-		catch (unused, 'Reporter:')
+		catch (unused, "Reporter:")
 			return Object()
 		}
 
@@ -926,12 +937,13 @@ Controller
 				if false is field_name = .rpt.GetSelectFields().PromptToField(fld)
 					continue
 				dd = Datadict(field_name)
-				width = Object?(dd.Format) and dd.Format.Member?('width')
-					? dd.Format.width : .DefaultColWidth
-				if dd.Format[0] is 'Image'
+				width = Object?(dd.Format) and dd.Format.Member?(#width)
+					? dd.Format.width
+					: .DefaultColWidth
+				if dd.Format[0] is #Image
 					width = (width / 8.5.InchesInTwips()) * .LandscapeChars/*=page width*/
 
-				coloptions[fld] = Record(heading: fld)
+				coloptions[fld] = [heading: fld]
 				}
 			cols.Add(Object(text: fld, :width))
 			}
@@ -940,25 +952,29 @@ Controller
 
 	On_Clear_Select()
 		{
-		.select.Set(Record())
+		.select.Set([])
 		}
 
 	On_Print()
 		{
-		.print_report("On_Print")
+		.print_report(#On_Print)
 		}
+
 	On_PDF_Save_to_file()
 		{
-		.print_report("On_PDF_Save_to_file")
+		.print_report(#On_PDF_Save_to_file)
 		}
+
 	On_PDF_Download()
 		{
 		.On_PDF_Save_to_file()
 		}
+
 	On_PDF_Email_as_attachment()
 		{
-		.print_report("On_PDF_Email_as_attachment")
+		.print_report(#On_PDF_Email_as_attachment)
 		}
+
 	ClearReporterColumns()
 		{
 		.rc.Set(#())
@@ -966,7 +982,7 @@ Controller
 
 	On_Preview()
 		{
-		.print_report("On_Preview")
+		.print_report(#On_Preview)
 		}
 
 	print_report(option)
@@ -980,31 +996,36 @@ Controller
 		catch (err)
 			.checkAndAlert(err)
 // Temporary logging for issue 33830
-if .Destroyed?()
-	{
-	SuneidoLog('ERROR: (CAUGHT) Reporter destroyed', calls:)
-	SuneidoLog('ERROR: (CAUGHT) Reporter destroyed - extra info', calls: .destroyCS,
-		params: [at: .destroyAt, :option], caughtMsg: 'for 33830')
-	}
-else
-	.Dirty?(dirtyState)
+		if .Destroyed?()
+			{
+			SuneidoLog("ERROR: (CAUGHT) Reporter destroyed", calls:)
+			SuneidoLog("ERROR: (CAUGHT) Reporter destroyed - extra info",
+				calls: .destroyCS,
+				params: [at: .destroyAt, :option], caughtMsg: "for 33830")
+			}
+		else
+			.Dirty?(dirtyState)
 		}
+
 	checkAndAlert(err)
 		{
-		if err.Has?('assertion failure: key.cursize()') or
-			err.Has?('assertion failure: size')
-			.AlertError("Reporter", "Invalid Summarize By/Sort")
-		else if err.Prefix?('SHOW:')
+		if err.Has?("assertion failure: key.cursize()") or
+			err.Has?("assertion failure: size")
+			.AlertError(#Reporter, "Invalid Summarize By/Sort")
+		else if err.Prefix?("SHOW:")
 			throw err
 		}
+
 	On_Page_Setup()
 		{
 		Params.On_Page_Setup(name: .rpt.GetTitle(), hwndOwner: .Window.Hwnd)
 		}
+
 	On_Export()
 		{
-		.print_report("On_Export")
+		.print_report(#On_Export)
 		}
+
 	tryCheckAndBuildQuery()
 		{
 		try
@@ -1014,28 +1035,30 @@ else
 				? queryInfo[0] // ReporterModel.BuildReport > rpt member
 				: false
 			}
-		catch (errs, 'Reporter:')
+		catch (errs, "Reporter:")
 			{
-			.AlertWarn('Reporter', errs.Replace('Reporter: ', ''))
+			.AlertWarn(#Reporter, errs.Replace("Reporter: ", ""))
 			return false
 			}
 		}
+
 	report()
 		{
 		try
 			return .checkAndBuildQuery()
-		catch (errs, 'Reporter:')
+		catch (errs, "Reporter:")
 			{
-			if errs =~ '; select tab:'
+			if errs =~ "; select tab:"
 				{
-				tab = errs.AfterLast('; select tab: ')
+				tab = errs.AfterLast("; select tab: ")
 				.Tabs.Select(.tabs.GetDefault(tab, 0))
 				errs = errs.BeforeLast(';')
 				}
-			.AlertWarn('Reporter', errs.Replace('Reporter: ', ''))
+			.AlertWarn(#Reporter, errs.Replace("Reporter: ", ""))
 			return false
 			}
 		}
+
 	checkAndBuildQuery()
 		{
 		if true isnt (valid = .check_valid())
@@ -1049,69 +1072,76 @@ else
 		}
 
 	Click(item)
-		{ .Properties(item) }
+		{
+		.Properties(item)
+		}
+
 	Properties(item)
 		{
-		coloptions = .Data.GetField('coloptions')
+		coloptions = .Data.GetField(#coloptions)
 		if not coloptions.Member?(item)
-			coloptions[item] = Record(heading: item)
+			coloptions[item] = [heading: item]
 		options = ToolDialog(.Window.Hwnd,
-			Object(.coloptionsControl, item, coloptions[item].Copy()))
+			[.coloptionsControl, item, coloptions[item].Copy()])
 		if options is false or options is coloptions[item]
 			return
 		coloptions[item] = options
 		.Dirty?(true)
 		}
+
 	ClearProperties(item)
 		{
-		coloptions = .Data.GetField('coloptions')
+		coloptions = .Data.GetField(#coloptions)
 		coloptions.Delete(item)
 		.Dirty?(true)
 		}
+
 	coloptionsControl: Controller
 		{
-		Title: 'Column Properties'
+		Title: "Column Properties"
 		New(col, options)
 			{
 			super(.controls(col))
 			// handle options as object or record, ensuring data is set to a record
-			.Data.Set(Record().Merge(options))
+			.Data.Set([].Merge(options))
 			}
+
 		controls(col)
 			{
-			return Object('Record'
-				Object('Vert'
-					Object('Heading' col)
-					'Skip'
-					#(Pair
-						(Static Heading)
-						(Editor xmin: 200 height: 5 name: heading))
-					'Skip'
-					#('Horz'
-						#(CheckBox 'Total', name: 'total')
-						'Skip'
-						#(CheckBox 'Min', name: 'min')
-						'Skip'
-						#(CheckBox 'Max', name: 'max')
-						'Skip'
-						#(CheckBox 'Average', name: 'average')
-						'Skip'
-						#(CheckBox 'Count', name: 'count')
-						)
-					'Skip'
-					#(CheckBox 'Print Summary Prompts In This Column',
-						name: 'print_summary_prompts')
-					'Skip'
-					#(OkCancel))
-				xstretch: 0, ystretch: 0)
+			return [#Record,
+				[#Vert,
+					[#Heading, col],
+					#Skip,
+					#(Pair,
+						(Static, Heading),
+						(Editor, xmin: 200, height: 5, name: heading)),
+					#Skip,
+					#(Horz,
+						(CheckBox, Total, name: total),
+						Skip,
+						(CheckBox, Min, name: min),
+						Skip,
+						(CheckBox, Max, name: max),
+						Skip,
+						(CheckBox, Average, name: average),
+						Skip,
+						(CheckBox, Count, name: count)),
+					#Skip,
+					#(CheckBox, "Print Summary Prompts In This Column",
+						name: print_summary_prompts),
+					#Skip,
+					#(OkCancel)]
+				xstretch: 0, ystretch: 0]
 			}
+
 		On_OK()
 			{
 			data = .Data.Get()
 			if data.print_summary_prompts is true and .anySummaryOptionsChecked?()
 				{
-				.AlertInfo(.Title, 'Summary prompts can not be printed in the ' $
-					'same column as the summary options are used')
+				.AlertInfo(.Title,
+					"Summary prompts can not be printed in the " $
+						"same column as the summary options are used")
 				return
 				}
 			.Window.Result(data)
@@ -1126,15 +1156,16 @@ else
 		}
 	WndPane_ContextMenu(x, y)
 		{
-		if .Tabs.TabGetSelectedName() isnt 'Design'
+		if .Tabs.TabGetSelectedName() isnt #Design
 			return
 		.rc.ContextMenu(x, y)
 		}
+
 	subtotal?(field)
 		{
 		data = .Data.Get()
 		prompt = data[field]
-		if prompt is '' or not .rpt.GetSelectFields().HasPrompt?(prompt)
+		if prompt is "" or not .rpt.GetSelectFields().HasPrompt?(prompt)
 			return false
 		field = .rpt.GetSelectFields().PromptToField(prompt)
 		// TODO: also don't total unique indexes
@@ -1148,37 +1179,39 @@ else
 		ReporterViewDataControl(rpt[1], rpt.exclude, .rpt.GetSelectFields(), .Window.Hwnd)
 		}
 
-	import_export_type: 'report design '
-	filter: "Report Design (*.rpt)\x00*.rpt"
+	import_export_type: "report design "
+	filter:             "Report Design (*.rpt)\x00*.rpt"
 	On_Export_Report_Design()
 		{
 		data = .prepare_to_save()
-		data.Delete('reporter_permissions')
-		data.Delete('selectFields')
-		ImportExportObject.Export('Export Report Design', data,
+		data.Delete(#reporter_permissions)
+		data.Delete(#selectFields)
+		ImportExportObject.Export("Export Report Design", data,
 			.import_export_type $ .reporterMode, .filter, .Window.Hwnd,
 			name: data.report_name)
 		}
+
 	On_Import_Report_Design()
 		{
 		if not .dirtysave()
 			return
 		try
 			{
-			data = ImportExportObject.Import('Import Report Design',
+			data = ImportExportObject.Import("Import Report Design",
 				.import_export_type $ .reporterMode, .filter, .Window.Hwnd)
 			if data is false
 				return
 			// need to invalidate because it gets removed
 			// (in prepare_data method) from data when exporting
-			data.Invalidate('reporter_summarizeby_cols')
+			data.Invalidate(#reporter_summarizeby_cols)
 			.open_report(data, dirty:)
 			}
 		catch
-			Alert("An error occurred during the import. " $
-				"The import file may be invalid.\n" $
-				"Only reports exported from Reporter can be imported",
-				"Reporter", .Window.Hwnd, MB.ICONERROR)
+			Alert(
+				"An error occurred during the import. " $
+					"The import file may be invalid.\n" $
+					"Only reports exported from Reporter can be imported",
+				#Reporter, .Window.Hwnd, MB.ICONERROR)
 		}
 
 	Ok_to_CloseWindow?()
@@ -1203,14 +1236,14 @@ else
 		{ // so you can't close with ESC
 		}
 
-destroyAt: false
-destroyCS: ''
+	destroyAt: false
+	destroyCS: ""
 	Destroy()
 		{
 		if .printMode
 			.Window.RemoveValidationItem(this)
 		super.Destroy()
-.destroyAt = Date()
-.destroyCS = FormatCallStack(GetCallStack(limit: 20), levels: 20)
+		.destroyAt = Date()
+		.destroyCS = FormatCallStack(GetCallStack(limit: 20), levels: 20)
 		}
 	}

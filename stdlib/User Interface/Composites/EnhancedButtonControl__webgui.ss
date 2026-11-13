@@ -1,29 +1,27 @@
 // Copyright (C) 2019 Axon Development Corporation All rights reserved worldwide.
 ButtonControl
 	{
-	ComponentName: 'EnhancedButton'
-	New(.text = false, command = false,
-		tabover = false, .defaultButton = false, style/*unused*/ = 0,
-		tip = false, pad = false, font = "", size = "", weight = "", textColor = false,
-		.width = false, .buttonWidth = false, .buttonHeight = false,
-		italic = false, underline = false, strikeout = false,
-		.image = false, .mouseOverImage = false, .mouseDownImage = false,
-		.imageColor = false, .mouseOverImageColor = false,
-		.book = 'imagebook', .mouseEffect = false, .imagePadding = 0,
-		.buttonStyle = false, classic/*unused*/ = false, .noBgnd = false,
-		.enlargeOnHover = false, hidden = false)
+	ComponentName: #EnhancedButton
+	New(.text = false, command = false, tabover = false, .defaultButton = false,
+		style/*unused*/ = 0, tip = false, pad = false, font = "", size = "", weight = "",
+		textColor = false, .width = false, .buttonWidth = false, .buttonHeight = false,
+		italic = false, underline = false, strikeout = false, .image = false,
+		.mouseOverImage = false, .mouseDownImage = false, .imageColor = false,
+		.mouseOverImageColor = false, .book = #imagebook, .mouseEffect = false,
+		.imagePadding = 0, .buttonStyle = false, classic/*unused*/ = false,
+		.noBgnd = false, .enlargeOnHover = false, hidden = false)
 		{
-		super(.text is false ? 'EnhancedButton' : .text, command, :defaultButton, :tip,
+		super(.text is false ? #EnhancedButton : .text, command, :defaultButton, :tip,
 			:pad, :font, :size, :weight, color: .textColor = TranslateColor(textColor),
 			:italic, :underline, :strikeout, :hidden)
 		.buttonName = command
 
-		.ComponentArgs = Object(text, tabover, defaultButton, tip, pad,
+		.ComponentArgs = [text, tabover, defaultButton, tip, pad,
 			font, size, weight, .textColor, width, buttonWidth, buttonHeight,
 			italic, underline, strikeout,
 			.toCharCode(image), .toCharCode(.mouseOverImage),
 			.toCharCode(.mouseDownImage), imageColor, mouseOverImageColor, book,
-			mouseEffect, imagePadding, buttonStyle, enlargeOnHover)
+			mouseEffect, imagePadding, buttonStyle, enlargeOnHover]
 		}
 
 	toCharCode(img)
@@ -31,15 +29,15 @@ ButtonControl
 		if String?(img) and false isnt char = IconFont().MapToCharCode(img)
 			return char
 		if Object?(img)
-			return Object(IconFont().MapToCharCode(img[0]),
-				IconFont().MapToCharCode(img[1]),
-				img.GetDefault(#highlighted, 0), img.GetDefault(#gap, 1))
-		if String?(img) and img.Suffix?('.emf')
+			return [Object!(IconFont().MapToCharCode, img[0]),
+				Object!(IconFont().MapToCharCode, img[1]),
+				img.GetDefault(#highlighted, 0), img.GetDefault(#gap, 1)]
+		if String?(img) and img.Suffix?(".emf")
 			{
-			name = img.RemoveSuffix('emf') $ 'svg'
-			if false isnt rec = QueryFirst(.book $ ' where name is ' $ Display(name) $
-				' sort num')
-				img = rec.text[rec.text.Find('<svg')..]
+			name = img.RemoveSuffix("emf") $ "svg"
+			if false isnt
+				rec = QueryFirst(.book $ " where name is " $ Display(name) $ " sort num")
+				img = rec.text[rec.text.Find("<svg") ..]
 			}
 		return img
 		}
@@ -48,6 +46,7 @@ ButtonControl
 		{
 		return .image
 		}
+
 	SetImage(image, mouseOverImage = false, mouseDownImage = false)
 		{
 		.image = image
@@ -55,7 +54,7 @@ ButtonControl
 			.mouseOverImage = mouseOverImage
 		if mouseDownImage isnt false
 			.mouseDownImage = mouseDownImage
-		.Act('SetImage', .toCharCode(image),
+		.Act(#SetImage, .toCharCode(image),
 			.toCharCode(mouseOverImage),
 			.toCharCode(mouseDownImage))
 		}
@@ -64,7 +63,7 @@ ButtonControl
 		{
 		if mouseOverImageColor isnt false
 			.mouseOverImageColor = mouseOverImageColor
-		.Act('SetImageColor', imageColor, mouseOverImageColor)
+		.Act(#SetImageColor, imageColor, mouseOverImageColor)
 		}
 
 	GetImageColor()
@@ -76,9 +75,10 @@ ButtonControl
 		{
 		.SetText(text)
 		}
+
 	SetText(.text)
 		{
-		.Act('SetText', .text)
+		.Act(#SetText, .text)
 		}
 
 	pushed: false
@@ -87,7 +87,7 @@ ButtonControl
 		if state isnt -1 and state isnt .pushed
 			{
 			.pushed = state
-			.Act('Pushed?', state)
+			.Act(#Pushed?, state)
 			}
 		return .pushed
 		}
@@ -102,7 +102,7 @@ ButtonControl
 		return .textColor
 		}
 
-	gray: 0xaaaaaa
+	gray: 0xaa_aaaa
 	Grayed(state = -1)
 		{
 		if state isnt -1
@@ -119,6 +119,7 @@ ButtonControl
 	SyncPrevFocus(.prevFocusHwnd)
 		{
 		}
+
 	BeforeCallCommand()
 		{
 		if .prevFocusHwnd isnt false and .buttonStyle is false
@@ -127,14 +128,14 @@ ButtonControl
 
 	ContextMenu(x, y)
 		{
-		if 0 isnt .Send('EnhancedButton_ContextMenu', :x, :y)
+		if 0 isnt .Send(#EnhancedButton_ContextMenu, :x, :y)
 			return 0
 		return super.ContextMenu(x, y)
 		}
 
 	RBUTTONDOWN(r)
 		{
-		.Send('EnhancedRButtonDown', r)
+		.Send(#EnhancedRButtonDown, r)
 		}
 
 	GetButtonName()

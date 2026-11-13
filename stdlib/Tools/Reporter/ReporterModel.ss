@@ -1,10 +1,10 @@
 // Copyright (C) 2008 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	errMsg: ''
-	New(rpt = '', .defaultMode = 'simple')
+	errMsg: ""
+	New(rpt = "", .defaultMode = #simple)
 		{
-		if rpt is ''
+		if rpt is ""
 			{
 			.setEmpty()
 			return
@@ -12,7 +12,7 @@ class
 
 		if String?(rpt)
 			{
-			if false is x = Query1("params", report: rpt)
+			if false is x = Query1(#params, report: rpt)
 				{
 				.setEmpty()
 				.errMsg = "Reporter: Cannot find report. " $
@@ -27,16 +27,19 @@ class
 			rpt = "Reporter - " $ x.report_name
 			}
 		.reporterMode = x.GetDefault(#reporterMode, .defaultMode)
-		if x.heading1 is "" and .reporterMode is 'simple'
+		if x.heading1 is "" and .reporterMode is #simple
 			x.heading1 = PageHeadName()
 		.data = x
 		.source = GetCustomReportsSource(x.Source)
 		Assert(.source isnt false)
-		.source.Set_default('')
+		.source.Set_default("")
 		.SetQuery(.source)
 		if not Object?(x.columns.GetDefault(0, #())) // converted old reports
-			x.columns.Map!({Object(text: it, width: Reporter_datadict.GetWidth(.sf, it))})
-		.title = 'Reporter - ' $ x.report_name
+			x.columns.Map!(
+				{
+				Object(text: it, width: Reporter_datadict.GetWidth(.sf, it))
+				})
+		.title = "Reporter - " $ x.report_name
 		.save_name = rpt
 		}
 
@@ -106,19 +109,19 @@ class
 		.addSummaryByFields()
 		for i in .. Reporter.MaxSummarizeFields
 			{
-			if "" is (func = .data['summarize_func' $ i])
+			if "" is (func = .data["summarize_func" $ i])
 				continue
-			if func is "count"
-				.add_summarize_field("count", "Count", summaryFunc:)
+			if func is #count
+				.add_summarize_field(#count, #Count, summaryFunc:)
 			else
 				{
-				prompt = .data['summarize_field' $ i]
+				prompt = .data["summarize_field" $ i]
 				if prompt is "" or not .sf.HasPrompt?(prompt) or
 					not .func_map.Member?(func)
 					continue
 				field = .sf.PromptToField(prompt)
 				.add_summarize_field(.func_map[func] $ '_' $ field,
-					func.Capitalize() $ " " $ prompt, summaryFunc:)
+					func.Capitalize() $ ' ' $ prompt, summaryFunc:)
 				.summarize_joinfields.Add(field)
 				}
 			}
@@ -133,6 +136,7 @@ class
 				.summarize_joinfields.Add(.sf.PromptToField(prompt))
 				}
 		}
+
 	add_summarize_field(field, prompt, summaryFunc = false)
 		{
 		if .summarize_fields.Has?(field)
@@ -143,11 +147,12 @@ class
 		.summarize_fields.Add(field)
 		.sf.AddField(field, prompt)
 		}
+
 	design_cols_with_summarize()
 		{
 		cols = .summarize_cols.Copy()
 		.ForEachCalc()
-			{ |key /*unused*/, field|
+			{|key/*unused*/, field|
 			cols.AddUnique(field)
 			}
 		return cols
@@ -158,7 +163,7 @@ class
 		// don't allow user to pick formula field that contains summarized field
 		.nonsummarized_fields = Object()
 		.ForEachCalc()
-			{ |key /*unused*/, field, formula|
+			{|key/*unused*/, field, formula|
 			.sf.FormulaPromptsToFields(formula, fields = Object())
 			// does not contain summarized field
 			if not fields.Intersect(.summarize_fields).Empty?()
@@ -169,10 +174,11 @@ class
 	add_calc_fields()
 		{
 		.ForEachCalc()
-			{ |key, field|
-			.sf.AddField('calc' $ key, field)
+			{|key, field|
+			.sf.AddField("calc" $ key, field)
 			}
 		}
+
 	ForEachCalc(block)
 		{
 		for row in .data.formulas
@@ -180,7 +186,7 @@ class
 			field = row.calc.Trim()
 			formula = row.formula.Trim()
 			form_val = row.form_val
-			if field isnt '' and (formula isnt '' or form_val is true)
+			if field isnt "" and (formula isnt "" or form_val is true)
 				block(row.key, field, :formula, :row)
 			}
 		}
@@ -189,80 +195,97 @@ class
 		{
 		return .data.columns
 		}
+
 	GetData()
 		{
 		return .data
 		}
+
 	GetSelectFields()
 		{
 		return .sf
 		}
+
 	GetTitle()
 		{
 		return .reporterMode is #form
-			? .title.Replace('^Reporter', 'Reporter Form')
+			? .title.Replace("^Reporter", "Reporter Form")
 			: .title
 		}
+
 	GetReportTitle()
 		{
 		return .title
 		}
+
 	GetHeader()
 		{
-		return .reporterMode is 'simple'
-			? Object('PageHead', .data.heading2, title2: .data.heading1)
+		return .reporterMode is #simple
+			? [#PageHead, .data.heading2, title2: .data.heading1]
 			: false
 		}
+
 	GetFooter()
 		{
-		return .reporterMode is 'enhanced'
-			? ReporterFormat.LoadCanvasFromSavedData(.data.reporterCanvas, 'page_footer')
+		return .reporterMode is #enhanced
+			? ReporterFormat.LoadCanvasFromSavedData(.data.reporterCanvas, #page_footer)
 			: false
 		}
+
 	GetSaveName()
 		{
 		return .save_name
 		}
+
 	SetSaveName(name)
 		{
 		.save_name = .title = name
 		// TODO: get rid of one of this two
 		}
+
 	GetAllCols()
 		{
 		return .allcols
 		}
+
 	GetDesignCols()
 		{
 		return .design_cols
 		}
+
 	GetSummarizeFields()
 		{
 		return .summarize_fields
 		}
+
 	GetSummarizeFuncCols()
 		{
 		return .summarize_func_cols
 		}
+
 	GetNonSummarizedFields()
 		{
 		return .nonsummarized_fields
 		}
+
 	GetQuery()
 		{
 		return .query
 		}
+
 	GetKeys()
 		{
 		return .keys
 		}
+
 	GetSummarizeJoinFields()
 		{
 		return .summarize_joinfields
 		}
+
 	Clear()
 		{
-		.query = ''
+		.query = ""
 		.keys = #()
 		.sf = SelectFields()
 		.allcols = #()
@@ -272,8 +295,8 @@ class
 		.nonsummarized_fields = #()
 		.infoFields = Object()
 
-		.title = 'Reporter'
-		.save_name = ''
+		.title = #Reporter
+		.save_name = ""
 		}
 
 //====================================================================
@@ -282,28 +305,26 @@ class
 		{
 		.Valid? = true
 		try
-			{
 			return .checkAndBuildQuery(paramselects, :checkOnly)
-			}
-		catch (errs, 'Reporter:')
+		catch (errs, "Reporter:")
 			{
 			.Valid? = false
 
-			if errs =~ '; select tab:'
+			if errs =~ "; select tab:"
 				errs = errs.BeforeLast(';')
 			if quiet isnt true
-				Alert(errs.Replace('Reporter: ', ''), 'Reporter', 0, MB.ICONWARNING)
+				Alert(errs.Replace("Reporter: ", ""), #Reporter, 0, MB.ICONWARNING)
 			else
-				SuneidoLog('Error: ' $ errs, calls:)
+				SuneidoLog("Error: " $ errs, calls:)
 
 			// use a query that produces no results so we get an empty report
-			report = Object(ReporterFormat, 'tables where table is ""',
-				Columns: #(), Data: Record(), Sf: .sf, Totalfields: #(),
+			report = [ReporterFormat, 'tables where table is ""',
+				Columns: #(), Data: [], Sf: .sf, Totalfields: #(),
 				Countfields: #(), Minfields: #(), Maxfields: #(),
-				Averagefields: #(), Printsummaryfields: #(), exclude: #())
-			return Object(report, name: .title,
-				header: Object('PageHead', .data.heading1, title2: ''),
-				printParams: [], paramsdata: [])
+				Averagefields: #(), Printsummaryfields: #(), exclude: #()]
+			return [report, name: .title,
+				header: [#PageHead, .data.heading1, title2: ""],
+				printParams: [], paramsdata: []]
 			}
 		}
 
@@ -315,15 +336,15 @@ class
 
 	check_report()
 		{
-		if .query is ''
-			throw .errMsg isnt '' ? .errMsg : "Reporter: " $ Reporter.InvalidMsg()
-		if .source.Member?('validField')
+		if .query is ""
+			throw .errMsg isnt "" ? .errMsg : "Reporter: " $ Reporter.InvalidMsg()
+		if .source.Member?(#validField)
 			{
 			rec = .data.Copy()
 			rec.Invalidate(.source.validField)
 			errs = rec[.source.validField]
-			if errs isnt ''
-				throw 'Reporter: ' $ errs
+			if errs isnt ""
+				throw "Reporter: " $ errs
 			}
 		}
 
@@ -334,13 +355,11 @@ class
 		cols = .make_cols()
 		try
 			query = .make_query(cols, sort, paramselects, source, :checkOnly)
-		catch(err/*unused*/, 'Retry failed -|RetryTransaction: too many retries')
-			{
-			throw 'Reporter: there was a problem generating the report, please try again'
-			}
+		catch (err/*unused*/, "Retry failed -|RetryTransaction: too many retries")
+			throw "Reporter: there was a problem generating the report, please try again"
 		summaryObject = .make_sort_summary(data)
 
-		rpt = Object(.reporterMode is 'form' ? ReporterCanvasFormat : ReporterFormat,
+		rpt = [.reporterMode is #form ? ReporterCanvasFormat : ReporterFormat,
 			query, Columns: cols, Data: .data, Sf: .sf,
 			Totalfields: .sf.PromptsToFields(summaryObject.total),
 			Minfields: .sf.PromptsToFields(summaryObject.min),
@@ -349,114 +368,131 @@ class
 			Countfields: .sf.PromptsToFields(summaryObject.count),
 			Printsummaryfields: .sf.PromptsToFields(summaryObject.summary_prompt_cols),
 			Headertext: .data.header, Footertext: .data.footer,
-			exclude: .BuildExclude(source))
+			exclude: .BuildExclude(source)]
 
 		params = .params(.sf, .data.GetDefault(#select, []))
-		return Object(rpt, name: .title, header: .GetHeader(), footer: .GetFooter(),
+		return [rpt, name: .title, header: .GetHeader(), footer: .GetFooter(),
 			printParams: .printParams(params),
-			paramsdata: params.Copy().Add(.data.print_lines, at: 'PrintLines'))
+			paramsdata: params.Copy().Add(.data.print_lines, at: #PrintLines)]
 		}
+
 	GetSortCols()
 		{
-		sort = ''
+		sort = ""
 		for i in .. Reporter.SortRows
-			{
-			if .data['sort' $ i] is ''
+			if .data["sort" $ i] is ""
 				continue
-			else if .sf.HasPrompt?(.data['sort' $ i])
-				sort $= ', ' $ .sf.PromptToField(.data['sort' $ i])
+			else if .sf.HasPrompt?(.data["sort" $ i])
+				sort $= ", " $ .sf.PromptToField(.data["sort" $ i])
 			else
 				throw "Reporter: Invalid Sort; select tab: Sort"
-			}
-		return sort.Split(',').Filter({ |x| x isnt '' }).Map!(
-			{ Object(field: it.Trim(), prompt: .sf.FieldToPrompt(it.Trim())) })
+		return sort.
+			Split(',').
+			Filter({|x| x isnt "" }).
+			Map!({ Object(field: it.Trim(), prompt: .sf.FieldToPrompt(it.Trim())) })
 		}
+
 	make_sort()
 		{
-		sort = ''
+		sort = ""
 		for i in .. Reporter.SortRows
-			{
-			if .data['sort' $ i] is ''
+			if .data["sort" $ i] is ""
 				continue
-			else if .sf.HasPrompt?(.data['sort' $ i])
-				sort $= ', ' $ .sf.PromptToField(.data['sort' $ i])
+			else if .sf.HasPrompt?(.data["sort" $ i])
+				sort $= ", " $ .sf.PromptToField(.data["sort" $ i])
 			else
 				throw "Reporter: Invalid Sort; select tab: Sort"
-			}
-		sort = sort.Replace(',', ' sort' $
-			(.data.reverse is true ? ' reverse' : ''), 1)
+		sort = sort.Replace(',', " sort" $ (.data.reverse is true ? " reverse" : ""), 1)
 		return sort
 		}
+
 	make_cols()
 		{
 		cols = .valid_cols()
 		if cols.Empty?()
 			throw "Reporter: No valid columns in Design; select tab: Design"
-		cols.Map!({|c| Object(text: .sf.PromptToField(c.text),
-			width: c.GetDefault('width', false)) })
+		cols.Map!(
+			{|c|
+			Object(text: .sf.PromptToField(c.text),
+				width: c.GetDefault(#width, false))
+			})
 		return cols
 		}
+
 	valid_cols()
 		{
 		cols = .data.columns.Copy()
 		cols.RemoveIf({|c| not .design_cols.Has?(c.text) })
 		return cols
 		}
+
 	make_extend(formula_fields, where, checkOnly = false)
 		{
 		if not .failedConverts.Empty?()
-			throw 'Reporter: No permission to the following fields:\r\n ' $
-				.failedConverts.Map!(Datadict.PromptOrHeading).Join(', ')
+			throw "Reporter: No permission to the following fields:\r\n " $
+				.failedConverts.Map!(Datadict.PromptOrHeading).Join(", ")
 
 		return Reporter_make_extend(.data, .sf, .ForEachCalc, formula_fields, where,
 			.summarize_by_fields(.data), .summarize_fields, :checkOnly)
 		}
+
 	summarize_by_fields(data)
 		{
 		return data.summarize_by.Split(',').Map!(.summary_field_from_prompt)
 		}
+
 	make_query(cols, sort, paramselects, source = false, checkOnly = false)
 		{
 		menuParams = .preProcessMenuParams(paramselects)
 		exclude_menu_options = menuParams.paramselects.NotEmpty?()
 		extends = .make_extend(formula_fields = Object(), formula_where = Object(),
 			:checkOnly)
-		where = Select2(.sf).Where(.data.GetDefault('select', []),
-			except: .summarize_fields.Copy().MergeUnion(formula_where),
-			extra_dd: .calc_dd(), :exclude_menu_options)
+		where = Select2(.sf).
+			Where(.data.GetDefault(#select, []),
+				except: .summarize_fields.Copy().MergeUnion(formula_where),
+				extra_dd: .calc_dd(), :exclude_menu_options)
 		.menu_params_extend(extends, menuParams.paramselects)
 		joinflds = where.joinflds.MergeUnion(menuParams.options)
 		joinfields = Flatten(
-			cols.Map({ it.text }),
-			sort.Replace('sort ','').Replace('reverse ', '').Split(','),
-			joinflds,
-			formula_fields,
-			.summarize_joinfields).Join(',')
+				cols.Map({ it.text }),
+				sort.Replace("sort ", "").Replace("reverse ", "").Split(','),
+				joinflds,
+				formula_fields,
+				.summarize_joinfields).
+			Join(',')
 
-		joinob = .sf.JoinsOb(joinfields, withDetails?:)
-
-		query = .tableHint(joinob, source) $
-			'(' $ BuildQueryJoin(.query, joinob) $  ')\n' $
-			Reporter_extend_info.Extend(.infoFields, joinfields) $ '\n' $
-			extends[0] $ '\n' $
-			where.where $ '\n' $
-			.menu_paramswhere_before_summarize(menuParams) $ '\n' $
+		rptSource = .source
+		if .source.Empty?() and source isnt false
+			rptSource = source
+		query = .MakeQuery(rptSource, .sf, .query, .infoFields,
+				joinfields, .summarize_joinfields) $ extends[0] $ '\n' $ where.where $
+			'\n' $ .menu_paramswhere_before_summarize(menuParams) $ '\n' $
 			.menu_params_calc_where_before_summarize(menuParams.paramselects, extends[1],
-				.summarize_fields) $ '\n' $
-			.make_summarize() $ '\n' $
-			extends[1] $ '\n' $
-			Select2(.sf).Where(.data.GetDefault(#select, []), formula_where,
-				extra_dd: .calc_dd()).where $ '\n' $
-			Select2(.sf).Where(.data.GetDefault(#select, []), .summarize_fields,
-				extra_dd: .calc_dd()).where $ '\n' $
+				.summarize_fields) $ '\n' $ .make_summarize() $ '\n' $ extends[1] $ '\n' $
+			Select2(.sf).
+				Where(.data.GetDefault(#select, []), formula_where,
+					extra_dd: .calc_dd()).where $ '\n' $
+			Select2(.sf).
+				Where(.data.GetDefault(#select, []), .summarize_fields,
+					extra_dd: .calc_dd()).where $ '\n' $
 			.menu_paramswhere_after_summarize(menuParams.paramselects) $ '\n' $
 			.menu_params_calc_where(menuParams.paramselects, extends[1],
-				.summarize_fields) $
-			sort
+				.summarize_fields) $ sort
 		// TODO: don't allow user to sort by columns that aren't in summary or not
 		// in extends after the summary (only if they are using summary option)
 		Reporter_query.CheckQuery(query)
 		return query
+		}
+
+	MakeQuery(source, sf, query, infoFields, joinfields = false,
+		summarize_joinfields = #())
+		{
+		if joinfields is false
+			joinfields = sf.Fields
+		joinob = sf.JoinsOb(joinfields, withDetails?:)
+		return .tableHint(query, joinob, source, summarize_joinfields) $ '(' $
+			BuildQueryJoin(query, joinob) $ ")\n" $
+			Reporter_extend_info.Extend(infoFields, joinfields) $ '\n'
 		}
 
 	preProcessMenuParams(paramselects)
@@ -473,13 +509,13 @@ class
 				? field $ .param_field_suffix
 				: paramselects.Member?(field)
 					? field
-					: ''
+					: ""
 
-			if paramField is ''
+			if paramField is ""
 				continue
 
 			param = paramselects[paramField]
-			if not Object?(param) or '' is param.GetDefault(#operation, '')
+			if not Object?(param) or "" is param.GetDefault(#operation, "")
 				continue
 
 			field = .convertNameAbbrevToNum(field, param, fields, paramselects)
@@ -490,9 +526,9 @@ class
 
 	convertParamSelectsField(field, paramselects)
 		{
-		if not field.Suffix?("?")
+		if not field.Suffix?('?')
 			return
-		fd = field.RemoveSuffix("?") $ .param_field_suffix
+		fd = field.RemoveSuffix('?') $ .param_field_suffix
 		if not paramselects.Member?(fd)
 			return
 		paramselects[field $ .param_field_suffix] = paramselects[fd]
@@ -508,28 +544,25 @@ class
 			return field
 
 		paramselects[joinNums.numField] = joinNums.nums.Empty?()
-			? [operation: 'less than', value: '', value2: '']
-			: [operation: 'in list', value: joinNums.nums, value2: '']
+			? [operation: "less than", value: "", value2: ""]
+			: [operation: "in list", value: joinNums.nums, value2: ""]
 		fields.Replace(field, joinNums.numField)
 		return joinNums.numField
 		}
 
-	tableHint(joinob, source)
+	tableHint(query, joinob, rptSource, summarize_joinfields)
 		{
-		if .query.Has?('/* tableHint: ')
-			return ''
+		if query.Has?("/* tableHint: ")
+			return ""
 
-		rptSource = .source
-		if .source.Empty?() and source isnt false
-			rptSource = source
-		tables = rptSource.GetDefault('tables', #())
+		tables = rptSource.GetDefault(#tables, #())
 		if not tables.Empty?()
-			return '/* tableHint: ' $ tables[0] $ ' */ '
+			return "/* tableHint: " $ tables[0] $ " */ "
 
-		tableHint = ''
+		tableHint = ""
 		// call QueryGetTable to make sure that query is not a complex query
-		if not joinob.Empty?() or not .summarize_joinfields.Empty?()
-			tableHint = '/* tableHint: ' $ QueryGetTable(.query) $ ' */ '
+		if not joinob.Empty?() or not summarize_joinfields.Empty?()
+			tableHint = "/* tableHint: " $ QueryGetTable(query) $ " */ "
 		return tableHint
 		}
 
@@ -539,26 +572,29 @@ class
 			if .calc_field?(field) and not Object?(paramselects[field])
 				for i in extends.Members()
 					if extends[i].Has?(field)
-						extends[i] = extends[i].Replace('extend ' $ field $ ' = .*\n',
-							'extend ' $ field $ ' = ' $
-								Display(paramselects[field]) $ '\n')
-
+						extends[i] = extends[i].Replace("extend " $ field $ " = .*\n",
+							"extend " $ field $ " = " $ Display(paramselects[field]) $
+								'\n')
 		}
+
 	menu_paramswhere_before_summarize(menuParams)
 		{
 		fields = menuParams.fields.Difference(.summarize_fields)
 		return .menu_paramswhere(fields, menuParams.paramselects)
 		}
+
 	menu_paramswhere_after_summarize(paramselects)
 		{
 		return .menu_paramswhere(.summarize_fields.Copy(), paramselects)
 		}
+
 	menu_paramswhere(args, paramselects)
 		{
 		args.data = paramselects
 		args.no_encode = true
 		return GetParamsWhere(@args)
 		}
+
 	menu_params_calc_where_before_summarize(paramselects, extends, summarize_fields)
 		{
 		fields = Object()
@@ -567,8 +603,9 @@ class
 				(not summarize_fields.Has?(field) and not extends.Has?(field))
 				fields.AddUnique(field)
 
-		return fields.Empty?() ? '' : .menu_paramswhere(fields, paramselects)
+		return fields.Empty?() ? "" : .menu_paramswhere(fields, paramselects)
 		}
+
 	menu_params_calc_where(paramselects, extends, summarize_fields)
 		{
 		fields = Object()
@@ -577,56 +614,59 @@ class
 				(summarize_fields.Has?(field) or extends.Has?(field))
 				fields.AddUnique(field)
 
-		return fields.Empty?() ? '' : .menu_paramswhere(fields, paramselects)
+		return fields.Empty?() ? "" : .menu_paramswhere(fields, paramselects)
 		}
+
 	calc_dd()
 		{
 		dd = Object()
 		.ForEachCalc()
-			{ |key, field /*unused*/|
+			{|key, field/*unused*/|
 			type = .formulaDataType(key)
 			if false isnt fieldDD = Reporter_datadict.GetCalcDD(type)
-				dd['calc' $ key] = fieldDD
+				dd["calc" $ key] = fieldDD
 			}
 		return dd
 		}
+
 	calc_field?(fd)
 		{
 		return fd =~ .Calc_prefix
 		}
+
 	GetFormulaType(fd)
 		{
 		if not .calc_field?(fd)
-			return ''
-		key = fd.AfterLast('calc')
+			return ""
+		key = fd.AfterLast(#calc)
 		return .formulaDataType(key)
 		}
 
 	formulaDataType(key)
 		{
 		idx = .data.formulas.FindIf({ it.key is key })
-		return .data.formulas[idx].GetDefault('type', 'Unknown')
+		return .data.formulas[idx].GetDefault(#type, #Unknown)
 		}
 
-	func_map: (total: 'total', average: 'average', maximum: max, minimum: min)
+	func_map: (total: total, average: average, maximum: max, minimum: min)
 	make_summarize()
 		{
 		summarize = .summarize_by_fields(.data)
 		nby = summarize.Size()
 		for i in .. Reporter.MaxSummarizeFields
 			{
-			if "" is func = .data['summarize_func' $ i]
+			if "" is func = .data["summarize_func" $ i]
 				continue
-			prompt = .data['summarize_field' $ i]
-			if func is "count"
-				summarize.Add("count")
+			prompt = .data["summarize_field" $ i]
+			if func is #count
+				summarize.Add(#count)
 			else if prompt isnt ""
 				summarize.Add(.func_map[func] $ ' ' $ .summary_field_from_prompt(prompt))
 			}
 		op = summarize.Size() is nby
-			? 'project /*CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/'
-			: 'summarize'
-		return summarize.Empty?() ? '' : op $ ' ' $ summarize.Join(',')
+			? "project /*CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/"
+			: #summarize
+		return summarize.Empty?() ? "" : op $ ' ' $ summarize.Join(',')
 		}
 
 	summary_field_from_prompt(prompt)
@@ -644,10 +684,10 @@ class
 		for item in data.coloptions.Members()
 			if .design_cols.Has?(item)
 				{
-				if data.coloptions[item].Member?('print_summary_prompts') and
+				if data.coloptions[item].Member?(#print_summary_prompts) and
 					data.coloptions[item].print_summary_prompts is true
 					sortSummaryObject.summary_prompt_cols.Add(item)
-				for sortSummaryItem in #('total', 'min', 'max', 'average', 'count')
+				for sortSummaryItem in #(total, min, max, average, count)
 					if data.coloptions[item].Member?(sortSummaryItem)
 						if data.coloptions[item][sortSummaryItem] is true
 							sortSummaryObject[sortSummaryItem].Add(item)
@@ -655,30 +695,29 @@ class
 		return sortSummaryObject
 		}
 
-	Calc_prefix: '^calc\d|^total_calc\d|^max_calc\d|^min_calc\d|^average_calc\d'
+	Calc_prefix: "^calc\d|^total_calc\d|^max_calc\d|^min_calc\d|^average_calc\d"
 	printParams(params)
 		{
-		return params.Members().
-			Map!({ |fd| .calc_field?(fd) ? .sf.FieldToPrompt(fd) : fd })
+		return params.
+			Members().
+			Map!({|fd| .calc_field?(fd) ? .sf.FieldToPrompt(fd) : fd })
 		}
+
 	params(sf, sel)
 		{
 		params = Object()
 		for (i = 0; i < Select2Control.Numrows; ++i)
-			{
-			if sel['checkbox' $ i] is true and
-				sel['oplist' $ i] isnt "" and sel['fieldlist' $ i] isnt "" and
-				sel['print' $ i] is true
+			if sel["checkbox" $ i] is true and sel["oplist" $ i] isnt "" and
+				sel["fieldlist" $ i] isnt "" and sel["print" $ i] is true
 				{
-				if false is field = sf.PromptToField(sel['fieldlist' $ i])
-					throw 'Reporter: Invalid field in Select'
+				if false is field = sf.PromptToField(sel["fieldlist" $ i])
+					throw "Reporter: Invalid field in Select"
 				if .calc_field?(field)
-					field = sel['fieldlist' $ i]
+					field = sel["fieldlist" $ i]
 
-				.format_params(params, field, sel['oplist' $ i], sel['val' $ i], i)
+				.format_params(params, field, sel["oplist" $ i], sel["val" $ i], i)
 				}
-			}
-		return params.Set_default('')
+		return params.Set_default("")
 		}
 
 	format_params(params, field, op, value, i)
@@ -694,42 +733,42 @@ class
 		{
 		if report is false
 			report = .Report(:quiet, :checkOnly)
-		reporterOb = Object('Params',
-			Object(.reporterMode is 'form' ? 'ReporterCanvasFormat' : 'ReporterFormat',
-				.save_name),
+		reporterOb = [#Params,
+			[.reporterMode is #form ? #ReporterCanvasFormat : #ReporterFormat,
+				.save_name],
 			Params: .menu_params(:checkOnly),
 			printParams: .Menu_print_params(),
-			header: .reporterMode is 'form'
+			header: .reporterMode is #form
 				? false
-				: report.GetDefault('header', false)
-			name: report.name.Replace('Reporter', 'Reporter Report'),
+				: report.GetDefault(#header, false),
+			name: report.name.Replace(#Reporter, "Reporter Report"),
 			title: .data.report_name,
-			disableFieldProtectRules:)
-		if false isnt footer = report.GetDefault('footer', false)
+			disableFieldProtectRules:]
+		if false isnt footer = report.GetDefault(#footer, false)
 			reporterOb.footer = footer
 		// form needs to set header to false to avoid printing any headers
-		if noHeader and .reporterMode isnt 'form'
-			reporterOb.Delete('header')
+		if noHeader and .reporterMode isnt #form
+			reporterOb.Delete(#header)
 		return reporterOb
 		}
 
 	menu_params(checkOnly = false)
 		{
 		sel = .data.GetDefault(#select, [])
-		params = Object('Vert')
+		params = [#Vert]
 		for (i = 0; i < Select2Control.Numrows; ++i)
 			{
-			prompt = sel['fieldlist' $ i]
-			if prompt isnt "" and sel['menu_option' $ i] is true
+			prompt = sel["fieldlist" $ i]
+			if prompt isnt "" and sel["menu_option" $ i] is true
 				.addFieldParam(prompt, params, :checkOnly)
 			}
 		.addFormulaParams(params)
-		if .data.report_description isnt ''
-			params.Add('Skip', Object('StaticWrap', .data.report_description))
-		params.Add('Skip',
-			#('Static',
-				'Note:  There may be additional Select options in Reporter.',
-				weight: 'bold'))
+		if .data.report_description isnt ""
+			params.Add(#Skip, [#StaticWrap, .data.report_description])
+		params.Add(#Skip,
+			#(Static,
+				"Note:  There may be additional Select options in Reporter.",
+				weight: bold))
 		return params
 		}
 
@@ -747,16 +786,16 @@ class
 			paramField = Object?(field) or .calc_field?(field)
 				? field
 				: .getParamField(field, originalField, prompt, :checkOnly)
-			params.Add(Object('ParamsSelect', paramField))
+			params.Add([#ParamsSelect, paramField])
 			}
 		}
 
 	getParamField(field, originalField, prompt, checkOnly = false)
 		{
 		baseField = originalField
-		prefix = ''
-		suffix = ''
-		if baseField.BeforeFirst('_') in ('total', 'min', 'max', 'average')
+		prefix = ""
+		suffix = ""
+		if baseField.BeforeFirst('_') in (#total, #min, #max, #average)
 			{
 			baseField = baseField.AfterFirst('_')
 			prefix = prompt.BeforeFirst(' ')
@@ -765,26 +804,26 @@ class
 		if baseField.Prefix?(Reporter_extend_info.Prefix)
 			{
 			suffix = baseField.AfterLast('_')
-			baseField = baseField.RemovePrefix(Reporter_extend_info.Prefix).
-				BeforeLast('_')
-			promptMethod = 'Reporter_extend_info.PrefixPrompt'
+			baseField =
+				baseField.RemovePrefix(Reporter_extend_info.Prefix).BeforeLast('_')
+			promptMethod = "Reporter_extend_info.PrefixPrompt"
 			}
 		else
 			{
 			if false isnt numField = .sf.GetJoinNumField(baseField)
 				{
-				suffix = prompt.Suffix?('Name')
-					? 'Name'
-					: prompt.Suffix?('Abbrev')
-						? 'Abbrev'
-						: ''
+				suffix = prompt.Suffix?(#Name)
+					? #Name
+					: prompt.Suffix?(#Abbrev)
+						? #Abbrev
+						: ""
 				baseField = numField
 				}
 
-			promptMethod = not baseField.Prefix?('custom_') or
+			promptMethod = not baseField.Prefix?(#custom_) or
 				prompt.Has?(SelectPrompt(baseField))
-				? 'SelectPrompt'
-				: 'Prompt'
+				? #SelectPrompt
+				: #Prompt
 			}
 
 		return .buildParam(field, [:baseField, :promptMethod, :prefix, :suffix],
@@ -800,15 +839,15 @@ class
 	addFormulaParams(params)
 		{
 		.ForEachCalc()
-			{ |key, field /*unused*/, row|
+			{|key, field/*unused*/, row|
 			formula = row
 			if formula.form_val is true
-				params.Add(Object('Pair', Object('Static', formula.calc),
-					.calc_param('calc' $ key, formula.calc)))
+				params.Add([#Pair, [#Static, formula.calc],
+					.calc_param("calc" $ key, formula.calc)])
 			}
 		}
 
-	param_field_suffix: '_param'
+	param_field_suffix: "_param"
 	MakeDD(field, prompt, baseType)
 		{
 		return Reporter_datadict.MakeDD(field, prompt, baseType)
@@ -820,9 +859,9 @@ class
 		fields = Object()
 		for (i = 0; i < Select2Control.Numrows; ++i)
 			{
-			prompt = sel['fieldlist' $ i]
-			if prompt isnt "" and sel['menu_option' $ i] is true and
-				sel['print' $ i] is true
+			prompt = sel["fieldlist" $ i]
+			if prompt isnt "" and sel["menu_option" $ i] is true and
+				sel["print" $ i] is true
 				{
 				if false is field = .sf.PromptToField(prompt)
 					continue
@@ -831,12 +870,14 @@ class
 						paramFormat: .getCalcFormat(prompt))
 				else
 					param = .abbrev_to_num_field(field,
-						.sf.GetConverted()).RemoveSuffix('?') $ .param_field_suffix
+								.sf.GetConverted()).
+							RemoveSuffix('?') $ .param_field_suffix
 				fields.Add(param)
 				}
 			}
 		return fields
 		}
+
 	getCalcFormat(prompt)
 		{
 		if false is calc = .getCalcField(prompt, .data)
@@ -844,16 +885,15 @@ class
 
 		paramFormat = false
 		for c in CustomFieldTypes(reporter:)
-			{
 			if calc.type is c.name
 				{
 				type = .formulaDataType(calc.key)
 				paramFormat = Reporter_datadict.GetCalcDef(type, c)
 				break
 				}
-			}
 		return paramFormat
 		}
+
 	getCalcField(prompt, data)
 		{
 		if "" is formulas = data.formulas
@@ -865,28 +905,29 @@ class
 		if false is pos = data.summarize_func_cols.Find(prompt)
 			return false
 
-		val = data['summarize_field' $ pos]
+		val = data["summarize_field" $ pos]
 		if false isnt idx = formulas.FindIf({ it.calc is val })
 			return formulas[idx]
 
 		return false
 		}
+
 	Menu_params_fields()
 		{
 		sel = .data.GetDefault(#select, [])
 		fields = Object()
 		for (i = 0; i < Select2Control.Numrows; ++i)
-			if sel['fieldlist' $ i] isnt "" and sel['menu_option' $ i] is true
-				if false isnt field = .sf.PromptToField(sel['fieldlist' $ i])
-					fields[.abbrev_to_num_field(field, .sf.GetConverted())] = ''
+			if sel["fieldlist" $ i] isnt "" and sel["menu_option" $ i] is true
+				if false isnt field = .sf.PromptToField(sel["fieldlist" $ i])
+					fields[.abbrev_to_num_field(field, .sf.GetConverted())] = ""
 		return .printParams(fields)
 		}
 
 	abbrev_to_num_field(field, convertedob = #())
 		{
-		if field.Suffix?('_abbrev') or field.Has?('_abbrev_')
+		if field.Suffix?("_abbrev") or field.Has?("_abbrev_")
 			{
-			numField = field.Replace('_abbrev', '_num')
+			numField = field.Replace("_abbrev", "_num")
 			if convertedob.Member?(field)
 				numField = convertedob[field]
 			if Reporter_query.HasColumn?(.query, numField)
@@ -898,7 +939,7 @@ class
 
 	calc_param(field, prompt)
 		{
-		idx = .data.formulas.FindIf({ it.key is field.Extract('\d\d*')})
+		idx = .data.formulas.FindIf({ it.key is field.Extract("\d\d*") })
 		type = .data.formulas[idx].type
 		ctrl = false
 		for c in CustomFieldTypes(reporter:)

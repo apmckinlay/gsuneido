@@ -5,20 +5,20 @@ RackComposeBase
 		{
 		if -1 is result = .App(:env)
 			return result
-		result = RackServer.ResultOb(result)
-		headers = Object()
-		for field in result[1].Members()
-			HttpResponse.ResponseHeaderField(field, result[1][field], headers)
-		.setDefaultResponseHeaders(headers)
-		return [result[0], headers, result[2]]
+		code, headers, content = RackServer.Result(result)
+		newHeaders = Object()
+		for field in headers.Members()
+			HttpResponse.ResponseHeaderField(field, headers[field], newHeaders)
+		.setDefaultResponseHeaders(newHeaders)
+		return [code, newHeaders, content]
 		}
 
 	setDefaultResponseHeaders(headers)
 		{
 		date = .date()
-		.setIfNotExist(headers, 'Expires', date)
-		.setIfNotExist(headers, 'Last-Modified', date)
-		.setIfNotExist(headers, 'Cache-Control', 'no-cache')
+		.setIfNotExist(headers, #Expires, date)
+		.setIfNotExist(headers, "Last-Modified", date)
+		.setIfNotExist(headers, "Cache-Control", "no-cache")
 		}
 
 	// for testing

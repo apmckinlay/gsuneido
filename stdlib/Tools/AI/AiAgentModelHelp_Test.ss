@@ -19,7 +19,7 @@ Test
 		models = #("deepseek/deepseek-v4.1-flash": [context: "1M", in: .15, out: .60])
 		ctrl = control(models)
 		text = modelHelpText(models)
-		Assert(ctrl[1].width is: text.Lines().Map(#Size).Max() + 2 /*= control margins */)
+		Assert(ctrl[1].width is: text.Lines().Map(#Size).Max() + 3 /*= control margins */)
 		// header + dashes + one model + blank + note
 		Assert(ctrl[1].height is: 4)
 		}

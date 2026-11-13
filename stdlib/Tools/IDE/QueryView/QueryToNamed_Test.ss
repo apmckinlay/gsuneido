@@ -19,6 +19,6 @@ Test
 
 		test("tables join columns")(false)
 		test("tables project table")(false)
-		test("tables where nrows = totalsize")(false)
+		test("columns where table = column")(false)
 		}
 	}

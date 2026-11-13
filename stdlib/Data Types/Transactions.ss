@@ -124,7 +124,7 @@ class
 		if limit is false
 			{
 			// sort in memory
-			sort = QueryGetSort(args.query)
+			sort = Query.GetSort(args.query)
 			if reverse = sort.Prefix?("reverse ")
 				sort = sort.RemovePrefix("reverse ")
 			sort = sort.Split(',')

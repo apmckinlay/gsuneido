@@ -204,6 +204,9 @@ AstFmtObject
 		c = .Fmt(node.cond, ectx, curr)
 		t = .Fmt(node.t, ectx, curr)
 		f = .Fmt(node.f, ectx, curr)
+		// preserve an author's line breaks between cond/t/f
+		if .Style.TrinaryBrokeInSrc?(node)
+			return .Cat(c, .Nest(.Cat(.Hard, "? ", t, .Hard, ": ", f)))
 		return .Group(.Cat(c, .Nest(.Cat(.Line, "? ", t, .Line, ": ", f))))
 		}
 

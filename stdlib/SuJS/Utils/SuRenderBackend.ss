@@ -36,9 +36,12 @@ class
 		.warnActionSize = OptContribution(#WarnSuJsActionSize, 43_000 /*= 2/3 of 64_000*/)
 
 		.eventRecorder = new EventRecorder()
+		.allowedGlobals = GetContributions(#SuJsGlobals)
 		}
 
-	SetTimeoutMin(.timeoutMin) { }
+	SetTimeoutMin(.timeoutMin)
+		{
+		}
 
 	AddLog(log)
 		{
@@ -280,10 +283,10 @@ class
 	handleEvent(uniqueId, event, args)
 		{
 		.LastEvent(Date())
-		if uniqueId is false
-			Global(event)(@args)
-		else
+		if uniqueId isnt false
 			.CallProc(uniqueId, event, args)
+		else if .allowedGlobals.Has?(event)
+			Global(event)(@args)
 		}
 
 	CallProc(uniqueId, event, args = #{})

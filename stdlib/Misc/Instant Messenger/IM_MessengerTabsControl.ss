@@ -6,15 +6,16 @@ TabsControl
 		{
 		super(@args)
 		.home = .GetControl(0)
-		.SetImageList(Object(.unreadMessageImage()))
+		.SetImageList([.unreadMessageImage()])
 		}
 
 	unreadMessageImage()
 		{
-		codeOb = IconFont().MapToCharCode(#document)
+		codeOb = Object!(IconFont().MapToCharCode, #document,
+			assertReason: 'IconFont "document" should exist')
 		return Sys.SuneidoJs?()
 			? Object(char: codeOb.char, font: codeOb.font, color: #black)
-			: Object(ImageFont(codeOb.char, codeOb.font), CLR.BLACK)
+			: [ImageFont(codeOb.char, codeOb.font), CLR.BLACK]
 		}
 
 	Startup()
@@ -26,8 +27,8 @@ TabsControl
 		activeChannels = IM_MessengerManager.GetActiveChannelsListByNum()
 		toRemove = Object()
 		.forEachTab()
-			{ |i, data|
-			if data.imchannel_num isnt ''
+			{|i, data|
+			if data.imchannel_num isnt ""
 				{
 				newName = IM_MessengerManager.GetChannelNameFromNum(data.imchannel_num)
 				if not activeChannels.Has?(data.imchannel_num)
@@ -42,7 +43,7 @@ TabsControl
 	ChannelOpen?(num)
 		{
 		.forEachTab()
-			{ |data|
+			{|data|
 			if data.imchannel_num is num
 				return true
 			}
@@ -51,7 +52,7 @@ TabsControl
 
 	forEachTab(block)
 		{
-		for (i = .tabPosOffset; i < .GetAllTabCount(); i++)
+		for (i = .tabPosOffset; i < .GetAllTabCount(); i += 1)
 			block(ctrl: .GetControl(i), :i, data: .GetTabData(i))
 		}
 
@@ -62,7 +63,7 @@ TabsControl
 		.SetUnread(true, i)
 		}
 
-	OpenTab(name, channelNum = '', noSelect = false)
+	OpenTab(name, channelNum = "", noSelect = false)
 		{
 		if false isnt i = .FindTab(name)
 			{
@@ -71,7 +72,7 @@ TabsControl
 			return i
 			}
 
-		.Insert(name, Object('IM_MessengerConversation', channelNum, Tab: name),
+		.Insert(name, [#IM_MessengerConversation, channelNum, Tab: name],
 			data: [imchannel_num: channelNum, pendingMessages: Object()],
 			:noSelect)
 		return .GetAllTabCount() - 1
@@ -86,14 +87,14 @@ TabsControl
 	GetTabName(source)
 		{
 		if false is i = .findControl(source)
-			return '???'
+			return "???"
 		return .TabName(i)
 		}
 
 	findControl(target)
 		{
 		.forEachTab()
-			{ |ctrl, i|
+			{|ctrl, i|
 			if Same?(ctrl, target)
 				return i
 			}
@@ -143,7 +144,7 @@ TabsControl
 
 	SelectByName(name)
 		{
-		if  false is i = .FindTab(name)
+		if false is i = .FindTab(name)
 			return
 
 		if .TabGetSelectedName() isnt name

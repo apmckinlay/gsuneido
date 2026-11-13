@@ -26,7 +26,7 @@ If nbytes is specified and it hits eof before reading the full amount then it is
 See also:
 [file.CopyTo](<../File/file.CopyTo.md>),
 [HttpClient2](<../HttpClient2.md>),
-HttpsClient,
+[HttpsClient](<../HttpsClient.md>),
 [HttpServer](<../HttpServer.md>),
 pipe.CopyTo,
 [socketClient.CopyTo](<../SocketClient/socketClient.CopyTo.md>),

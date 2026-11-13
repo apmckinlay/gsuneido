@@ -19,12 +19,10 @@ class
 			return cmdline
 			}
 		if token is false
-			{
-			return cmdline.Has?('_UpdateClientCopies') and cmdline.Has?('shortcutName')
+			return cmdline.Has?("_UpdateClientCopies") and cmdline.Has?(#shortcutName)
 				? cmdline
-				: "Login(origCmd:" $ Display(cmdline) $ ")"
-			}
-		Suneido.defaultLoginReason = 'token supplied'
+				: "Login(origCmd:" $ Display(cmdline) $ ')'
+		Suneido.defaultLoginReason = "token supplied"
 		if .authorize(.decodeToken(token))
 			return cmdline
 		.fatal("command line authorization failed")
@@ -38,9 +36,9 @@ class
 	authorized?()
 		{
 		try
-			ServerEval('Date')
+			Database.Check()
 		catch (unused, "not authorized")
-			return false
+			return NewAuth?() ? Database.Auth(#default, "") : false
 		return true
 		}
 
@@ -69,11 +67,11 @@ class
 
 	AddTokenToCmdLine(cmd)
 		{
-		return ' t:' $ Base64.Encode(.token()) $ Opt(' ', cmd.Trim())
+		return " t:" $ Base64.Encode(.token()) $ Opt(' ', cmd.Trim())
 		}
 
 	token() // overridden by test
 		{
-		return Database.Token()
+		return NewAuth?() ? Auth.Token() : Database.Token()
 		}
 	}

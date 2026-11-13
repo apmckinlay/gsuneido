@@ -23,6 +23,13 @@ Test
 			Suneido.AstFormatter_Test.Add(m $ ": " $ err)
 		}
 
+	UnitTest_nestedConstants()
+		{
+		// Objects_Test uses twelve nested objects to test nesting limits.
+		.t("x = #((((((((((((1))))))))))))")
+		.t("x = #((/* outer */ (1, 2)), ((3)))")
+		}
+
 	UnitTest_expressions()
 		{
 		.t("123")
@@ -121,6 +128,20 @@ Test
 				"fourthOperandName + fifthOperandName",
 			"total = firstOperandName + secondOperandName + thirdOperandName + " $
 				"fourthOperandName +\n\t\tfifthOperandName")
+		}
+
+	UnitTest_trinaryBreaks()
+		{
+		// an author's line breaks between cond/t/f of a ternary are preserved
+		.t("x = a ?\n\tb\n\t: c",
+			"x = a\n\t\t? b\n\t\t: c")
+		// a single-line ternary stays single-line
+		.t("x = a ? b : c")
+		// a long ternary that needs breaking still breaks at ? :
+		.t("d = ctx.lastStatement is true ? .FormatNode(node.expr, ctx) : " $
+				".FormatExpr(node.expr, ctx)",
+			"d = ctx.lastStatement is true\n\t\t? .FormatNode(node.expr, ctx)\n\t\t" $
+				": .FormatExpr(node.expr, ctx)")
 		}
 
 	UnitTest_statements()
@@ -380,6 +401,12 @@ Test
 			wrap: false)
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\tX: 1\n\t}",
 			"class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\tX: 1\n\t}", wrap: false)
+		// trailing comments do not preserve a blank before the class close
+		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\t// trailing\n\n\t}",
+			"class\n\t{\n\tF()\n\t\t{\n\t\t}\n\t// trailing\n\t}", wrap: false)
+		// blank lines around a floating comment between methods still survive
+		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\t// floating\n\n" $
+				"\tG()\n\t\t{\n\t\t}\n\t}", wrap: false)
 		.t("Base\n\t{\n\tOp: (a: 1, b: 2)\n\t}", wrap: false)
 		// scalar members align into a value column; longest key sets the width
 		.t("class\n\t{\n\tx: 1\n\tabcd: 2\n\t}", "class\n\t{\n\tx:    1\n\tabcd: 2\n\t}",
@@ -744,6 +771,19 @@ Test
 		.t("x = 'l1\nl2' $ a[0 :: 2]")
 		.t("x = 'l1\nl2' $ a[3]")
 		.t("f('l1\nl2' $ a[1 ..], :b)")
+		}
+
+	UnitTest_multiAssign()
+		{
+		.t("a,b,c = F()", "a, b, c = F()")
+		// RackServer_Test: a verbatim MultiAssign included the semicolon,
+		// then the inline body added another, introducing an empty statement.
+		.t("fn = function(x) { a,b,c = RackServer.Result(x); return [a,b,c] }",
+			"fn = function(x) { a, b, c = RackServer.Result(x); return [a, b, c] }")
+		.t("a, b = F();\n\treturn a", "a, b = F()\n\treturn a", norm:)
+		.t("a, b = F();;", norm:)
+		.t("a, b = /* values */ F()")
+		.t("a, b = F() // values")
 		}
 
 	t(src, expected = false, wrap = true, width = false, norm = false)

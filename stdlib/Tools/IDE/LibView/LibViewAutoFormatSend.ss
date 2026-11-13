@@ -16,7 +16,10 @@ class
 			return false
 
 		if formatted is rec.text
-			return .alert(name $ " is already formatted")
+			{
+			InfoWindowControl(name $ " is already formatted", autoClose: 1.5)
+			return false
+			}
 
 		if not AstFmtEquals?(rec.text, formatted)
 			return .alert(
@@ -27,7 +30,9 @@ class
 		if "" isnt why = .unsendable(rec)
 			{
 			.applyLocally(libview, name, formatted)
-			return .alert(name $ ' ' $ why $ " so it was formatted locally")
+			InfoWindowControl(name $ ' ' $ why $ " so it was formatted locally",
+				autoClose: 1.5)
+			return false
 			}
 
 		if OptContribution(#CheckUpdateBuildTime, function() { return false })()

@@ -5,9 +5,7 @@ MemoizeSingle
 	{
 	Func()
 		{
-		query = 'columns
-					summarize table, list column
-					where HasLibraryColumns?(list_column)'
-		return QueryList(query, 'table').SortWith!(#Lower)
+		query = "tables where HasLibraryColumns?(TableColumns(table))"
+		return QueryList(query, #table).SortWith!(#Lower)
 		}
 	}

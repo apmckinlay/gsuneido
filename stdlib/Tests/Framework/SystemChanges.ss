@@ -38,10 +38,18 @@ class
 		tableStates = Object()
 		// Distancing from the next Timestamp to better detect changes to _TS values
 		asof = Date().Replace(millisecond: 0).Minus(seconds: 1)
-		QueryApply('tables')
-			{
-			tableStates[it.table] = [nrows: it.nrows, totalsize: it.totalsize, :asof]
-			}
+		if BuiltDate() < #20261112
+			QueryApply('tables')
+				{
+				tableStates[it.table] =
+					[nrows: it.nrows, totalsize: it.totalsize, :asof]
+				}
+		else
+			QueryApply('tables extend tables_nrows, tables_size')
+				{
+				tableStates[it.table] =
+					[nrows: it.tables_nrows, totalsize: it.tables_size, :asof]
+				}
 		systemChanges_excludeTables.Each({ .excludeTable(tableStates, it) })
 		return tableStates
 		}

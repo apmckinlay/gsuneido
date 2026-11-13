@@ -228,6 +228,22 @@ class
 		return [this[..i], this[i + delimiter.Size() ..]]
 		}
 
+	sig_CutFirst: "(delimiter = ' ')"
+	CutFirst(delimiter = ' ')
+		{
+		i = .Find(delimiter)
+		return this[..i], this[i + delimiter.Size() ..]
+		}
+
+	sig_CutLast: "(delimiter = ' ')"
+	CutLast(delimiter = ' ')
+		{
+		i = .FindLast(delimiter)
+		if i is false
+			i = .Size()
+		return this[..i], this[i + delimiter.Size() ..]
+		}
+
 	sig_BeforeFirst: "(delimiter) :string"
 	BeforeFirst(delimiter)
 		{
@@ -253,14 +269,6 @@ class
 		return i is false ? "" : this[i + delimiter.Size() ..]
 		}
 
-//	Cut(sep)
-//		{
-//		i = this.Find(sep)
-//		if i is -1
-//			return this, ""
-//		else
-//			return this[..i], this[i + sep.Size() ..]
-//		}
 	sig_Capitalized?: "() :boolean"
 	Capitalized?()
 		{

@@ -13,18 +13,18 @@ class
 
 		sys.win32 = .win32?()
 		os = OSName()
-		sys.windows = os.Has?('windows')
-		sys.linux = os.Has?("linux")
-		sys.macos = os.Has?("mac")
+		sys.windows = os.Has?(#windows)
+		sys.linux = os.Has?(#linux)
+		sys.macos = os.Has?(#mac)
 
 		sys.client = .client?(suneidojs)
 		sys.server = .server?(suneidojs)
 
 		try
 			.init2(sys)
-		catch (unused, "not authorized")
-			; // call later from init3
-
+		catch (unused, "not authorized|*not permitted")
+			{ // call later from init3
+			}
 		sys.Set_readonly()
 		Suneido.sys = sys // after readonly so it doesn't need to be concurrent
 		}
@@ -32,7 +32,7 @@ class
 	init2(sys) // if client-server this must be done after authorization
 		{
 		sos = ServerEval(#OSName).Lower()
-		sys.linuxserver = sos.Has?('linux')
+		sys.linuxserver = sos.Has?(#linux)
 		sys.serverDir = ServerEval(#ExeDir)
 		}
 
@@ -89,7 +89,7 @@ class
 
 	Browser?()
 		{
-		return Suneido.Member?('SuRender')
+		return Suneido.Member?(#SuRender)
 		}
 
 	Win32?()
@@ -101,10 +101,12 @@ class
 		{
 		return Suneido.sys.windows
 		}
+
 	Linux?()
 		{
 		return Suneido.sys.linux
 		}
+
 	MacOS?()
 		{
 		return Suneido.sys.macos
@@ -149,24 +151,24 @@ class
 
 	Systags()
 		{
-		return Suneido.sys.MembersIf({ |m| Suneido.sys[m] })
+		return Suneido.sys.MembersIf({|m| Suneido.sys[m] })
 		}
 
 	Connections()
 		{
 		if .Client?()
-			return ServerEval('Sys.Connections')
+			return ServerEval("Sys.Connections")
 
 		connections = Database.Connections()
 		connections.Append(
-			Thread.List().Filter({ it.Suffix?('(jsS)') }).Map({ it.AfterFirst(' ') }))
+			Thread.List().Filter({ it.Suffix?("(jsS)") }).Map({ it.AfterFirst(' ') }))
 		return connections
 		}
 
 	Kill(session_id)
 		{
 		if .Client?()
-			return ServerEval('Sys.Kill', session_id)
+			return ServerEval("Sys.Kill", session_id)
 
 		.kill(session_id)
 		return true
@@ -179,7 +181,7 @@ class
 		userRemote = session_id.BeforeLast('<')
 		prefix = userRemote.Blank?() ? session_id : userRemote
 		for conn in .threadList()
-			if conn.Suffix?('(jsS)') and conn.Prefix?(prefix.RemoveSuffix('(jsS)'))
+			if conn.Suffix?("(jsS)") and conn.Prefix?(prefix.RemoveSuffix("(jsS)"))
 				toKill[conn] = true
 		}
 
@@ -196,7 +198,7 @@ class
 
 	toKill()
 		{
-		return Suneido.GetInit('SessionsToKill', { Object() })
+		return Suneido.GetInit(#SessionsToKill, { Object() })
 		}
 
 	threadList()
@@ -207,21 +209,21 @@ class
 	KillSessionIfNeeded(block)
 		{
 		sessionId = Database.SessionId()
-		if false is ServerSuneido.GetAt('SessionsToKill', sessionId)
+		if false is ServerSuneido.GetAt(#SessionsToKill, sessionId)
 			return
-		ServerSuneido.DeleteAt('SessionsToKill', sessionId)
+		ServerSuneido.DeleteAt(#SessionsToKill, sessionId)
 		block()
 		}
 
 	SkipSessionsToKill(conns)
 		{
-		ServerSuneido.Get('SessionsToKill', #()).Members().Each({ conns.Remove(it) })
+		ServerSuneido.Get(#SessionsToKill, #()).Members().Each({ conns.Remove(it) })
 		}
 
 	MainThread?()
 		{
 		return .SuneidoJs?()
-			? Thread.Name().Suffix?('(jsS)')
+			? Thread.Name().Suffix?("(jsS)")
 			: Thread.Main?()
 		}
 	}

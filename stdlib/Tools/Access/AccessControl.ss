@@ -1180,6 +1180,8 @@ CommandParent
 		// which calls protect rule which can potentially trigger next num rules
 		// Also, no need to leave edit mode if on new record
 		// and user hasn't done anything
+		if .record isnt false and true isnt msg = .data.CheckPendingEdits()
+			return .setInvalidFields(msg)
 		if .record is false or (.newrecord? and not .data.Dirty?())
 			return true
 		if true is result = .save()
@@ -1556,8 +1558,52 @@ CommandParent
 		return .allowSubTableSelect is true ? .subtables.Where(this, selectControls) : ""
 		}
 
+	subTableSelectHelper: class
+		{
+		Name: false
+		New(.columns, .query, .linkField, .Name, .saveName)
+			{
+			}
+
+		GetColumnsSaveName()
+			{
+			return .saveName
+			}
+
+		GetColumns()
+			{
+			return .columns
+			}
+
+		GetQuery()
+			{
+			return .query
+			}
+
+		GetLinkedQuery()
+			{
+			return .query
+			}
+
+		GetLinkField()
+			{
+			return .linkField
+			}
+		}
 	GetLinkedBrowseTabs()
 		{
+		// We use a special class that combines all dynamic type columns if in multi-view
+		if .types.DynamicTypes isnt false and .Send(#InMultiView) is true
+			{
+			subTableSelect = .types.DynamicTypes.subTableSelectHelper
+			helper = new .subTableSelectHelper(subTableSelect.filterCols,
+				subTableSelect.subQuery,
+				subTableSelect.linkField,
+				subTableSelect.nameField,
+				subTableSelect.saveSelectName)
+			return Object(0: Object(browse: helper, name: #General))
+			}
+
 		// We have the tab names here.
 		// We want to use the tab names as it should make it clear to the
 		// user which item the filters are going to apply to
@@ -1569,6 +1615,11 @@ CommandParent
 			names = tabs.GetAllTabNames()
 			}
 
+		return .buildLinkedBrowseObject(tabs, names)
+		}
+
+	buildLinkedBrowseObject(tabs, names)
+		{
 		linked = Object()
 		// .linkedBrowses is in the order the tabs were constructed, not the order they
 		// appear on the screen

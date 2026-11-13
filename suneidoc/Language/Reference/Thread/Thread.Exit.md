@@ -7,3 +7,5 @@
 ```
 
 Exits from the current thread. Cannot be used from the main thread.
+
+See also: [Exit](<../Exit.md>)

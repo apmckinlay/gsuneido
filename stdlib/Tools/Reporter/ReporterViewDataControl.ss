@@ -1,7 +1,7 @@
 // Copyright (C) 2020 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	Title: 'View Data'
+	Title: "View Data"
 	CallClass(query, excludeCols, sf, hwnd = 0)
 		{
 		cols = QuerySelectColumns(query).Difference(excludeCols).RemoveIf(Internal?)
@@ -10,12 +10,12 @@ Controller
 		renamed = Object()
 		.makeDatadicts(cols, fields_ob, suffix, renamed, sf.GetConverted())
 		sort = .getSort(query, renamed)
-		baseQuery = QueryStripSort(query)
+		baseQuery = Query.StripSort(query)
 
 		query = baseQuery $
-			renamed.Map2(
-				{ |oldCol, newCol| ' rename ' $ oldCol $ ' to ' $ newCol }).Join(' ') $
-			Opt(' sort ', sort)
+			renamed.
+				Map2({|oldCol, newCol| " rename " $ oldCol $ " to " $ newCol }).
+				Join(' ') $ Opt(" sort ", sort)
 		cols.SortWith!(SelectPrompt)
 
 		.showData(hwnd, query, cols, renamed)
@@ -25,39 +25,39 @@ Controller
 
 	showData(hwnd, query, cols, renamed)
 		{
-		ToolDialog(hwnd, Object(this, query, cols, renamed), title: .Title, border: 0)
+		ToolDialog(hwnd, [this, query, cols, renamed], title: .Title, border: 0)
 		}
 
 	New(query, cols, .renamed)
 		{
 		super(.layout(query, cols))
-		.list = .FindControl('VirtualList')
+		.list = .FindControl(#VirtualList)
 		}
 
 	layout(query, cols)
 		{
-		return Object('VirtualList', query, cols, headerSelectPrompt:,
-			disableSelectFilter:, preventCustomExpand?:)
+		return [#VirtualList, query, cols, headerSelectPrompt:,
+			disableSelectFilter:, preventCustomExpand?:]
 		}
 
 	// extracted for testing
 	suffix()
 		{
-		return '_' $ String(Timestamp()).Tr('#.')
+		return '_' $ String(Timestamp()).Tr("#.")
 		}
 
 	getSort(query, renamed)
 		{
-		sort = QueryGetSort(query)
-		reverseStr = ''
-		if sort isnt ''
+		sort = Query.GetSort(query)
+		reverseStr = ""
+		if sort isnt ""
 			{
-			if sort.Prefix?('reverse ')
-				sort = sort.RemovePrefix(reverseStr = 'reverse ')
+			if sort.Prefix?("reverse ")
+				sort = sort.RemovePrefix(reverseStr = "reverse ")
 			newSort = Object()
 			for field in sort.Split(',')
 				newSort.Add(renamed.GetDefault(field, field))
-			sort = reverseStr $ newSort.Join(', ')
+			sort = reverseStr $ newSort.Join(", ")
 			}
 		return sort
 		}
@@ -65,21 +65,20 @@ Controller
 	makeDatadicts(cols, fields_ob, suffix, renamed, converted)
 		{
 		numsToRemove = Object()
-		for fn in GetContributions('SelectFieldsReporterRemoveNum')
+		for fn in GetContributions(#SelectFieldsReporterRemoveNum)
 			fn(cols)
 		cols.Map!()
-			{ |col|
+			{|col|
 			prompt = fields_ob.Find(col)
 			selectPrompt = SelectPrompt(col)
-			if ((selectPrompt is col or converted.Member?(col)) and
-				false isnt prompt)
+			if ((selectPrompt is col or converted.Member?(col)) and false isnt prompt)
 				{
-				if col =~ '_(name|abbrev)'
-					numsToRemove.Add(col.Replace('(name|abbrev)', 'num'))
+				if col =~ "_(name|abbrev)"
+					numsToRemove.Add(col.Replace("(name|abbrev)", #num))
 				col = .makeColDD(col, suffix, prompt, renamed)
 				}
-			else if selectPrompt isnt col and col =~ '_(name|abbrev)'
-				numsToRemove.Add(col.Replace('(name|abbrev)', 'num'))
+			else if selectPrompt isnt col and col =~ "_(name|abbrev)"
+				numsToRemove.Add(col.Replace("(name|abbrev)", #num))
 			col
 			}
 		cols.RemoveIf({ numsToRemove.Has?(it) })
@@ -87,8 +86,8 @@ Controller
 
 	makeColDD(col, suffix, prompt, renamed)
 		{
-		newCol = col.RemoveSuffix("?") $ suffix
-		ReporterModel.MakeDD(newCol, prompt, 'string')
+		newCol = col.RemoveSuffix('?') $ suffix
+		ReporterModel.MakeDD(newCol, prompt, #string)
 		renamed[col] = newCol
 		return newCol
 		}
@@ -98,9 +97,9 @@ Controller
 		return false
 		}
 
-	VirtualList_BuildContextMenu(rec /*unused*/)
+	VirtualList_BuildContextMenu(rec/*unused*/)
 		{
-		return #('Summarize...', 'CrossTable...', 'Export...')
+		return #("Summarize...", "CrossTable...", "Export...")
 		}
 
 	On_Context_Summarize()
@@ -121,7 +120,7 @@ Controller
 	Destroy()
 		{
 		for fld in .renamed.Values()
-			Reporter.DeleteDD('Field_' $ fld)
+			Reporter.DeleteDD("Field_" $ fld)
 		super.Destroy()
 		}
 	}

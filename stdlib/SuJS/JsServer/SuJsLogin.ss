@@ -148,23 +148,31 @@ class
 		return data.Members().Subset?(.allowedParams)
 		}
 
+	// Run in client sessions - using client Suneido
 	CreatePreauthToken()
 		{
+		if Sys.Client?()
+			return ServerEval("SuJsLogin.CreatePreauthToken")
+
 		token = Base64.Encode(Random.Bytes(16/*=len*/))
-		ServerSuneido.Add(#SuPreauthTokens, Date().Plus(minutes: 5), token)
+		Suneido.GetInit(#SuPreauthTokens, Object)[token] = Date().Plus(minutes: 5)
 		return token
 		}
 
+	// Run in login request - using server Suneido
 	validatePreauthToken(env)
 		{
 		if not env.queryvalues.Member?(#token)
 			return false
 
 		token = env.queryvalues.token
-		if false is expiry = ServerSuneido.GetAt(#SuPreauthTokens, token, false)
+		if not Suneido.Member?(#SuPreauthTokens)
 			return false
 
-		ServerSuneido.DeleteAt(#SuPreauthTokens, token)
+		if false is expiry = Suneido.SuPreauthTokens.GetDefault(token, false)
+			return false
+
+		Suneido.SuPreauthTokens.Delete(token)
 		if Date() > expiry
 			return false
 		return true

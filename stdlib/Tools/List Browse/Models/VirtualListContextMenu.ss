@@ -4,16 +4,14 @@ class
 	menu: ()
 	headerMenu: ()
 	recMenu: false
-
+	DevMenu: ("", "Go To QueryView", Inspect,
+		"Copy Field Name", "Go To Field Definition")
 	New(menu = false, headerMenu = false, .recMenu = false, .addCurrentMenu? = false,
 		.addGlobalMenu? = false)
 		{
 		.defaultHeaderMenus =
 			["Reset Columns", "", "Print...", "Reporter...", "Reporter Forms..."]
 
-		if Suneido.User is #default
-			.defaultHeaderMenus.Add("", "Go To QueryView",
-				"Inspect Control", "Copy Field Name", "Go To Field Definition")
 		if menu isnt false
 			.menu = menu
 		if headerMenu isnt false
@@ -122,6 +120,8 @@ class
 			}
 		if control.GetHeaderSelectPrompt() isnt #no_prompts
 			.addFormatMenu(m)
+		if Suneido.User is #default
+			m.MergeUnion(.DevMenu)
 		return m
 		}
 

@@ -7,14 +7,15 @@ SocketServer
 	{
 	Name: "Rack Server"
 	Port: 80
-	bodyTooLarge: ('413 Request Entity Too Large', (), '')
-	badRequest: ('400 Bad Request', (), 'Error 400 (Bad Request)!!!')
-	errorResponse: ('500 Internal Server Error', (), 'internal server error')
+	bodyTooLarge: ("413 Request Entity Too Large", (), "")
+	badRequest: ("400 Bad Request", (), "Error 400 (Bad Request)!!!")
+	errorResponse: ("500 Internal Server Error", (), "internal server error")
 	New(.app, with = false)
 		{
 		if with isnt false
 			.app = Compose(@with)(app) // combine app and middleware
 		}
+
 	Run()
 		{
 		// forever loop is to allow "persistent" connections
@@ -22,31 +23,31 @@ SocketServer
 		// returning from Run will close the connection
 		forever
 			{
-			stage = ''
+			stage = ""
 			env = RackEnv(this)
 			try
 				{
-				stage = 'reading request'
+				stage = "reading request"
 				.readRequestHeader(env)
-				if env.request is ''
+				if env.request is ""
 					return
 
-				stage = 'reading body'
+				stage = "reading body"
 				result = .checkBody(env)
 
 				headRequestOnly = false
 				if result is true
 					{
-					stage = 'in App'
-					if env.method is 'HEAD'
+					stage = "in App"
+					if env.method is #HEAD
 						{
 						headRequestOnly = true
-						env.method = 'GET'
+						env.method = #GET
 						}
 					result = (.app)(:env)
 					}
 
-				stage = 'writing response'
+				stage = "writing response"
 				// .app should return -1 if it has handled the response
 				// e.g. WebSocketHandler
 				if result is -1
@@ -54,15 +55,15 @@ SocketServer
 
 				.writeResponse(result, headRequestOnly)
 				if env.version is 1.0/*=http version*/ or
-					env.GetDefault('connection', '') is 'close'
+					env.GetDefault(#connection, "") is #close
 					return
 				}
 			catch (e)
 				{
-				if e.Has?('lost connection')
+				if e.Has?("lost connection")
 					return
 				.error(stage, e, env)
-				if stage is 'writing response'
+				if stage is "writing response"
 					return // close connection
 				try
 					{
@@ -81,22 +82,24 @@ SocketServer
 		env.remote_user = .RemoteUser()
 		.readHeaders(env)
 		if env.version >= 1.1 and /*= HTTP version 1.1 */
-			env.GetDefault('expect', '').Lower() is '100-continue'
+			env.GetDefault(#expect, "").Lower() is "100-continue"
 			{
-			.Writeline('HTTP/1.1 100 Continue')
-			.Writeline('')
+			.Writeline("HTTP/1.1 100 Continue")
+			.Writeline("")
 			}
 		}
+
 	readRequestLine(env)
 		{
 		request = .Readline()
 		if request is false
-			request = ''
+			request = ""
 		env.request = request
 		// add method, path, query, version
 		env.Merge(HttpRequest.SplitRequestLine(request))
 		env.queryvalues = Url.SplitQuery(env.query)
 		}
+
 	readHeaders(env)
 		{
 		header = InetMesg.ReadHeader(this)
@@ -105,7 +108,7 @@ SocketServer
 
 	checkBody(env)
 		{
-		if false isnt len = env.Extract('content_length', false)
+		if false isnt len = env.Extract(#content_length, false)
 			{
 			if not len.Number?()
 				return .badRequest
@@ -121,21 +124,21 @@ SocketServer
 
 	writeResponse(result, headRequestOnly = false)
 		{
-		result = .ResultOb(result)
-		headers = result[1].Copy()
-		headers.Server = 'Suneido RackServer'
-		content = result[2]
+		code, headers, content = .Result(result)
+		headers = headers.Copy()
+		headers.Server = "Suneido RackServer"
 		if headRequestOnly
 			{
-			headers.Content_Length = result[2].Size()
-			content = ''
+			headers.Content_Length = content.Size()
+			content = ""
 			}
-		HttpSend(this, "HTTP/1.1 " $ result[0], headers, content)
+		HttpSend(this, "HTTP/1.1 " $ code, headers, content)
 		}
-	ResultOb(result) //TODO use multiple return values after BuiltDate 0227
+
+	ResultOb(result) // not used, remove after transition
 		{
 		if String?(result)
-			return ['200 OK', #(), result]
+			return ["200 OK", #(), result]
 
 		code = .responseCode(result[0])
 		if result.Size() is 2
@@ -146,6 +149,20 @@ SocketServer
 			? result // avoid creating a new object if not necessary
 			: [code, result[1], result[2]]
 		}
+
+	Result(result)
+		{
+		if String?(result)
+			return "200 OK", #(), result
+
+		code = .responseCode(result[0])
+		if result.Size() is 2
+			return code, #(), result[1]
+
+		Assert(result.Size() is 3) /*= normal result size is 3 values */
+		return code, result[1], result[2]
+		}
+
 	responseCode(code)
 		{
 		switch
@@ -169,19 +186,19 @@ SocketServer
 		{
 		// put env in params since it just shows as <object> in locals
 		if .logError?(e)
-			SuneidoLog("ERROR: (CAUGHT) RackServer: " $ stage $ ': ' $ e,
+			SuneidoLog("ERROR: (CAUGHT) RackServer: " $ stage $ ": " $ e,
 				params: env,
-				caughtMsg: '400 response returned to client if bad request, ' $
-					'else returns 500 internal server error to client')
+				caughtMsg: "400 response returned to client if bad request, " $
+					"else returns 500 internal server error to client")
 		}
 
 	logError?(e)
 		{
-		if e.Prefix?('socket')
+		if e.Prefix?(#socket)
 			return false
 
-		if e.RemovePrefix('ERROR: ').Prefix?('CopyTo') and
-			(e.Has?('wsasend') or e.Has?('broken pipe'))
+		if e.RemovePrefix("ERROR: ").Prefix?(#CopyTo) and
+			(e.Has?(#wsasend) or e.Has?("broken pipe"))
 			return false
 
 		return e isnt HttpRequest.BadRequest

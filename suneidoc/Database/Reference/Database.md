@@ -16,6 +16,7 @@
 | [Database.Kill](<Database/Database.Kill.md>) |
 | [Database.Load](<Database/Database.Load.md>) |
 | [Database.Nonce](<Database/Database.Nonce.md>) |
+| [Database.Schema](<Database/Database.Schema.md>) |
 | [Database.SessionId](<Database/Database.SessionId.md>) |
 | [Database.TempDest](<Database/Database.TempDest.md>) |
 | [Database.Token](<Database/Database.Token.md>) |

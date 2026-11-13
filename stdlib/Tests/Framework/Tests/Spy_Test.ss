@@ -37,6 +37,7 @@ Test
 		{
 		New(a) { throw "from New" }
 		}`
+
 	Setup()
 		{
 		.MakeLibraryRecord([name: #SpyTest_1, text: .src1])
@@ -142,6 +143,29 @@ Test
 		spy4 = fakeSpy(Global("SpyTest_5.New"))
 		Assert(spy4.Paths is: #(New))
 		Assert(spy4.InNew?)
+		}
+
+	Test_library_tag_with_new_argument()
+		{
+		src = `class { CallClass() { return "original" } }`
+		srcTestMode = `class { CallClass(newargs = false) { return "testmode" } }`
+		.MakeLibraryRecord([name: #SpyTest_6, text: src])
+		.MakeLibraryRecord([name: #SpyTest_6__testmode, text: srcTestMode])
+		.MakeLibraryRecord([name: #Test_lib_LibraryTags_Trials, text: "#(testmode)"])
+		Contributions.ResetCache()
+		ServerEval(`Contributions.ResetCache`)
+		LibraryTags.Reset()
+		.AddTeardown(
+			{
+			QueryDo("delete Test_lib where name is #Test_lib_LibraryTags_Trials")
+			Contributions.ResetCache()
+			ServerEval(`Contributions.ResetCache`)
+			LibraryTags.Reset()
+			})
+		Assert(Global(#SpyTest_6)() is: #testmode)
+
+		.SpyOn(Global(#SpyTest_6)).Return(#spy6)
+		Assert(Global(#SpyTest_6)() is: #spy6)
 		}
 
 	Test_CallClass()

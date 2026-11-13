@@ -72,7 +72,7 @@
 				BuiltDateTag.Edit(libview)
 				}),
 		(LibView, New, "function",
-			"function ()
+			"function()
 	{
 	}"),
 		(LibView, New, "class",

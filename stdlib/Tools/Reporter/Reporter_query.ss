@@ -3,13 +3,12 @@ class
 	{
 	GetQuery(source)
 		{
-		// if there is no book open (from running demo data), do not do the authorize
-		 // or if there is no "name" member i.e. stdlib only query based
-		if not Suneido.Member?('browser') or not source.Member?(#name)
+		// Do not attempt authorize if there is no "name" member (e.g. stdlib only query)
+		if not source.Member?(#name)
 			query = source.query
 		else
 			query = false is ReporterDataSource.Authorized?(source.name)
-				? ''
+				? ""
 				: source.query
 		if query.BeforeFirst('.').GlobalName?() and not Uninit?(query.BeforeFirst('.'))
 			query = Global(query)()
@@ -38,10 +37,10 @@ class
 			exclude = source.exclude
 		else if Function?(source.exclude)
 			exclude = (source.exclude)()
-		else if String?(source.exclude) and source.exclude isnt ''
+		else if String?(source.exclude) and source.exclude isnt ""
 			exclude = (source.exclude.Eval())() // needs Eval
 		exclude = exclude.Copy()
-		if false isnt cl = OptContribution('CustomTabPermissions', false)
+		if false isnt cl = OptContribution(#CustomTabPermissions, false)
 			cl.ReporterExcludes(source, exclude)
 		return exclude
 		}

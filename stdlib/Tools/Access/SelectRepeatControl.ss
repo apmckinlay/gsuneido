@@ -4,7 +4,8 @@ Controller
 	Name:       #SelectRepeat
 	MaxRecords: 50
 	New(.sf, select_vals, name, .option = "", .title = "", .noUserDefaultSelects? = false,
-		.fromFilter = false, selChanged = false, .defaultSaveName = false)
+		.fromFilter = false, selChanged = false, .defaultSaveName = false,
+		.hasSubTables? = false)
 		{
 		.Name = name
 		if .defaultSaveName is false
@@ -55,6 +56,13 @@ Controller
 				mouseEffect:, weight: #bold, pad: 40,
 				name: #loadButton, xstretch: 0], name: #buttons]
 		buttons.Add(#(Skip, small:))
+		if .hasSubTables? is true
+			{
+			buttons.Add([#EnhancedButton, "Filter on Line Items", command: #FilterItems,
+				buttonStyle:, mouseEffect:, pad: 40, name: #subTableFilter,
+				xstretch: 0])
+			buttons.Add(#(Skip, small:))
+			}
 		buttons.Add([#Button, #Count, tip: SelectControl.CountBtnTip])
 		buttons.Add(#(Skip, small:))
 		buttons.Add([#Presets, .option, .title, :initial, xstretch: 0,
@@ -62,11 +70,13 @@ Controller
 		buttons.Add(#Fill)
 		VirtualListTopLayoutControl.BuildLayout(extraLayout, buttons)
 		buttons.name = #buttons
+		msg = extraLayout.msg.Empty?() ? "" : extraLayout.msg
 		return [#Vert,
 			[#Scroll,
 				[#ChooseFilters, useCheckBoxes:, fieldOptional:,
 					maxRecords: .MaxRecords, name: #conditions]],
-			buttons]
+			buttons,
+			msg]
 		}
 
 	setScrollYmin(rows)
@@ -96,6 +106,11 @@ Controller
 		if false is .Send(#Select_Apply)
 			return
 		.SetSelectApplied(true)
+		}
+
+	On_FilterItems()
+		{
+		.Send(#Select_OpenDialog)
 		}
 
 	changed?: false

@@ -17,12 +17,13 @@ class
 						WebSocketHandler(env, env.socket, SuJsWebSocketServer) }],
 		['GET', 	'/robots.txt', 			'SuJsRobotsTxt']
 		['GET', 	'/sw.js', 				'SuJsServiceWorker.Get']
+		['GET', 	'/sujs_resources', 		'SuJsDownload.GetSuJSResource']
 		['GET',		'/rally',				'SuJsRally']
 		['POST',	'/rally',				'SuJsRally']
 	)
 	CallClass()
 		{
-		return GetContributions('RackRoutes').
+		return GetContributions(#RackRoutes).
 			Filter({ it.GetDefault(#public, false) }).
 			Append(.routes)
 		}

@@ -4,14 +4,14 @@ class
 	CallClass(env)
 		{
 		if .invalidToken?(env)
-			return Object('Unauthorized', [], 'Your session is invalid or expired')
+			return [#Unauthorized, [], "Your session is invalid or expired"]
 
 		if not env.queryvalues.Member?(0)
-			return ['BadRequest', [], 'Invalid request, missing file name']
+			return [#BadRequest, [], "Invalid request, missing file name"]
 
 		filename = Base64.Decode(env.queryvalues[0]).Xor(EncryptControlKey())
-		preview? = env.queryvalues.GetDefault('preview', false)
-		saveName = env.queryvalues.GetDefault('saveName', false)
+		preview? = env.queryvalues.GetDefault(#preview, false)
+		saveName = env.queryvalues.GetDefault(#saveName, false)
 		.Download(env, filename, preview?, saveName)
 		}
 
@@ -24,36 +24,33 @@ class
 		{
 		// Todo: only allow downloading from files in temp or attachment or UserData (for Videos)
 		temp? = Paths.Basename(filename) is filename
-		dest = temp? ? Paths.Combine('temp', filename) : filename
+		dest = temp? ? Paths.Combine(#temp, filename) : filename
 
 		if temp?
 			.DeleteTask(filename)
 
 		if not FileExists?(dest)
-			return Object('404 Not Found', Object(), 'not found')
+			return ["404 Not Found", Object(), "not found"]
 		headers = .buildHeaders(filename, preview?, saveName)
 		result = SendFileToSocket(env.socket, dest, headers)
 		if temp?
-			{
 			if true isnt deleteResult = DeleteFile(dest)
-				SuneidoLog('ERRATIC: Could not clean up file from temp',
+				SuneidoLog("ERRATIC: Could not clean up file from temp",
 					params: Object(:deleteResult, :dest), calls:)
-			}
 		return result
 		}
 
 	buildHeaders(filename, preview?, saveName)
 		{
 		headers = Object()
-		if preview? in (false, 'false')
-			headers['Content-Disposition'] =
-				'attachment; filename="' $
-					Paths.Basename(saveName is false ? filename : String(saveName)) $ '"'
+		if preview? in (false, "false")
+			headers["Content-Disposition"] = 'attachment; filename="' $
+				Paths.Basename(saveName is false ? filename : String(saveName)) $ '"'
 		if false isnt type = MimeTypes.GetDefault(filename.AfterLast('.').Lower(), false)
 			{
-			if preview? isnt false and type.Prefix?('text/')
-				type = 'text/plain'
-			headers['Content_Type'] = type
+			if preview? isnt false and type.Prefix?("text/")
+				type = "text/plain"
+			headers.Content_Type = type
 			}
 		return headers
 		}
@@ -64,15 +61,17 @@ class
 		Assert(Paths.Basename(filename) is filename)
 
 		.AddTask(Suneido.User, filename, saveName)
-		SuRenderBackend().RecordAction(false, 'SuDownloadFile', [
-			target: Base64.Encode(filename.Xor(EncryptControlKey())),
-			:saveName])
+		SuRenderBackend().
+			RecordAction(false, #SuDownloadFile,
+				[
+					target: Base64.Encode(filename.Xor(EncryptControlKey())),
+					:saveName])
 		}
 
 	AddTask(user, filename, saveName)
 		{
 		if Sys.Client?()
-			ServerEval('SuJsDownload.AddTask', user, filename, saveName)
+			ServerEval("SuJsDownload.AddTask", user, filename, saveName)
 
 		.ensureTasks()
 		Suneido.SuJsDownloadTasks[user][filename] = Object(t: Date(), :saveName)
@@ -81,7 +80,7 @@ class
 	DeleteTask(filename)
 		{
 		if Sys.Client?()
-			ServerEval('SuJsDownload.DeleteTask', filename)
+			ServerEval("SuJsDownload.DeleteTask", filename)
 
 		.ensureTasks()
 		for user in Suneido.SuJsDownloadTasks.Members().Copy()
@@ -118,11 +117,31 @@ class
 			return
 
 		if false isnt alert = Suneido.GetDefault(#SuJsDownloadAlertWindow, false)
-			Defer({
+			Defer(
+				{
 				if not alert.Destroyed?()
 					alert.Ctrl.Update(result)
 				})
 		else if result.NotEmpty?()
 			Defer({ SuJsDownloadAlertControl(result) })
+		}
+
+	GetSuJSResource(env)
+		{
+		fileName = env.path.AfterLast('/')
+		if fileName not in ("magickApi.js", "magick.wasm", "magick.js", "pako.min.js")
+			return [#NotFound, #(), "Invalid request, file does not exist!"]
+		SuneidoLog("INFO: loading SUJS resources from its own service " $ fileName)
+		headers = GetRes.Headers(fileName)
+		headers.Last_Modified = headers.Last_Modified.InternetFormat()
+		headers.Expires = headers.Expires.InternetFormat()
+		try
+			return SendFileToSocket(env.socket,
+				ApplicationDir() $ "/sujs_resources/" $ fileName, headers)
+		catch (err)
+			{
+			SuneidoLog("ERROR: (CAUGHT) failed to load " $ fileName $ " - " $ err)
+			return [#InternalServerError, #(), "Failed to open file: " $ fileName]
+			}
 		}
 	}

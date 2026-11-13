@@ -45,7 +45,8 @@ Component
 
 	mousedown(event)
 		{
-		event.PreventDefault()
+		if .Window.Base?(ListEditWindowComponent)
+			event.PreventDefault()
 		}
 
 	Resize(w, h)

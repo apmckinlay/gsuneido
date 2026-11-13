@@ -24,7 +24,8 @@ Test
 		}
 
 	call(unused)
-		{ }
+		{
+		}
 
 	Test_SetMouseUpCB()
 		{
@@ -58,25 +59,22 @@ Test
 		fn = SuRender.SuRender_isThirdPartyError?
 
 		// external stack (e.g. browser extension) - classified as third party
-		Assert(fn(#(error:
-			(stack: 'Error: oops\r\n    at chrome-extension://abc/foo.js:1:1'))))
+		Assert(fn("Error: oops\r\n    at chrome-extension://abc/foo.js:1:1"))
 
 		// translated JS uses $f frames; Blink/Chrome
-		Assert(not fn(#(error: (stack: 'Error: bad\r\n    at $f (script:10:5)'))))
+		Assert(not fn("Error: bad\r\n    at $f (script:10:5)"))
 		// ...and WebKit/Safari
-		Assert(not fn(#(error: (stack: 'Error: bad\r\n$f@script:10:5'))))
+		Assert(not fn("Error: bad\r\n$f@script:10:5"))
 
 		// bundled/minified JS filenames - not third party
-		Assert(not fn(#(error:
-			(stack: 'Error: bad\r\n    at stuff (https://x/su_bundle.min.js:1:42)'))))
-		Assert(not fn(#(error:
-			(stack: 'Error: bad\r\n    at stuff (https://x/su_code_bundle.js:1:42)'))))
+		Assert(not fn("Error: bad\r\n    at stuff (https://x/su_bundle.min.js:1:42)"))
+		Assert(not fn("Error: bad\r\n    at stuff (https://x/su_code_bundle.js:1:42)"))
 
 		// missing/short stacks - treated as ours (do not suppress)
-		Assert(not fn(#(error: (stack: ''))))
-		Assert(not fn(#(error: (stack: 'Error: just a message'))))
+		Assert(not fn(""))
+		Assert(not fn("Error: just a message"))
 
-		// missing event.error - protected by outer try
+		// invalid type - protected by outer try
 		Assert(not fn(Object()))
 		}
 	}

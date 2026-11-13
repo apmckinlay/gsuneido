@@ -195,4 +195,71 @@ Test
 		test('// Inspect("testing")', false)
 		test("// StackTrace()", false)
 		}
+
+	Test_comby_matches()
+		{
+		code = "function (foo) {\r\n\tfoo(1)\r\n\tfoo(\r\n\t\t2)\r\n}"
+		cc = .combyChecker(code, #(("foo(:[x])", "avoid foo")), results = [])
+		Assert(cc() is: false)
+		Assert(results isSize: 2)
+		Assert(results[0]
+			is: Object(pos: 19, len: 6, line: 1,
+				msg: "ERROR: use of foo(1) - avoid foo"))
+		Assert(results[1]
+			is: Object(pos: 28, len: 10, line: 2,
+				msg: "ERROR: use of foo( 2) - avoid foo"))
+		Assert(cc.CheckCode_errors?)
+		Assert(cc.CheckCode_warnings? is: false)
+		}
+
+	Test_comby_warning()
+		{
+		cc = .combyChecker("function (foo) { foo(1) }",
+			#(("foo(:[x])", "", warning:)), results = [])
+		Assert(cc() is: "")
+		Assert(results isSize: 1)
+		Assert(results[0].msg is: "WARNING: use of foo(1)")
+		Assert(cc.CheckCode_errors? is: false)
+		Assert(cc.CheckCode_warnings?)
+		}
+
+	Test_comby_ignored()
+		{
+		for code in #('"foo(1)"', "// foo(1)", "/* foo(1) */", "bar(1)")
+			{
+			cc = .combyChecker(code, #(("foo(:[x])", "avoid foo")), results = [])
+			cc.CheckCode_extra_checks()
+			Assert(results is: [])
+			Assert(cc.CheckCode_errors? is: false)
+			Assert(cc.CheckCode_warnings? is: false)
+			}
+		}
+
+	Test_comby_filter()
+		{
+		code = "foo(1)\r\nfoo(2)"
+		rules = #(("foo(:[x])", "avoid foo",
+				filter: function(code, pos, len) { return code[pos::len] is "foo(1)" }))
+		cc = .combyChecker(code, rules, results = [])
+		cc.CheckCode_comby()
+		Assert(results isSize: 1)
+		Assert(results[0]
+			is: Object(pos: 8, len: 6, line: 1,
+				msg: "ERROR: use of foo(2) - avoid foo"))
+		}
+
+	Test_comby_noHint()
+		{
+		cc = .combyChecker("true", #(("true", "avoid true")), results = [])
+		cc.CheckCode_comby()
+		Assert(results isSize: 1)
+		Assert(results[0].msg is: "ERROR: use of true - avoid true")
+		}
+
+	combyChecker(code, rules, results)
+		{
+		cc = new CheckCode(false, false, code, results)
+		cc.CheckCode_badComby = rules
+		return cc
+		}
 	}

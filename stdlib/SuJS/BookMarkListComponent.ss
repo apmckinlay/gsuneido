@@ -1,11 +1,11 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 Component
 	{
-	Name:		"BookMarkList"
-	Xstretch:		1
-	Ystretch:		1
+	Name:     #BookMarkList
+	Xstretch: 1
+	Ystretch: 1
 
-	styles: `
+	styles:   `
 		.su-bookmark-list {
 			flex-basis: 0;
 			overflow: auto;
@@ -34,23 +34,23 @@ Component
 		}`
 	New()
 		{
-		LoadCssStyles('su-bookmark-list.css', .styles)
-		.CreateElement('div', className: 'su-bookmark-list')
+		LoadCssStyles("su-bookmark-list.css", .styles)
+		.CreateElement(#div, className: "su-bookmark-list")
 		.marks = Object()
-		.El.AddEventListener('dblclick', .doubleClick)
-		.El.AddEventListener('dragover', .dragover)
+		.El.AddEventListener(#dblclick, .doubleClick)
+		.El.AddEventListener(#dragover, .dragover)
 		}
 
 	doubleClick(event)
 		{
 		if event.target isnt .El
 			return
-		.Event('DoubleClick')
+		.Event(#DoubleClick)
 		}
 
-	SetState(marks)
+	Sync(marks)
 		{
-		.El.innerText = ''
+		.El.innerText = ""
 		.marks.Delete(all:)
 		for mark in marks
 			.AddMark(mark)
@@ -58,7 +58,7 @@ Component
 
 	handlerFactory(mark, handler)
 		{
-		return { |event| handler(event, mark) }
+		return {|event| handler(event, mark) }
 		}
 
 	rightclick(event, mark)
@@ -78,7 +78,7 @@ Component
 
 	colorInput(event, mark)
 		{
-		mark.el.SetStyle('background-color', event.target.value)
+		mark.el.SetStyle("background-color", event.target.value)
 		}
 
 	colorChange(event, mark)
@@ -100,10 +100,10 @@ Component
 	AddMark(mark)
 		{
 		color = ToCssColor(mark.color)
-		el = CreateElement('div', .El, className: 'su-bookmark-item')
+		el = CreateElement(#div, .El, className: "su-bookmark-item")
 		el.title = el.innerHTML = mark.path.RemovePrefix('/') $ '/'
-		el.dir = 'rtl'
-		el.SetStyle('background-color', color)
+		el.dir = #rtl
+		el.SetStyle("background-color", color)
 		el.AddEventListener(#contextmenu, .handlerFactory(mark, .rightclick))
 		el.AddEventListener(#click, .handlerFactory(mark, .click))
 		el.draggable = true
@@ -111,8 +111,8 @@ Component
 		el.AddEventListener(#dragend, .handlerFactory(mark, .dragend))
 		mark.el = el
 
-		picker = CreateElement('input', mark.el, className: 'su-bookmark-color-input')
-		picker.type = 'color'
+		picker = CreateElement(#input, mark.el, className: "su-bookmark-color-input")
+		picker.type = #color
 		picker.value = color
 		picker.AddEventListener(#input, .handlerFactory(mark, .colorInput))
 		picker.AddEventListener(#change, .handlerFactory(mark, .colorChange))
@@ -137,19 +137,19 @@ Component
 		{
 		if .dragging is false
 			{
-			event.dataTransfer.dropEffect = "none";
+			event.dataTransfer.dropEffect = #none
 			return
 			}
 		event.PreventDefault()
-		event.StopPropagation();
-		event.dataTransfer.dropEffect = "move";
+		event.StopPropagation()
+		event.dataTransfer.dropEffect = #move
 
 		dy = event.clientY - .El.GetBoundingClientRect().top
 		markHeight = .dragging.el.GetBoundingClientRect().height
 		i = Min((dy / markHeight).Round(0), .marks.Size())
 		cur = .findMark(.dragging.path)
 
-		if i is cur or i is cur + 1
+		if i is cur or i is cur+1
 			return
 		if i < .marks.Size()
 			.El.InsertBefore(.dragging.el, .marks[i].el)
@@ -157,15 +157,15 @@ Component
 			.El.AppendChild(.dragging.el)
 		if i < cur
 			{
-			for (j = cur - 1; j >= i; j--)
-				.marks[j + 1] = .marks[j]
+			for (j = cur - 1; j >= i; j -= 1)
+				.marks[j+1] = .marks[j]
 			.marks[i] = .dragging
 			}
 		else
 			{
-			for (j = cur + 1; j < i; j++)
-				.marks[j - 1] = .marks[j]
-			.marks[i - 1] = .dragging
+			for (j = cur + 1; j < i; j += 1)
+				.marks[j-1] = .marks[j]
+			.marks[i-1] = .dragging
 			}
 		}
 
@@ -185,8 +185,8 @@ Component
 		if .active is mark
 			return
 		if .active isnt false
-			.active.el.classList.Remove('su-bookmark-item-active')
+			.active.el.classList.Remove("su-bookmark-item-active")
 		if false isnt .active = mark
-			.active.el.classList.Add('su-bookmark-item-active')
+			.active.el.classList.Add("su-bookmark-item-active")
 		}
 	}

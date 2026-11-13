@@ -1,22 +1,23 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 class /*abstract*/
 	{
-	Xmin:		0
-	Xstretch:	false
-	Ymin:		0
-	Ystretch:	false
-	MaxHeight:	99999
-	Top:		0		// Top and Left specify the "alignment" point
-	Left:		0
-	Name:		""
-	Title:		""
-	DefaultButton: "OK"
-	Custom: 	false
+	Xmin:          0
+	Xstretch:      false
+	Ymin:          0
+	Ystretch:      false
+	MaxHeight:     99_999
+	Top:           0 // Top and Left specify the "alignment" point
+	Left:          0
+	Name:          ""
+	Title:         ""
+	DefaultButton: #OK
+	Custom:        false
 
 	New()
 		{
 		.New2()
 		}
+
 	New2() /*internal*/
 		{
 		// this is separate from New so it can be overridden by WindowBase
@@ -25,18 +26,18 @@ class /*abstract*/
 		.Controller = _parent.Base?(Controller) ? _parent : _parent.Controller
 		.Window = _parent.Window
 
-		if .Custom is false and _parent.Member?('Custom')
+		if .Custom is false and _parent.Member?(#Custom)
 			.Custom = _parent.Custom
 
-		.Xmin = .scale(_ctrlspec.GetDefault("xmin", .Xmin))
-		.Ymin = .scale(_ctrlspec.GetDefault("ymin", .Ymin))
-		.Top = .scale(_ctrlspec.GetDefault("top", .Top))
+		.Xmin = .scale(_ctrlspec.GetDefault(#xmin, .Xmin))
+		.Ymin = .scale(_ctrlspec.GetDefault(#ymin, .Ymin))
+		.Top = .scale(_ctrlspec.GetDefault(#top, .Top))
 		.Left = .scale(.Left)
-		if (_ctrlspec.Member?("xstretch"))
+		if _ctrlspec.Member?(#xstretch)
 			.Xstretch = _ctrlspec.xstretch
-		if (_ctrlspec.Member?("ystretch"))
+		if _ctrlspec.Member?(#ystretch)
 			.Ystretch = _ctrlspec.ystretch
-		if (_ctrlspec.Member?("name"))
+		if _ctrlspec.Member?(#name)
 			.Name = _ctrlspec.name
 		}
 
@@ -58,16 +59,18 @@ class /*abstract*/
 		{
 		if not .Member?(#Controller)
 			return 0 // destroyed
-		if not args.Member?('source')
+		if not args.Member?(#source)
 			args.source = this
 		return .Controller.Msg(args)
 		}
+
 	Msg(args) // ignore messages from Window when top control is not a Controller
 		{
-		if args[0] is 'On_Cancel' and .Window.Method?(#On_Cancel)
+		if args[0] is #On_Cancel and .Window.Method?(#On_Cancel)
 			.Window.On_Cancel()
 		return 0
 		}
+
 	On_Cancel()
 		{
 		if .Controller.Method?(#On_Cancel)
@@ -81,7 +84,7 @@ class /*abstract*/
 		x = .build(x)
 		_parent = this
 		_ctrlspec = x
-		ctrl = Construct(x, "Control")
+		ctrl = Construct(x, #Control)
 		if String?(ctrl.Name) and ctrl.Name isnt ""
 			this[ctrl.Name] = ctrl
 		return ctrl
@@ -91,7 +94,7 @@ class /*abstract*/
 		{
 		if x.Size() is 1 and x.Member?(0) and Object?(x[0])
 			x = x[0]
-		if x[0] is 'NoPrompt' and .isFieldString?(x[1])
+		if x[0] is #NoPrompt and .isFieldString?(x[1])
 			x = .handleNoPromptField(x)
 		else if .isFieldString?(x[0])
 			x = .handleField(x)
@@ -100,7 +103,7 @@ class /*abstract*/
 
 	getDatadictControl(name, orig)
 		{
-		x = Datadict(name).Control.Copy().Add(name at: 'name')
+		x = Datadict(name).Control.Copy().Add(name at: #name)
 		for m in orig.Members()
 			if String?(m)
 				x[m] = orig[m]
@@ -129,47 +132,62 @@ class /*abstract*/
 		if .Custom isnt false and .Custom.Member?(name)
 			{
 			x.Merge(.Custom[name])
-			hidden = .Custom[name].GetDefault('hidden', false)
+			hidden = .Custom[name].GetDefault(#hidden, false)
 			}
 		if "" isnt prompt = Prompt(name)
-			{
-			if x[0] is 'CheckBox'
+			if x[0] is #CheckBox
 				{ // prompt is part of checkbox
 				x.text = prompt
 				x.hidden = hidden
 				}
 			else
-				x = Object('Pair', Object('Static', prompt, :hidden), x)
-			}
+				x = [#Pair, [#Static, prompt, :hidden], x]
 		return x
 		}
 
 	Resize(x/*unused*/, y/*unused*/, w/*unused*/, h/*unused*/)
-		{ }
+		{
+		}
+
 	Update()
-		{ }
+		{
+		}
+
 	HasFocus?()
 		{
 		return false
 		}
+
 	GetState()
 		{
 		return Object()
 		}
+
 	SetState(unused)
-		{ }
+		{
+		}
+
 	SetEnabled(unused)
-		{ }
+		{
+		}
+
 	SetVisible(unused)
-		{ }
+		{
+		}
+
 	SetReadOnly(unused)
-		{ }
+		{
+		}
+
 	SetFocus()
-		{ }
+		{
+		}
+
 	ClearFocus()
 		{
 		SetFocus(NULL)
 		}
+
 	GetReadOnly()
 		{
 		return false
@@ -179,84 +197,103 @@ class /*abstract*/
 		{
 		return Object()
 		}
+
 	FindControl(name, exclude = false)
 		{
 		for c in .GetChildren()
 			{
 			if exclude isnt false and c.Base?(exclude)
 				continue
-			if c.Name is name or
-				false isnt (c = c.FindControl(name, :exclude))
+			if c.Name is name or false isnt (c = c.FindControl(name, :exclude))
 				return c
 			}
 		return false
 		}
+
 	GetRect()
 		{
 		// returns a Rect containing the coordinates of
 		// the control (relative to parent Hwnd)
 		return Rect(0, 0, 0, 0)
 		}
+
 	GetClientRect()
 		{
 		// returns a Rect containing the coordinates of
 		// the control's client area
 		return Rect(0, 0, 0, 0)
 		}
+
 	Dirty?(unused = "")
 		{
 		return false
 		}
+
+	CheckPendingEdit?()
+		{
+		return false
+		}
+
 	Valid?()
 		{
 		return true
 		}
+
 	ValidData?(@unused)
 		{
 		return true
 		}
+
 	HandleTab()
 		{
 		return false
 		}
+
 	AlertHwnd()
 		{
 		// sometimes the Alert methods are used on classes that don't have
 		// a window associated with them.
-		return .Member?("Window") ? .Window.Hwnd : 0
+		return .Member?(#Window) ? .Window.Hwnd : 0
 		}
+
 	AlertError(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONERROR)
 		}
+
 	AlertWarn(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONWARNING)
 		}
+
 	AlertInfo(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONINFORMATION)
 		}
+
 	AlertQuestion(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONQUESTION)
 		}
+
 	BottomUp(@args)
 		{
 		for c in .GetChildren()
 			c.BottomUp(@args)
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		return
 		}
+
 	TopDown(@args)
 		{
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		for c in .GetChildren()
 			c.TopDown(@args)
 		return
 		}
+
 	ForeachChild(ctrl, block)
 		{
 		for c in ctrl.GetChildren()
@@ -265,20 +302,25 @@ class /*abstract*/
 			.ForeachChild(c, block)
 			}
 		}
+
 	WindowRefresh()
 		{
 		if .Member?(#Window)
 			.Window.Refresh()
 		}
+
 	WindowHwnd()
 		{
-		try return .Window.Hwnd
+		try
+			return .Window.Hwnd
 		return 0
 		}
+
 	WindowActive?()
 		{
 		return .WindowHwnd() is GetActiveWindow()
 		}
+
 	FocusFirst(parentHwnd, custom = false)
 		{
 		if custom is false
@@ -286,7 +328,7 @@ class /*abstract*/
 
 		if custom isnt false
 			for field in custom.Members()
-				if custom[field].GetDefault('first_focus', false) is true and
+				if custom[field].GetDefault(#first_focus, false) is true and
 					false isnt ctrl = .FindControl(field)
 					{
 					ctrl.SetFocus()
@@ -302,14 +344,16 @@ class /*abstract*/
 			if hwnd is first
 				break
 			}
-		if ctrl isnt false and ctrl.Method?('SelectAll')
+		if ctrl isnt false and ctrl.Method?(#SelectAll)
 			ctrl.SelectAll()
 		SetFocus(hwnd)
 		}
+
 	getControl(hwnd)
 		{
 		return .Window.HwndMap.GetDefault(hwnd, false)
 		}
+
 	readonly(ctrl)
 		{
 		return ctrl is false ? false : ctrl.GetReadOnly()
@@ -333,51 +377,63 @@ class /*abstract*/
 		{
 		plus = Instance?(plusCtrls) ? plusCtrls.Xmin : plusCtrls.SumWith({ it.Xmin })
 		minus = Instance?(minusCtrls) ? minusCtrls.Xmin : minusCtrls.SumWith({ it.Xmin })
-		return  plus - minus - overlaps
+		return plus - minus - overlaps
 		}
 
 	// uniqueID is used to prevent too many stacked delayed calls.
 	// uniqueID should only be used in cases where it is "safe" to eliminate
 	// intermediate delayed function calls (ie block is not doing critical processing
 	// such as modifying data)
-	timers: #()
+	timers: ()
+	unique: ()
 	Delay(delay, block, uniqueID = false)
 		{
 		return .delayed(Delay, block, delay, uniqueID)
 		}
+
 	Defer(block, uniqueID = false)
 		{
 		return .delayed(Defer, block, 0, uniqueID)
 		}
+
 	delayed(fn, block, delay, uniqueID)
 		{
 		if .destroying?
 			return false
 
+		// assign initial values in case control get destroyed
+		timers = .timers
+		unique = .unique
 		if .timers.Readonly?()
 			{
-			.timers = Object() // intentionally lazy, don't put in New
-			.unique = Object()
+			timers = .timers = Object() // intentionally lazy, don't put in New
+			unique = .unique = Object()
 			}
 
-		if uniqueID isnt false and .unique.Member?(uniqueID)
+		if uniqueID isnt false and unique.Member?(uniqueID)
 			{
-			.timers.Remove1(.unique[uniqueID])
-			.unique[uniqueID].Kill()
+			timers.Remove1(unique[uniqueID])
+			unique[uniqueID].Kill()
 			}
 
 		timer = false // needed so block can reference it
-		timer = fn(delayMs: delay) { .timers.Remove1(timer); block() }
-		.timers.Add(timer)
+		timer = fn(delayMs: delay)
+			{
+			timers.Remove1(timer)
+			block()
+			}
+		timers.Add(timer)
 		if uniqueID isnt false
-			.unique[uniqueID] = timer
-		return (.killwrap)(timer, .timers)
+			unique[uniqueID] = timer
+		return (.killwrap)(timer, timers)
 		}
+
 	killwrap: class
 		{
 		New(.killer, .timers)
 			{
 			}
+
 		Kill()
 			{
 			.killer.Kill()
@@ -387,7 +443,7 @@ class /*abstract*/
 
 	Destroyed?()
 		{
-		return not .Member?('Window')
+		return not .Member?(#Window)
 		}
 
 	destroying?: false
@@ -406,8 +462,23 @@ class /*abstract*/
 		.Delete(all:) // to help garbage collection
 		}
 
-	Act(@unused) { throw "Suneido.js only" }
-	ActWith(@unused) { throw "Suneido.js only" }
-	CancelAct(@unused) { throw "Suneido.js only" }
-	SuSetHidden(@unused) { throw "Suneido.js only" }
+	Act(@unused)
+		{
+		throw "Suneido.js only"
+		}
+
+	ActWith(@unused)
+		{
+		throw "Suneido.js only"
+		}
+
+	CancelAct(@unused)
+		{
+		throw "Suneido.js only"
+		}
+
+	SuSetHidden(@unused)
+		{
+		throw "Suneido.js only"
+		}
 	}

@@ -285,7 +285,9 @@ Control
 		.handleSelectionChanged(newSelections, oldSelections)
 		}
 
-	SetFocusedRow(.focusedRow) { }
+	SetFocusedRow(.focusedRow)
+		{
+		}
 
 	committing: false
 	CommitRecord(rec, highlighErr? = false)
@@ -394,8 +396,6 @@ Control
 			.selectRowAfterInsert(newRecOb.newRowNum)
 			.EditField(.GetSelectedRecord(), .model.ColModel.Get(0))
 			}
-		else
-			.Repaint()
 		return true
 		}
 
@@ -780,5 +780,7 @@ Control
 		SuRenderBackend().DumpStatus(#DebugVListRowsMismatch)
 		}
 
-	Default(@unused) { }
+	Default(@unused)
+		{
+		}
 	}

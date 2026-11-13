@@ -8,22 +8,22 @@ class
 		url = .decode(url)
 		// NOTE: may not need to embed images into html for printing anymore if gSuneido
 		// handles it properly
-		embed? = url.Suffix?('?print')
-		url = url.RemoveSuffix('?print')
+		embed? = url.Suffix?("?print")
+		url = url.RemoveSuffix("?print")
+		evalPrefixLength = 14
 		if url.Prefix?("suneido:/eval?")
 			{
-			.evalCode(url, url[14 ..] /*= strip "suneido:/eval?" */,
-				"ERROR: SuneidoAPP - ")
+			.evalCode(url, url[evalPrefixLength..], "ERROR: SuneidoAPP - ")
 			return ""
 			}
 		if url.Prefix?("suneido:/from?")
-			return .evalCode(url, url[14 ..] /*= strip "suneido:/from?" */,
+			return .evalCode(url, url[evalPrefixLength..],
 				"ERROR: (CAUGHT) SuneidoAPP - ", returnMsg: "Resource Execution Failure")
 		if url.Prefix?("suneido:/inmemory/")
 			return InMemory.Get(url)
 		return not .going?(url)
 			? .app(url, embed?)
-			: ''
+			: ""
 		}
 
 	decode(url)
@@ -55,8 +55,9 @@ class
 
 	okayToEval?(code)
 		{
-		allowed = #(NotificationsHtml OpenBook ShellExecute AccessGoTo Exec_DrillDown,
-			LoginHtml, ChangePasswordDialog, 'SystemInfo.ShowScript')
+		allowed = #(NotificationsHtml, OpenBook, ShellExecute, AccessGoTo, Exec_DrillDown,
+			LoginHtml, ChangePasswordDialog, "SystemInfo.ShowScript",
+			"AiAgentControl.GoTo")
 		return allowed.Has?(code.BeforeFirst('('))
 		}
 
@@ -64,12 +65,12 @@ class
 		{
 		if url !~ .FileRegx
 			try
-				return PubSub.Publish(.event(.hwnd(url)), 'Going', :url) isnt false
+				return PubSub.Publish(.event(.hwnd(url)), #Going, :url) isnt false
 			catch (err)
 				{
-				if err isnt 'no return value'
-					SuneidoLog('ERROR: (CAUGHT) ' $ err, params: Object(:url),
-						caughtMsg: 'url navigation failed')
+				if err isnt "no return value"
+					SuneidoLog("ERROR: (CAUGHT) " $ err, params: Object(:url),
+						caughtMsg: "url navigation failed")
 				return true
 				}
 		return false
@@ -86,7 +87,7 @@ class
 
 	browserLoads()
 		{
-		return Suneido.GetDefault('BrowserRedir_Loads', false)
+		return Suneido.GetDefault(#BrowserRedir_Loads, false)
 		}
 
 	browserHwnd(url, browserLoads)
@@ -106,19 +107,19 @@ class
 
 	event(hwnd = false)
 		{
-		return 'BrowserRedir_' $ (hwnd is false ? GetActiveWindow() : hwnd)
+		return "BrowserRedir_" $ (hwnd is false ? GetActiveWindow() : hwnd)
 		}
 
 	app(url, embed?)
 		{
-		url = url[8 ..] /*= strip "suneido:" */
-		if not url.Prefix?("/")
-			return ''
+		url = url[8..] /*= strip "suneido:" */
+		if not url.Prefix?('/')
+			return ""
 		rec = .GetBookRec(url)
 		if String?(rec)
 			{
-			SuneidoLog('ERROR: (CAUGHT) SuneidoAPP - ' $ rec, calls:,
-				params: Object(:url), caughtMsg: 'returned: ' $ rec)
+			SuneidoLog("ERROR: (CAUGHT) SuneidoAPP - " $ rec, calls:,
+				params: Object(:url), caughtMsg: "returned: " $ rec)
 			return rec
 			}
 		if url =~ .Images $ '$'
@@ -138,19 +139,18 @@ class
 		{
 		table = url.Extract("^/([^/]*)")
 		if not TableExists?(table)
-			return Display(table) $ ' is not a table'
+			return Display(table) $ " is not a table"
 		name = url.Extract("[^/]*$")
 		path = url[1 + table.Size() .. -name.Size() - 1]
-		if (not name.Suffix?('?') and (false isnt pos = name.FindLast('?')) and
-			name[pos+1] isnt ' '/*? isnt in the middle of something*/)
+		if not name.Suffix?('?') and (false isnt pos = name.FindLast('?')) and
+			name[pos+1] isnt ' ' /*? isnt in the middle of something*/
 			name = name[..pos]
-		qFn = LastContribution('CacheBookRec?')(table, path, name)
+		qFn = LastContribution(#CacheBookRec?)(table, path, name)
 			? Query1Cached
 			: Query1
 		if false is x = qFn(table, :path, :name)
-			return "Page " $ Display(table) $ " > " $
-				Display(path) $ " > " $ Display(name) $ " not found." $
-				" Page may have been deleted or renamed."
+			return "Page " $ Display(table) $ " > " $ Display(path) $ " > " $
+				Display(name) $ " not found." $ " Page may have been deleted or renamed."
 		x.table = table
 		return x
 		}
@@ -161,11 +161,11 @@ class
 			x = s.Eval() // needs Eval
 		catch (unused, "can't find")
 			x = "<p>This page is not available.</p>"
-		if (String?(x) and x.Prefix?("<"))
+		if String?(x) and x.Prefix?('<')
 			return HtmlWrap(x, table)
-		if ("" isnt (s = SuneidoAPP_Authorize(table, path $ '/' $ name)))
+		if "" isnt (s = SuneidoAPP_Authorize(table, path $ '/' $ name))
 			return HtmlWrap(s)
-		PubSub.Publish(.event(), 'Set', control: x)
+		PubSub.Publish(.event(), #Set, control: x)
 		return ""
 		}
 	}

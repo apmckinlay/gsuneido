@@ -6,13 +6,15 @@ Control
 		.HwndMap = Object()
 		.cmdmap = Object().Set_default("")
 		.rcmdmap = Object().Set_default(false)
-		.mapcmd("On_OK", ID.OK)
-		.mapcmd("On_Cancel", ID.CANCEL)
+		.mapcmd(#On_OK, ID.OK)
+		.mapcmd(#On_Cancel, ID.CANCEL)
 		.Window = .Controller = this
 		.move_observers = Object()
 		}
 
-	New2() { }
+	New2()
+		{
+		}
 
 	GetLayout()
 		{
@@ -28,9 +30,9 @@ Control
 
 		if componentName in (#ModalWindow, #Dialog)
 			SuRenderBackend().WindowManager.AddModalWindow(this)
-		if componentName is 'Window'
+		if componentName is #Window
 			SuRenderBackend().WindowManager.AddTaskbarWindow(this)
-		return componentName $ 'Component'
+		return componentName $ "Component"
 		}
 
 	On_Cancel()
@@ -44,7 +46,7 @@ Control
 			if useDefaultSize is true
 				.SetWinSize(@.DefaultSize())
 
-		.Act('Center')
+		.Act(#Center)
 		}
 
 	DefaultSize()
@@ -52,8 +54,8 @@ Control
 		return Object(w: 1024, h: 768)
 		}
 
-	keep_size: false
-	window_info: false
+	keep_size:        false
+	window_info:      false
 	orig_window_info: false
 	restoreKeepSize(title, ctrlspec, keep_size)
 		{
@@ -62,8 +64,7 @@ Control
 		.keep_size = String?(keep_size) and keep_size isnt ""
 			? keep_size
 			: .keepSizeName(ctrlspec, title)
-		if .keep_size is false or
-			false is info = KeyListViewInfo.Get(.keep_size)
+		if .keep_size is false or false is info = KeyListViewInfo.Get(.keep_size)
 			return false
 		.window_info = info.window_info
 		.orig_window_info = info.window_info.Copy()
@@ -80,12 +81,12 @@ Control
 
 	keepSizeName(ctrlspec, title)
 		{
-		result = ''
+		result = ""
 		if Object?(ctrlspec) and ctrlspec.Member?(0) and String?(ctrlspec[0])
 			result = ctrlspec[0]
-		if title isnt '' and title isnt false
-			result = result isnt '' ? (result $ " - " $ title) : title
-		return result isnt '' ? result : false
+		if title isnt "" and title isnt false
+			result = result isnt "" ? (result $ " - " $ title) : title
+		return result isnt "" ? result : false
 		}
 
 	WINDOWRESIZE(rect)
@@ -97,10 +98,12 @@ Control
 		{
 		.move_observers.Add(fn)
 		}
+
 	ObserveMoveRemove(fn)
 		{
 		.move_observers.Remove(fn)
 		}
+
 	WINDOWPOSCHANGING()
 		{
 		for observer in .move_observers
@@ -112,14 +115,17 @@ Control
 		{
 		return .validationItems = Object()
 		}
+
 	AddValidationItem(item)
 		{
 		.validationItems.Add(item)
 		}
+
 	RemoveValidationItem(item)
 		{
 		.validationItems.Remove(item)
 		}
+
 	GetValidationItems()
 		{
 		return .validationItems
@@ -142,13 +148,14 @@ Control
 		if String?(control)
 			control = Global(control $ "Control")
 		.commands = Object()
-		if not control.Member?("Commands")
+		if not control.Member?(#Commands)
 			return
 		cmds = control.Commands
 		if Function?(cmds)
 			cmds = control.Commands()
 		.AddCommands(cmds)
 		}
+
 	AddCommands(cmds)
 		{
 		for cmd in cmds
@@ -159,18 +166,18 @@ Control
 				id: .Mapcmd(cmd[0]))
 		.SetupAccels(cmds)
 		}
+
 	Commands()
-		{ return .commands }
+		{
+		return .commands
+		}
 
 	// accelerator stuff =============================================
-	getter_accels()
-		{
-		return .accels = Object()
-		}
 	getter_accelGroups()
 		{
 		return .accelGroups = Object()
 		}
+
 	SetupAccels(cmds)
 		{
 		.ResetAccels()
@@ -180,27 +187,30 @@ Control
 				{
 				id = .Mapcmd(cmd[0])
 				accel = .make_accel(cmd[1], id)
-				newGroup.Add(Object(:accel, :id))
+				newGroup.Add(accel)
 				}
 		.accelGroups.Add(newGroup)
 		.SetAccels()
 		return newGroup
 		}
+
 	AddAccel(name, s)
 		{
 		id = .Mapcmd(name)
-		.commands[name] = Object(help: '', bitmap: '', accel: s, :id)
+		.commands[name] = Object(help: "", bitmap: "", accel: s, :id)
 		accel = .make_accel(s, id)
-		.accelGroups.Add(Object(Object(:accel, :id)))
+		.accelGroups.Add([accel])
 		}
+
 	convert: (
-		space: ' ',
-		add: '=', // js keydown's key is '=' instead of '+'
+		space:    ' ',
+		add:      '=', // js keydown's key is '=' instead of '+'
 		subtract: '-',
-		down: 'arrowdown',
-		left: 'arrowleft',
-		right: 'arrowright',
-		up: 'arrowup')
+		down:     arrowdown,
+		left:     arrowleft,
+		right:    arrowright,
+		up:       arrowup
+		)
 	make_accel(s, cmd)
 		{
 		ac = Object(:cmd, idx: 0)
@@ -223,28 +233,27 @@ Control
 		ac.key = .convert.GetDefault(ac.key, ac.key)
 		return ac
 		}
+
 	RestoreAccels(accels)
 		{
 		.ResetAccels()
 		.accelGroups.Remove(accels)
 		.SetAccels()
 		}
+
 	ResetAccels()
 		{
 		.Act(#ResetAccels)
 		}
+
 	SetAccels()
 		{
-		.buildAccel()
-		if .accels.NotEmpty?()
-			.Act(#SetAccels, .accels)
-		}
-	buildAccel()
-		{
-		.accels = Object()
+		accels = Object()
 		for group in .accelGroups
-			for item in group
-				.accels.Add(item.accel)
+			for ac in group
+				accels.Add(ac)
+		if accels.NotEmpty?()
+			.Act(#SetAccels, accels)
 		}
 
 	nextcmdnum: 102
@@ -252,22 +261,25 @@ Control
 		{
 		method = .cmd_to_method(cmd)
 		// if a number has already been assigned, return it
-		if (.rcmdmap[method] isnt false)
+		if .rcmdmap[method] isnt false
 			return .rcmdmap[method]
 		cmdnum = .nextcmdnum++
 		.mapcmd(method, cmdnum)
 		return cmdnum
 		}
+
 	cmd_to_method(cmd)
 		{
-		cmd = cmd.BeforeFirst("\t")
+		cmd = cmd.BeforeFirst('\t')
 		return "On_" $ ToIdentifier(cmd)
 		}
+
 	mapcmd(method, cmdnum)
 		{
 		.rcmdmap[method] = cmdnum
 		.cmdmap[cmdnum] = method
 		}
+
 	Cmdmap(num)
 		{
 		return .cmdmap[num]
@@ -286,15 +298,16 @@ Control
 	Send(@args)
 		{
 		args.source = this
-		if (not .Member?('Ctrl'))
+		if not .Member?(#Ctrl)
 			return 0
 		return .Ctrl.Msg(args)
 		}
+
 	Msg(args) /*internal*/
 		{
 		msg = args[0]
-		if (.Method?(msg))
-			return this[msg](@+1 args)
+		if .Method?(msg)
+			return this[msg](@+1args)
 		else
 			return 0
 		}
@@ -362,7 +375,7 @@ Control
 			return
 		window_info = .window_info is false ? Object() : .window_info
 		for m, v in .windowSize
-			window_info[m $ '_web'] = v
+			window_info[m $ "_web"] = v
 		if .orig_window_info isnt window_info
 			KeyListViewInfo.Save(.keep_size, window_info)
 		}
@@ -389,11 +402,11 @@ Control
 
 	AllowCloseWindow?()
 		{
-		if false is .Send("Ok_to_CloseWindow?")
+		if false is .Send(#Ok_to_CloseWindow?)
 			return false
 
 		// Check validation on the window
-		if .Send('ConfirmDestroy') is false
+		if .Send(#ConfirmDestroy) is false
 			return false
 
 		if .validationItems is false
@@ -411,7 +424,7 @@ Control
 
 	discardUnsavedChanges(item)
 		{
-		return (item.Method?('CloseWindowConfirmation') and
+		return (item.Method?(#CloseWindowConfirmation) and
 			not item.CloseWindowConfirmation())
 			? false
 			: CloseWindowConfirmation(.Window.Hwnd)
@@ -419,9 +432,9 @@ Control
 
 	DetectActivationOnDisabled(info)
 		{
-		if false isnt SuneidoLog.Once('WARNING: DetectActivationOnDisabledWindow',
+		if false isnt SuneidoLog.Once("WARNING: DetectActivationOnDisabledWindow",
 			params: Object(disabledBy: info, uniqueId: .UniqueId))
-			SuRenderBackend().DumpStatus('DetectActivationOnDisabled')
+			SuRenderBackend().DumpStatus(#DetectActivationOnDisabled)
 		}
 
 	CLOSE()
@@ -435,11 +448,13 @@ Control
 		{
 		if .Destroyed?()
 			return
-		Finally({
+		Finally(
+			{
 			.saveKeepSize()
-			if .Member?('Ctrl')
+			if .Member?(#Ctrl)
 				.Ctrl.Destroy()
-			}, {
+			},
+			{
 			.Act(#Destroy)
 			.UnregisterWindow()
 			})

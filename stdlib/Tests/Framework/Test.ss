@@ -23,7 +23,7 @@ class
 	beforeRun()
 		{
 		prevConditions = Object()
-		Plugins().ForeachContribution('TestRunner', 'beforeRun')
+		Plugins().ForeachContribution(#TestRunner, #beforeRun)
 			{
 			prevConditions.MergeNew((it.func)())
 			}
@@ -32,7 +32,7 @@ class
 
 	AfterRun(prevConditions)
 		{
-		Plugins().ForeachContribution('TestRunner', 'afterRun')
+		Plugins().ForeachContribution(#TestRunner, #afterRun)
 			{
 			(it.func)(prevConditions)
 			}
@@ -41,13 +41,13 @@ class
 	Debug()
 		{
 		_debugTest = true
-		if Type(this) is "Class"
-			return (new this).Debug()
+		if Type(this) is #Class
+			return (new this()).Debug()
 
 		.debug_block()
 			{
 			.Foreach_test_method()
-				{ |member|
+				{|member|
 				this[member]()
 				}
 			}
@@ -68,8 +68,7 @@ class
 			{
 			members.MergeUnion(base.Members())
 			base = base.Base()
-			}
-			while base isnt Test
+			} while base isnt Test
 
 		return members
 		}
@@ -77,8 +76,8 @@ class
 	DebugOne(test_method)
 		{
 		_debugTest = true
-		if Type(this) is "Class"
-			return (new this).DebugOne(test_method)
+		if Type(this) is #Class
+			return (new this()).DebugOne(test_method)
 
 		.debug_block()
 			{
@@ -96,7 +95,7 @@ class
 			.Setup()
 			block()
 			}
-		catch(e)
+		catch (e)
 			{
 			teardown? = .failureHandler(e)
 			passed? = false
@@ -121,6 +120,7 @@ class
 			}
 		return teardown?
 		}
+
 	callsBeforeDebug(stack)
 		{
 		calls = Object()
@@ -144,8 +144,7 @@ class
 	runningTestMethod: false
 	debug_one(member, privatePrefix, base, block)
 		{
-		if member.Prefix?("Test") and
-			not member.Prefix?(privatePrefix) and
+		if member.Prefix?(#Test) and not member.Prefix?(privatePrefix) and
 			Function?(base[member])
 			Finally(
 				{
@@ -162,39 +161,46 @@ class
 		{
 		.teardowns = Object()
 		.teardownsAfterEachMethod = Object()
-		ServerSuneido.Set('TestRunningLogs', Object())
+		ServerSuneido.Set(#TestRunningLogs, Object())
 		}
 
 	Setup()
-		{ }
+		{
+		}
 
 	TempName()
-		{ return .TempTableName().Capitalize() }
+		{
+		return .TempTableName().Capitalize()
+		}
 
 	TempTableName()
-		{ return 'tests' $ Display(Timestamp()).Tr('#.', '_') }
+		{
+		return "tests" $ Display(Timestamp()).Tr("#.", '_')
+		}
 
 	MakeTable(@args)
 		{
 		.AddTeardown(.teardown_tables)
 		table = .TempTableName()
-		Database("create " $ table $ " " $ args[0])
+		Database("create " $ table $ ' ' $ args[0])
 		for r in args.Delete(0)
 			QueryOutput(table, r)
 		return table
 		}
+
 	teardown_tables()
 		{
 		libs = Libraries()
 		resetCache? = false
 		QueryApply('tables
 			where table > "tests_20" and table < "tests_2099"
-			sort reverse table') // reverse to handle foreign keys
-			{ |x|
+			sort reverse table')
+			{|// reverse to handle foreign keys
+				x|
 			if libs.Has?(x.table)
 				{
 				resetCache? = true
-				ServerEval('Unuse', x.table)
+				ServerEval(#Unuse, x.table)
 				}
 			try
 				Database("drop " $ x.table)
@@ -212,31 +218,34 @@ class
 		Database("view " $ table $ " = " $ definition)
 		return table
 		}
+
 	teardown_views()
 		{
 		QueryApply('views
 			where view_name > "tests_20" and view_name < "tests_2099"')
-			{ |x|
+			{|x|
 			Database("destroy " $ x.view_name)
 			}
 		}
 
-	testlib: 'Test_lib'
+	testlib: #Test_lib
 	TestLibName()
-		{ return .testlib }
+		{
+		return .testlib
+		}
 
 	EnsureLibrary(lib)
 		{
 		if not TableExists?(lib)
 			.makeLibrary(lib)
 		if lib is .testlib
-			Database('ensure ' $ .testlib $ ' (lib_committed)')
-		if ServerEval('Use', lib)
+			Database("ensure " $ .testlib $ " (lib_committed)")
+		if ServerEval(#Use, lib)
 			Unload()
 		else if lib is .testlib and Libraries().Last() isnt lib
 			{
-			ServerEval('Unuse', lib)
-			ServerEval('Use', lib)
+			ServerEval(#Unuse, lib)
+			ServerEval(#Use, lib)
 			Unload()
 			}
 		}
@@ -245,29 +254,31 @@ class
 	MakeLibraryRecord(@records)
 		{
 		table = .testlib
-		if records.Member?('table')
+		if records.Member?(#table)
 			{
 			// TODO: Teardown does not clean up records if the table is a standard lib
 			table = records.table
-			records.Delete('table')
+			records.Delete(#table)
 			.AddTeardown(.teardown_tables)
 			}
 
 		.EnsureLibrary(table)
 		for x in records
 			{
-			QueryDo('delete ' $ table $ ' where name is ' $ Display(x.name))
+			QueryDo("delete " $ table $ " where name is " $ Display(x.name))
 			OutputLibraryRecord(table, x)
 			.checkLibraryName(x.name)
 			}
 		.AddTeardown(.teardown_test_lib)
 		return table
 		}
+
 	MakeLibrary(@records)
 		{
 		.AddTeardown(.teardown_tables)
 		return .makeLibrary(.TempTableName(), records)
 		}
+
 	makeLibrary(library, records = #())
 		{
 		LibTreeModel.Create(library)
@@ -278,7 +289,8 @@ class
 			}
 		return library
 		}
-	checkLibraryName(name /*unused*/)
+
+	checkLibraryName(name/*unused*/)
 		{
 //		if name.GlobalName?() and
 //			not name.Has?(Date().Format("yyyyMMdd")) and
@@ -298,9 +310,9 @@ class
 		QueryApply(.testlib)
 			{|x|
 			Unload(x.name)
-			ServerEval('Unload', x.name)
+			ServerEval(#Unload, x.name)
 			}
-		QueryDo('delete ' $ .testlib)
+		QueryDo("delete " $ .testlib)
 		}
 
 	MakeBook()
@@ -316,10 +328,10 @@ class
 		SvcDisabledBooks.ResetCache()
 		}
 
-	MakeBookRecord(book, text, path = '', extrafields = #())
+	MakeBookRecord(book, text, path = "", extrafields = #())
 		{
 		.AddTeardown({ .teardownBook(book) })
-		num = QueryMax(book, 'num') + 1
+		num = QueryMax(book, #num) + 1
 		name = .TempName()
 		rec = [:num, :path, :name, :text]
 		rec.MergeNew(extrafields)
@@ -332,12 +344,12 @@ class
 		// If MakeBook is called before MakeBookRecord, the table will be dropped
 		// prior to this teardown (rendering the below unnecessary)
 		if TableExists?(book)
-			QueryDo('delete ' $ book $ ' where name > "Tests_" and name < "Tests_z"')
+			QueryDo("delete " $ book $ ' where name > "Tests_" and name < "Tests_z"')
 		}
 
 	MakeRecordFromDB(rec) // so .New?() returns false
 		{
-		return QueryFirst('columns sort column').Delete(all:).Merge(rec)
+		return QueryFirst("stdlib sort num").Delete(all:).Merge(rec)
 		}
 
 	MakeFile(content = false)
@@ -360,11 +372,11 @@ class
 
 	teardown_files()
 		{
-		for file in Dir('./tests_20*')
+		for file in Dir("./tests_20*")
 			DeleteFile(file)
 		}
 
-	MakeDir(parent = '')
+	MakeDir(parent = "")
 		{
 		.AddTeardown(.teardown_dir)
 		dirName = Opt(parent, '/') $ .TempTableName()
@@ -374,9 +386,12 @@ class
 
 	teardown_dir()
 		{
-		for folder in Dir('./tests_20*').Filter({ it.Suffix?('/') })
+		for folder in Dir("./tests_20*").Filter({ it.Suffix?('/') })
 			{
-			result = RetryBool(maxretries: 5, min: 50) { DeleteDir(folder) }
+			result = RetryBool(maxretries: 5, min: 50)
+				{
+				DeleteDir(folder)
+				}
 			if result isnt true
 				throw result
 			}
@@ -385,33 +400,34 @@ class
 	// type: Plugin_FieldTypes
 	MakeCustomField(tableName, type, prompt = false, options = #())
 		{
-		destroyCustomizable? = not TableExists?('customizable')
+		destroyCustomizable? = not TableExists?(#customizable)
 		c = Customizable(tableName)
 		if prompt is false
 			prompt = .TempName()
 
-		unuseConfiglib? = not Libraries().Has?('configlib')
-		destroyConfiglib? = not TableExists?('configlib')
+		unuseConfiglib? = not Libraries().Has?(#configlib)
+		destroyConfiglib? = not TableExists?(#configlib)
 
 		field = c.CreateField(prompt, type, SelectFields(), :options)
 
-		.AddTeardown({
-			Database('alter ' $ tableName $ ' drop (' $ field $ ')')
+		.AddTeardown(
+			{
+			Database("alter " $ tableName $ " drop (" $ field $ ')')
 			if unuseConfiglib?
 				{
-				ServerEval('Unuse', 'configlib')
+				ServerEval(#Unuse, #configlib)
 				Unload()
 				}
 			if destroyConfiglib?
-				Database('destroy configlib')
+				Database("destroy configlib")
 			else
 				{
-				QueryDo('delete configlib where name in (' $
-					Display('Access_' $ field) $ ', ' $ Display('Field_' $ field) $ ')')
-				Unload('Field_' $ field)
+				QueryDo("delete configlib where name in (" $ Display("Access_" $ field) $
+					", " $ Display("Field_" $ field) $ ')')
+				Unload("Field_" $ field)
 				}
 			if destroyCustomizable?
-				Database('destroy customizable')
+				Database("destroy customizable")
 			CustomizableMap.ResetServerCache()
 			QueryColumns.ResetCache()
 			})
@@ -420,30 +436,30 @@ class
 
 	// NOTE: "name" should be generated via .TempName, or TempTableName
 	// 	IE: .MakeTable > return table > table = .TempTableName()
-	MakeCustomLayout(name, tab, layout = '', custom? = false, hidden? = '',
-		table_name = '', user = '', customKey = '')
+	MakeCustomLayout(name, tab, layout = "", custom? = false, hidden? = "",
+		table_name = "", user = "", customKey = "")
 		{
-		destroyCustomizable? = not TableExists?('customizable')
+		destroyCustomizable? = not TableExists?(#customizable)
 		Customizable(name)
-		QueryOutput('customizable',
+		QueryOutput(#customizable,
 			[:name, :tab, :layout, :custom?, :hidden?, :table_name, :user, :customKey])
-		.AddTeardown({
+		.AddTeardown(
+			{
 			if destroyCustomizable?
-				Database('destroy customizable')
+				Database("destroy customizable")
 			else
-				QueryDo('delete customizable where name is ' $ Display(name))
+				QueryDo("delete customizable where name is " $ Display(name))
 			})
 		}
 
-	MakeCustomizeField(tableName, field, formula = '', key = false, selectFields = false,
+	MakeCustomizeField(tableName, field, formula = "", key = false, selectFields = false,
 		extrafields = #())
 		{
-		if not tableName.Lower().Prefix?('tests_') and
-			not field.Lower().Prefix?('tests_') and
-			not Customizable.CustomField?(field)
+		if not tableName.Lower().Prefix?(#tests_) and
+			not field.Lower().Prefix?(#tests_) and not Customizable.CustomField?(field)
 			throw "MakeCustomizeField does not currently handle non-custom fields"
 
-		if not TableExists?('customizable_fields')
+		if not TableExists?(#customizable_fields)
 			{
 			Customizable.EnsureTable()
 			.AddTeardown(.tearDownCustomizableFieldsTable)
@@ -451,29 +467,30 @@ class
 		.AddTeardown(.tearDownCustomizeFields)
 		if selectFields is false
 			selectFields = QueryColumns(tableName)
-		fn = CustomizeField.TranslateFormula(
-			SelectFields(selectFields), formula, field)
+		fn = CustomizeField.TranslateFormula(SelectFields(selectFields), formula, field)
 		if key is false
 			key = tableName
 		else
 			Customizable.ResetCustomizedCache(key)
-		QueryOutput('customizable_fields', [custfield_num: .TempTableName(),
-			custfield_name: key, custfield_field: field
-			custfield_formula: formula,
-			custfield_formula_code: fn.formulaCode
-			custfield_formula_fields: fn.fields].Merge(extrafields))
+		QueryOutput(#customizable_fields,
+			[custfield_num: .TempTableName(),
+					custfield_name: key, custfield_field: field,
+					custfield_formula: formula,
+					custfield_formula_code: fn.formulaCode,
+					custfield_formula_fields: fn.fields].
+				Merge(extrafields))
 		}
 
 	MakeDatadict(@args)
 		{
-		fieldName = args.Extract('fieldName', .TempName().Lower())
-		baseClass = args.Extract('baseClass', 'Field_string')
-		control = args.Extract('control', 'Field')
+		fieldName = args.Extract(#fieldName, .TempName().Lower())
+		baseClass = args.Extract(#baseClass, #Field_string)
+		control = args.Extract(#control, #Field)
 
 		fieldArgs = Object()
 		for m, v in args
 			fieldArgs.Add(m $ `: ` $ (String?(v) ? Display(v) : v))
-		joinStr = '\r\n\t\t\t\t'
+		joinStr = "\r\n\t\t\t\t"
 		.MakeLibraryRecord([name: `Field_` $ fieldName,
 			text: baseClass $ `
 				{` $
@@ -488,9 +505,9 @@ class
 		{
 		field = .TempTableName()
 		fieldPrefix = field.Tr('_')
-		num = fieldPrefix $ '_num'
-		name = fieldPrefix $ '_name'
-		abbrev = fieldPrefix $ '_abbrev'
+		num = fieldPrefix $ "_num"
+		name = fieldPrefix $ "_name"
+		abbrev = fieldPrefix $ "_abbrev"
 		table = .MakeTable('(' $ Object(num, name, abbrev).Join(',') $ ')
 			key (' $ num $ ')
 			key (' $ name $ ')
@@ -504,12 +521,12 @@ class
 					field: ` $ num $ `)
 				Format: (Id query: '` $ table $ `' numField: ` $ num $ `)
 				}`])
-		leftjoin = ' leftjoin by(' $ num $ ') (' $ table $
-			' project ' $ num $ ', ' $ name $ ', ' $ abbrev $ ')'
+		leftjoin = " leftjoin by(" $ num $ ") (" $ table $ " project " $ num $ ", " $
+			name $ ", " $ abbrev $ ')'
 		return Object(:table, :num, :name, :abbrev, :leftjoin)
 		}
 
-	MakeNextNum(field = 'num', num = 1)
+	MakeNextNum(field = #num, num = 1)
 		{
 		.AddTeardown(.teardown_tables)
 		GetNextNum.Create(table = .TempTableName(), field, num)
@@ -520,11 +537,12 @@ class
 		{
 		.AddTeardown(.teardown_eca)
 		num = .TempTableName() // should be suitable for test key as well
-		QueryOutput('event_condition_actions', Record(
-			eca_num: num,
-			eca_event: name,
-			eca_conditions: conditions,
-			eca_actions: actions))
+		QueryOutput(#event_condition_actions,
+			[
+				eca_num: num,
+				eca_event: name,
+				eca_conditions: conditions,
+				eca_actions: actions])
 		}
 
 	teardown_eca()
@@ -536,20 +554,20 @@ class
 	WatchTable(table)
 		{
 		// The WatchTable('suneidolog') is now supported by GetSuneidoLog()
-		Assert(table isnt 'suneidolog')
-		watchMember = 'TestWatchTable_' $ table $ .TempName()
+		Assert(table isnt #suneidolog)
+		watchMember = "TestWatchTable_" $ table $ .TempName()
 		ServerSuneido.Set(watchMember, Object())
-		.AddTeardown({.teardownWatchTable(table, watchMember) })
+		.AddTeardown({ .teardownWatchTable(table, watchMember) })
 		trigger = "Trigger_" $ table
 		callSuper = .getCallSuperAndTrackWatch(table, trigger, watchMember)
 		code = .watchTableOverrideCode(watchMember, callSuper)
-		ServerEval("LibraryOverride", .testlib, trigger, code)
+		ServerEval(#LibraryOverride, .testlib, trigger, code)
 		return watchMember
 		}
 
 	GetSuneidoLog()
 		{
-		return ServerSuneido.Get('TestRunningLogs', #())
+		return ServerSuneido.Get(#TestRunningLogs, #())
 		}
 
 	teardownWatchTable(table, watchMember)
@@ -559,15 +577,16 @@ class
 		if TableExists?(table)
 			for rec in recs
 				QueryDelete(table, rec)
-		ob = Suneido.GetDefault('WatchTable_' $ table, Record())
+		ob = Suneido.GetDefault("WatchTable_" $ table, [])
 		newmems = ob.members.Copy()
 		newmems.Remove(watchMember)
 		if newmems.Empty?()
-			Suneido.Delete('WatchTable_' $ table)
+			Suneido.Delete("WatchTable_" $ table)
 		else
-			Suneido['WatchTable_' $ table] = Object(members: newmems,
+			Suneido["WatchTable_" $ table] = Object(members: newmems,
 				callSuper: ob.callSuper)
 		}
+
 	watchTableOverrideCode(watchMember, callSuper)
 		{
 		// if query updates occur in a suneido.js thread (on the server),
@@ -586,22 +605,23 @@ class
 				ServerSuneido.AddToMember(member, newrec)
 			}`
 		}
+
 	getCallSuperAndTrackWatch(table, trigger, watchMember)
 		{
-		callSuper = ''
-		if not Suneido.Member?('WatchTable_' $ table)
+		callSuper = ""
+		if not Suneido.Member?("WatchTable_" $ table)
 			{
 			if not Uninit?(trigger)
-				callSuper = "_" $ trigger $ '(t, oldrec, newrec)'
-			Suneido['WatchTable_' $ table] = Object(:callSuper,
-				members: Object(watchMember))
+				callSuper = '_' $ trigger $ "(t, oldrec, newrec)"
+			Suneido["WatchTable_" $ table] = Object(:callSuper,
+				members: [watchMember])
 			}
 		else
 			{
-			ob = Suneido.GetDefault('WatchTable_' $ table, Record())
+			ob = Suneido.GetDefault("WatchTable_" $ table, [])
 			callSuper = ob.callSuper
 			newmembers = ob.members.Copy().Add(watchMember)
-			Suneido['WatchTable_' $ table] = Object(:callSuper, members: newmembers)
+			Suneido["WatchTable_" $ table] = Object(:callSuper, members: newmembers)
 			}
 		return callSuper
 		}
@@ -613,7 +633,7 @@ class
 
 	MemoizeSingleOverride(cache, value)
 		{
-		MemoizeSingle.Cache()[override = cache $ 'Override'] = value
+		MemoizeSingle.Cache()[override = cache $ "Override"] = value
 		.AddTeardown({ MemoizeSingle.Cache().Delete(override) })
 		}
 
@@ -625,15 +645,17 @@ class
 		.spys.Add(spy = Spy(target))
 		return spy
 		}
+
 	teardownSpys()
 		{
 		.spys.Each()
-			{ |spy|
+			{|spy|
 			if spy.NotEmpty?()
 				spy.Close()
 			}
 		.spys = Object()
 		}
+
 	getter_spys()
 		{
 		return .spys = Object() // once only
@@ -647,12 +669,12 @@ class
 
 	dropTables(tables)
 		{
-		tables.Filter(TableExists?).Each({ Database('drop ' $ it) })
+		tables.Filter(TableExists?).Each({ Database("drop " $ it) })
 		}
 
 	tearDownCustomizableFieldsTable()
 		{
-		Database('destroy customizable_fields')
+		Database("destroy customizable_fields")
 		Customizable.ResetAllCache()
 		}
 
@@ -667,16 +689,16 @@ class
 		{
 		.teardownsAfterEachMethod.AddUnique(func)
 		}
+
 	TeardownAfterEachMethod()
 		{
 		try
-			{
 			for (i = .teardownsAfterEachMethod.Size() - 1; i >= 0; --i)
 				(.teardownsAfterEachMethod[i])()
-			}
 		.teardownsAfterEachMethod = Object()
-		ServerSuneido.DeleteMember('TestRunningLogs')
+		ServerSuneido.DeleteMember(#TestRunningLogs)
 		}
+
 	AddTeardown(@args)
 		{
 		fn = args.Size() is 1
@@ -684,38 +706,36 @@ class
 			: Bind(@args) // need Curry for AddUnique since blocks are always unique
 		.teardowns.AddUnique(fn)
 		}
+
 	Teardown()
 		{
 		errors = Object()
 		tries = 0
 		maxtries = 5
 		allteardowns = .teardowns.Copy()
-		while (tries < maxtries and not allteardowns.Empty?())
+		while tries < maxtries and not allteardowns.Empty?()
 			{
 			errors = Object()
 			for (i = allteardowns.Size() - 1; i >= 0; --i)
-				{
 				try
 					{
 					(allteardowns[i])()
 					allteardowns.Delete(i)
 					}
-				catch (err, '*foreign key')
-					{
-					if tries is maxtries - 1 // last try, record errors for user
+				catch (err, "*foreign key")
+					if tries is maxtries-1 // last try, record errors for user
 						errors.Add(err)
-					}
-				}
 			++tries
 			}
 		.cleanUp()
-		ServerEval("LibraryOverrideClear")
+		ServerEval(#LibraryOverrideClear)
 		if not allteardowns.Empty?()
-			throw 'did not run all teardowns (see errors object) : ' $
-				(errors.Join('; ')[..100])
+			throw "did not run all teardowns (see errors object) : " $
+				(errors.Join("; ")[..100])
 		}
+
 	cleanUp()
 		{
-		ServerSuneido.DeleteMember('TestRunningLogs')
+		ServerSuneido.DeleteMember(#TestRunningLogs)
 		}
 	}

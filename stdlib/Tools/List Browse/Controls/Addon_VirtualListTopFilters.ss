@@ -9,21 +9,21 @@ Addon_VirtualListViewBase
 		if .fromSmallDialog(view)
 			{
 			.addTopExtraButtons(view)
-			FilterButtonControl.UpdateStatus(view, model.ColModel.HasSelectedVals?())
+			.UpdateFilterItemsButton()
 			.UpdateTotalSelected()
 			return
 			}
-		openState = UserSettings.Get(view.Option $ ' - Split Open', 'no_default')
+		openState = UserSettings.Get(view.Option $ " - Split Open", #no_default)
 		select = view.GetDefaultSelect()
-		if openState is true or (openState is 'no_default' and select.Size() > 0)
+		if openState is true or (openState is #no_default and select.Size() > 0)
 			.OpenFilters(view)
 		else
 			.addTopExtraButtons(view)
-		FilterButtonControl.UpdateStatus(view, model.ColModel.HasSelectedVals?())
+		.UpdateFilterItemsButton()
 		// to ensure extra space for creating new record
 		if model.GetInitStartLast() is true
 			view.Defer(view.On_VirtualListThumb_ArrowDown,
-				uniqueID: 'VirtualListLoadFilter')
+				uniqueID: #VirtualListLoadFilter)
 		.UpdateTotalSelected()
 		}
 
@@ -37,9 +37,14 @@ Addon_VirtualListViewBase
 
 	addTopExtraButtons(view)
 		{
-		filtersWrapper = view.FindControl('select')
+		filtersWrapper = view.FindControl(#select)
 		extraLayout = view.Select_ExtraLayout()
-		filtersWrapper.Append(Object('VirtualListTopLayout', extraLayout))
+		if extraLayout.msg.Empty?()
+			filtersWrapper.Append([#VirtualListTopLayout, extraLayout])
+		else
+			filtersWrapper.Append([#Vert,
+				[#VirtualListTopLayout, extraLayout],
+				extraLayout.msg])
 		}
 
 	ToggleFilter(view)
@@ -53,9 +58,8 @@ Addon_VirtualListViewBase
 			}
 		else if topFilters is false
 			.OpenFilters(view)
-		else
-			if .Select_Apply()
-				.removeFilters(view, topFilters)
+		else if .Select_Apply()
+			.removeFilters(view, topFilters)
 		.UpdateTotalSelected()
 		}
 
@@ -64,39 +68,41 @@ Addon_VirtualListViewBase
 		return view.FindControl(.selectRepeatName)
 		}
 
+	filterOnSubTablesButton: false
 	OpenFilters(view)
 		{
 		grid = view.GetGrid()
-		filtersWrapper = view.FindControl('select')  // possibly call once ???
+		filtersWrapper = view.FindControl(#select) // possibly call once ???
 		filtersWrapper.Remove(0)
 		rect = GetWindowRect(grid.Hwnd)
-		scroll = view.FindControl('VirtualListScroll')
+		scroll = view.FindControl(#VirtualListScroll)
 		scroll.Ymin = (rect.bottom - rect.top) / 2
-		UserSettings.Put(view.Option $ ' - Split Open', true)
+		UserSettings.Put(view.Option $ " - Split Open", true)
 		colModel = view.GetModel().ColModel
 
-		if .Send('UseSubTableFilters?') is true
-			filtersWrapper.Append(
-				Object('SelectRepeatSubtables', view, colModel, .selectRepeatName))
-		else
-			filtersWrapper.Append(Object('SelectRepeat',
-				view.GetSelectFields(), view.Select_vals, .selectRepeatName,
-				option: view.Option, title: view.GetTitle(), fromFilter:,
-				selChanged: view.GetDefault('SelectChanged?', false),
-				noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?()))
+		filtersWrapper.Append([#SelectRepeat,
+			view.GetSelectFields(), view.Select_vals, .selectRepeatName,
+			option: view.Option, title: view.GetTitle(), fromFilter:,
+			selChanged: view.GetDefault(#SelectChanged?, false),
+			noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?(),
+			hasSubTables?: .UseSubTableFilters?()])
 
-		split = view.FindControl('VertSplit')
+		.filterOnSubTablesButton = .FindControl(#subTableFilter)
+		.UpdateFilterItemsButton()
+
+		split = view.FindControl(#VertSplit)
 		split.UpdateSplitter()
 		if false is split.SetSplitSaveName(view.Option) // no default
 			split.MaximizeSecond()
 		if .Model.CheckAboveSortLimit?()
 			{
-			filtersWrapper.FindControl('buttons').
-				Insert(0, Object('VirtualListSortWarningButton', .Parent))
-			if false isnt warnButton = .FindControl('VirtualListSortWarningButton')
+			filtersWrapper.
+				FindControl(#buttons).
+				Insert(0, [#VirtualListSortWarningButton, .Parent])
+			if false isnt warnButton = .FindControl(#VirtualListSortWarningButton)
 				.setWarnButtonState(warnButton)
 			}
-		view.AfterTopFilter("open")
+		view.AfterTopFilter(#open)
 		}
 
 	getter_selectRepeatName()
@@ -115,7 +121,7 @@ Addon_VirtualListViewBase
 	showSortWarning?()
 		{
 		x = .Parent.FindControl(.selectRepeatName).Get()
-		if x.Member?('Header')
+		if x.Member?(#Header)
 			x = x.Header
 
 		// do NOT need to worry about SubTable filters here
@@ -128,52 +134,53 @@ Addon_VirtualListViewBase
 
 	removeFilters(view, topFilters)
 		{
-		split = view.FindControl('VertSplit')
+		split = view.FindControl(#VertSplit)
 		view.SelectChanged? = topFilters.SelectChanged?()
 		split.SaveSplit()
-		UserSettings.Put(view.Option $ ' - Split Open', false)
-		filtersWrapper = view.FindControl('select')  // possibly call once ???
+		UserSettings.Put(view.Option $ " - Split Open", false)
+		filtersWrapper = view.FindControl(#select) // possibly call once ???
 		filtersWrapper.RemoveAll()
+		.filterOnSubTablesButton = false
 		.addTopExtraButtons(view)
 		split.UpdateSplitter(remove:)
-		scroll = view.FindControl('VirtualListScroll')
+		scroll = view.FindControl(#VirtualListScroll)
 		scroll.Parent.Ystretch = 2
-		view.AfterTopFilter("close")
+		view.AfterTopFilter(#close)
 		}
 
 	On_Count()
 		{
-		if .Filtersontop is false or
-			(.topFilters isnt false and .Select_Apply()) or
+		if .Filtersontop is false or (.topFilters isnt false and .Select_Apply()) or
 			(.Filtersontop and .topFilters is false)
 			AccessControl.GetCount(.GetTitle(), .GetQuery())
 		}
 
-	SelectFromWindow(.topFilters)
+	subTableSelects: false
+	SelectFromWindow(.topFilters, .subTableSelects)
 		{
 		return .Select_Apply()
 		}
 
 	CloseSelectFromWindow()
 		{
-		.Delete(String(this).BeforeFirst("(") $ "_topFilters") // fall back to getter
+		.Delete(String(this).BeforeFirst('(') $ "_topFilters") // fall back to getter
 		}
 
 	Select_Apply()
 		{
-		if false is .Send('VirtualList_ApplySelect?')
+		if false is .Send(#VirtualList_ApplySelect?)
 			return false
 		if .SaveFirst() is false
 			return false
 		if false is where = .filtersWhere()
 			return false
-		_slowQueryLog = Object(logged: false, from: 'Select_Apply')
+		_slowQueryLog = Object(logged: false, from: #Select_Apply)
 
 		// need to handle conditions being an object of objects if topFilters
 		// is a SelectRepeatSubtables
 		x = .topFilters.Get()
-		if x.Member?('Header')
-			conditions = x['Header'].conditions
+		if x.Member?(#Header)
+			conditions = x.Header.conditions
 		else
 			conditions = x.conditions
 		if .checkSlowSelect(conditions, where) is false
@@ -190,7 +197,7 @@ Addon_VirtualListViewBase
 
 	initializeQueryState(@queryState)
 		{
-		if 0 is (queryState.presets = .Send('VirtualList_SlowQueryPresets'))
+		if 0 is (queryState.presets = .Send(#VirtualList_SlowQueryPresets))
 			queryState.presets = #()
 		return queryState.Set_default(false)
 		}
@@ -221,18 +228,16 @@ Addon_VirtualListViewBase
 		try
 			{
 			if not conditions.Empty?()
-				{
-				if conditions.Member?('Header')
+				if conditions.Member?(#Header)
 					{
 					.SetSelectVals(conditions.Header.conditions)
-					.SetExtraSelectVals(conditions.Delete('Header'))
+					.SetExtraSelectVals(conditions.Delete(#Header))
 					}
 				else
 					.SetSelectVals(conditions.conditions)
-				}
 
 			curSelectVals = .Select_vals.DeepCopy()
-			if false isnt .Send('VirtualList_BeforeApplySelect', where)
+			if false isnt .Send(#VirtualList_BeforeApplySelect, where)
 				.SetWhere(where)
 			else
 				{
@@ -240,11 +245,11 @@ Addon_VirtualListViewBase
 				.SetSelectVals(curSelectVals)
 				}
 			}
-		catch (unused, '*regex')
+		catch (unused, "*regex")
 			{
 			.SetSelectVals(preSelectVals)
 			.SetWhere(preWhere)
-			.AlertInfo('Select', 'Invalid matcher')
+			.AlertInfo(#Select, "Invalid matcher")
 			return false
 			}
 
@@ -253,15 +258,48 @@ Addon_VirtualListViewBase
 			.Model.ClearStickyFieldValues()
 		.SelectControl_Changed()
 		.UpdateTotalSelected(true)
+
+		.UpdateFilterItemsButton()
+
 		return true
 		}
 
+	UpdateFilterItemsButton()
+		{
+		if .UseSubTableFilters?() is true
+			{
+			.UpdateFilterButton(active: .GetModel().ColModel.HasSelectedVals?() or
+				.subTableFilter is true)
+			if .filterOnSubTablesButton isnt false
+				{
+				.filterOnSubTablesButton.Pushed?(.subTableFilter is true)
+				.FindControl(#loadButton).SetTextColor(CLR.DEFAULT)
+				}
+			}
+		}
+
+	SetSubTableFilter(subTableFilter)
+		{
+		.subTableFilter = subTableFilter
+		.UpdateFilterItemsButton()
+		}
+
+	subTableFilter: false
 	filtersWhere()
 		{
 		if .topFilters.Base?(SelectRepeatControl)
 			{
 			if false is where = .topFilters.Where()
 				return false
+
+			if .subTableSelects isnt false
+				{
+				.subTableFilter = false
+				extraWhere = .Send(#VirtualList_ExtraWhere, .subTableSelects)
+				if extraWhere isnt ""
+					.subTableFilter = true
+				where.where $= extraWhere
+				}
 			return .GetSelectFields().Joins(where.joinflds) $ where.where
 			}
 		return .topFilters.Where(.GetSelectFields())
@@ -279,8 +317,11 @@ Addon_VirtualListViewBase
 
 	Select_OpenDialog()
 		{
-		conditions = .topFilters.Get().conditions
-		.SetSelectVals(conditions)
+		if .topFilters isnt false
+			{
+			conditions = .topFilters.Get().conditions
+			.SetSelectVals(conditions)
+			}
 		.On_VirtualListThumb_ArrowSelect()
 		}
 
@@ -289,7 +330,7 @@ Addon_VirtualListViewBase
 		{
 		if not .SaveOutstandingChanges()
 			return
-		if false is .Send("VirtualList_AllowSort", :col)
+		if false is .Send(#VirtualList_AllowSort, :col)
 			return
 		if not .Model.CheckSortable(col)
 			return
@@ -334,19 +375,19 @@ Addon_VirtualListViewBase
 		// there are scenarios where the column the user clicked on is not actualy
 		// the column we want to sort on. need to look that up and pass it down to
 		// VirtualListSortModel (as well as the column the user clicked on.)
-		if 0 is dataCol = .Send('VirtualList_GetSortCol', col: displayCol)
+		if 0 is dataCol = .Send(#VirtualList_GetSortCol, col: displayCol)
 			dataCol = false
 
 		// displayCol is the column the user clicked on
 		// dataCol - if it exists - is the column we actually want to sort on
 		posPreSort = .Model.GetPosition()
-		.Send('VirtualList_BeforeSort')
+		.Send(#VirtualList_BeforeSort)
 		.Model.SetSort(displayCol, dataCol)
 		ctrls = .GetViewControls()
 		ctrls.header.RefreshSort(.GetPrimarySort())
 		if posPreSort isnt pos = .Model.GetPosition()
-			if posPreSort isnt 'middle'
-				.Model.SetStartLast(posPreSort isnt 'top')
+			if posPreSort isnt #middle
+				.Model.SetStartLast(posPreSort isnt #top)
 			else
 				ctrls.thumb.SetThumbPosition(pos)
 		.Grid.Repaint()
@@ -355,8 +396,8 @@ Addon_VirtualListViewBase
 
 	FixDisabledSort()
 		{
-		msg = 'SORT DISABLED! Use one of the following fields or presets to reduce the ' $
-			'number of records read through in order to allow sorting'
+		msg = "SORT DISABLED! Use one of the following fields or presets to reduce the " $
+			"number of records read through in order to allow sorting"
 
 		indexes = .Model.SelectableIndexes()
 		queryState = .initializeQueryState(:msg, :indexes)
@@ -367,7 +408,7 @@ Addon_VirtualListViewBase
 		{
 		if .Model.CheckBoxColModel is false
 			return
-		if false isnt totalCtrl = .FindControl("totalSelected")
+		if false isnt totalCtrl = .FindControl(#totalSelected)
 			totalCtrl.Set(.Model.CheckBoxColModel.GetSelectedTotal(:recalc))
 		}
 
@@ -380,7 +421,7 @@ Addon_VirtualListViewBase
 
 	SelectControl_SetSelectApplied(validFunc)
 		{
-		if false isnt (warnButton = .FindControl('VirtualListSortWarningButton')) and
+		if false isnt (warnButton = .FindControl(#VirtualListSortWarningButton)) and
 			false isnt validFunc(quiet:)
 			.setWarnButtonState(warnButton)
 		}

@@ -1,10 +1,10 @@
 // Copyright (C) 2015 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	ComponentName: 'KeyListViewBaseComponent'
+	ComponentName: #KeyListViewBaseComponent
 	New(.query, columns, saveInfoName = "", prefix = "", prefixColumn = false,
 		keys = false, .field = "", value = "", enableMultiSelect = false,
-		.checkBoxColumn = false, .customizeQueryCols = false, .optionalRestrictions = #()
+		.checkBoxColumn = false, .customizeQueryCols = false, .optionalRestrictions = #(),
 		.startLast = false)
 		{
 		super(.Layout(query, columns, saveInfoName, prefix, prefixColumn,
@@ -39,63 +39,63 @@ Controller
 
 		optRestrictionsControl = .optionalRestrictions.NotEmpty?()
 			? .optionalRestrictionLayout()
-			: ''
-		mandatoryFields = keys.Map({ it.Replace('_lower!$') })
-		return Object("Vert",
+			: ""
+		mandatoryFields = keys.Map({ it.Replace("_lower!$") })
+		return [#Vert,
 			optRestrictionsControl,
-			Object("VirtualList", .baseQuery, allColumns, columnsSaveName,
-				headerSelectPrompt:, hideCustomColumns?: not .customizeQueryCols
+			[#VirtualList, .baseQuery, allColumns, columnsSaveName,
+				headerSelectPrompt:, hideCustomColumns?: not .customizeQueryCols,
 				menu: #(Copy), :mandatoryFields, :enableMultiSelect,
-				:checkBoxColumn, keyField: .field, ymin: 200, xmin: 100, name: 'List',
+				:checkBoxColumn, keyField: .field, ymin: 200, xmin: 100, name: #List,
 				excludeSelectFields: .GetExcludeSelectFields(),
-				hideColumnsNotSaved?:, preventCustomExpand?:, startLast: .startLast),
+				hideColumnsNotSaved?:, preventCustomExpand?:, startLast: .startLast],
 			#(Skip, 5),
-			Object('Horz',
-				#(Skip 2),
-				#(Static Locate),
-				#(Skip 4),
+			[#Horz,
+				#(Skip, 2),
+				#(Static, Locate),
+				#(Skip, 4),
 				#(Field, width: 10, xstretch: 1),
-				#(Skip 4),
-				#(Static by),
-				#(Skip 4),
+				#(Skip, 4),
+				#(Static, by),
+				#(Skip, 4),
 				(colnames.Size() <= 1
-					? Object('Static', SelectPrompt(.prefixColumn),
-						name: 'prefixBy')
-					: Object('ChooseList', colnames, set: keys[0],
-						name: 'prefixBy'))
-				#(Skip 6),
-				#(Button Go),
-				#(Skip 2)
-				name: "GoHorz"))
+					? [#Static, SelectPrompt(.prefixColumn),
+						name: #prefixBy]
+					: [#ChooseList, colnames, set: keys[0],
+						name: #prefixBy]),
+				#(Skip, 6),
+				#(Button, Go),
+				#(Skip, 2)
+				name: #GoHorz]]
 		}
 
 	optionalRestrictionLayout()
 		{
-		form = Object('Form')
+		form = [#Form]
 		for field in .optionalRestrictions
 			{
 			dd = Datadict(field)
 			if .ChooseDateCtrl?(dd)
 				{
 				dateQuery = .BuildChooseDateQueryWhere(field)
-				if dd.Prompt.Has?('Terminate')
-					.addCheckBoxAndQuery(form, 'terminated', dateQuery)
-				else if dd.Prompt.Has?('Expiry')
-					.addCheckBoxAndQuery(form, 'expired', dateQuery)
+				if dd.Prompt.Has?(#Terminate)
+					.addCheckBoxAndQuery(form, #terminated, dateQuery)
+				else if dd.Prompt.Has?(#Expiry)
+					.addCheckBoxAndQuery(form, #expired, dateQuery)
 				}
 			else if .ChooseListActiveInactive?(dd)
-				.addCheckBoxAndQuery(form, 'inactive',
+				.addCheckBoxAndQuery(form, #inactive,
 					.BuildChooseListActiveInactiveWhere(field))
 			}
 		// Initialize .extraWhere with all "Show" checkboxes unchecked
 		.updateExtraWhere([])
-		return Object('Record', form, name: 'KeyListViewParams')
+		return [#Record, form, name: #KeyListViewParams]
 		}
 
 	BuildChooseDateQueryWhere(field)
 		{
-		return "(" $ field $ ' is "" or ' $
-			field $ ' >= ' $ Display(Date().NoTime()) $ ")"
+		return '(' $ field $ ' is "" or ' $ field $ " >= " $ Display(Date().NoTime()) $
+			')'
 		}
 
 	BuildChooseListActiveInactiveWhere(field)
@@ -110,25 +110,25 @@ Controller
 
 	ChooseListActiveInactive?(dd)
 		{
-		return  GetControlClass.FromControl(dd.Control) is ChooseListControl and
-			dd.Control[1].Has?('inactive') and dd.Control[1].Has?('active')
+		return GetControlClass.FromControl(dd.Control) is ChooseListControl and
+			dd.Control[1].Has?(#inactive) and dd.Control[1].Has?(#active)
 		}
 
 	addCheckBoxAndQuery(form, type, query)
 		{
 		name = "show_" $ type
-		form.Add(Object('CheckBox' text: "Show " $ type.Capitalize(), :name))
+		form.Add([#CheckBox text: "Show " $ type.Capitalize(), :name])
 		.whereMap[name] = query
 		}
 
-	extraWhere: ''
+	extraWhere: ""
 	updateExtraWhere(data)
 		{
 		whereOb = Object()
 		for m in .whereMap.Members().Sort!() // sort so order is consistent for tests
 			if data[m] isnt true
 				whereOb.Add(.whereMap[m])
-		.extraWhere = Opt(' where ', whereOb.Join(' and '))
+		.extraWhere = Opt(" where ", whereOb.Join(" and "))
 		}
 
 	getter_whereMap()
@@ -138,7 +138,7 @@ Controller
 
 	Record_NewValue(field/*unused*/, value/*unused*/, source)
 		{
-		if source.Name isnt 'KeyListViewParams'
+		if source.Name isnt #KeyListViewParams
 			return
 		.updateExtraWhere(source.Get())
 		.NewValue(SelectPrompt(.GetPrefixColumn()), .GetPrefixBy())
@@ -167,7 +167,7 @@ Controller
 
 	Startup()
 		{
-		if .fieldCtrl.Get() isnt ''
+		if .fieldCtrl.Get() isnt ""
 			.FieldChange()
 		}
 
@@ -177,7 +177,7 @@ Controller
 		}
 
 	savedQuery?: false
-	extended: #()
+	extended: ()
 	orig_locateBy: false
 	initializeLayoutVariables(query, keys, prefixColumn, columns, saveInfoName, prefix)
 		{
@@ -187,7 +187,7 @@ Controller
 
 		.saveInfoName = saveInfoName
 		.save_query = TruncateKey(query)
-		.info = .saveInfoName is '' ? false : KeyListViewInfo.Get(saveInfoName)
+		.info = .saveInfoName is "" ? false : KeyListViewInfo.Get(saveInfoName)
 		// Issue 11413 - fall back to the old way we saved if new way fails,
 		// new way will be used to save in 'Destroy'
 		if .info is false
@@ -195,27 +195,27 @@ Controller
 			.info = KeyListViewInfo.Get(.save_query)
 			.savedQuery? = .info isnt false
 			}
-		if Object?(.info) and .info.Member?('window_info') and Object?(.info.window_info)
-			.orig_locateBy = .info.window_info.GetDefault('locateby_key', false)
+		if Object?(.info) and .info.Member?(#window_info) and Object?(.info.window_info)
+			.orig_locateBy = .info.window_info.GetDefault(#locateby_key, false)
 
 		query_columns = QueryColumns(query)
 		keys = .initializeKeys(keys, query, query_columns)
 		.handlePrefixColumn(prefixColumn, keys, columns, query_columns)
 		colnames = keys.Map(SelectPrompt)
 		.prefix = prefix
-		extend = ''
+		extend = ""
 		if columns isnt false
 			{
 			.extended = columns.Difference(query_columns)
 			extend = .getExtended(.extended)
 			}
-		.baseQuery = QueryStripSort(query) $ extend $ Opt(" sort ", .prefixColumn)
+		.baseQuery = Query.StripSort(query) $ extend $ Opt(" sort ", .prefixColumn)
 		return Object(:keys, :colnames)
 		}
 
 	getExtended(extended)
 		{
-		return Opt(' extend ', extended.Join(', '), ' ')
+		return Opt(" extend ", extended.Join(", "), ' ')
 		}
 
 	initializeKeys(keys, query, query_columns)
@@ -235,15 +235,21 @@ Controller
 
 	addAbbrevToKeys(keys, cols)
 		{
-		if false isnt (i = keys.FindIf({|c| c.Suffix?('_name') })) and
-			cols.Has?(ka = keys[i].Replace('_name$', '_abbrev'))
+		if false isnt (i = keys.FindIf({|c| c.Suffix?("_name") })) and
+			cols.Has?(ka = keys[i].Replace("_name$", "_abbrev"))
 			keys.Add(ka)
 		}
 
 	removeUnwantedKeys(keys)
 		{
-		keys.RemoveIf() {|k| k =~ ',' or k =~ '_num(_new)?$' }
-		keys.RemoveIf() {|k| keys.Has?(k $ '_lower!') }
+		keys.RemoveIf()
+			{|k|
+			k =~ ',' or k =~ "_num(_new)?$"
+			}
+		keys.RemoveIf()
+			{|k|
+			keys.Has?(k $ "_lower!")
+			}
 		keys.Remove("")
 		}
 
@@ -268,18 +274,17 @@ Controller
 
 	hasValidSavedKeyChoice?(keys)
 		{
-		return Object?(.info) and
-			.info.Member?('window_info') and
-			.info.window_info.Member?('locateby_key') and
+		return Object?(.info) and .info.Member?(#window_info) and
+			.info.window_info.Member?(#locateby_key) and
 			keys.Has?(.info.window_info.locateby_key)
 		}
 
 	list: false
 	initializeList()
 		{
-		.list = .FindControl('List')
-		.prefixBy = .FindControl('prefixBy')
-		.fieldCtrl = .FindControl('Field')
+		.list = .FindControl(#List)
+		.prefixBy = .FindControl(#prefixBy)
+		.fieldCtrl = .FindControl(#Field)
 		}
 
 	Fieldproc(hwnd, msg, wparam, lparam)
@@ -334,9 +339,9 @@ Controller
 
 	setFieldFromCurrentRec(field, query, prefix, value)
 		{
-		if (field isnt "" and value isnt "" and
+		if field isnt "" and value isnt "" and
 			false isnt rec = Query1(QueryAddWhere(query,
-				" where " $ field $ " is " $ Display(value))))
+				" where " $ field $ " is " $ Display(value)))
 			.fieldCtrl.Set(rec[.prefixColumn])
 		else
 			.fieldCtrl.Set(prefix)
@@ -348,7 +353,7 @@ Controller
 		if .list is false
 			return
 		prefix = DatadictEncode(.prefixColumn, .fieldCtrl.Get())
-		if .prefixColumn.Suffix?('_lower!')
+		if .prefixColumn.Suffix?("_lower!")
 			prefix = prefix.Lower()
 		.list.Seek(.prefixColumn, prefix)
 		}
@@ -391,13 +396,13 @@ Controller
 
 		columns = .allColumns()
 		column = field = .field_from_prompt(value)
-		if column.Suffix?('_lower!')
-			column = column.BeforeLast('_lower!')
+		if column.Suffix?("_lower!")
+			column = column.BeforeLast("_lower!")
 		columns.Remove(column, field)
 		columns.Add(column, at: 0)
 		.prefixColumn = field
 		extended = .list.GetColumns().Intersect(.extended)
-		.baseQuery = QueryStripSort(.query) $ .getExtended(extended) $ .GetExtraWhere() $
+		.baseQuery = Query.StripSort(.query) $ .getExtended(extended) $ .GetExtraWhere() $
 			" sort " $ .prefixColumn
 		.list.SetQuery(.baseQuery, columns)
 		.list.MoveColumnToFront(column)
@@ -412,15 +417,15 @@ Controller
 	field_from_prompt(prompt)
 		{
 		if prompt.Suffix?('*')
-			return .field_from_prompt(prompt[..-1]) $ '_lower!'
+			return .field_from_prompt(prompt[..-1]) $ "_lower!"
 		for field in .columns
 			{
 			if field.Prefix?('-')
-				field = field[1 ..]
+				field = field[1..]
 			if SelectPrompt(field) is prompt
 				return field
 			}
-		throw 'Unknown prompt: ' $ prompt
+		throw "Unknown prompt: " $ prompt
 		}
 
 	set_initial_focus()
@@ -467,7 +472,7 @@ Controller
 
 	save(locateby_key)
 		{
-		name = .saveInfoName is '' ? .save_query : .saveInfoName
+		name = .saveInfoName is "" ? .save_query : .saveInfoName
 		window_info = Object() // KeyListCheckboxView does not save size info
 		if false isnt savedInfo = KeyListViewInfo.Get(name)
 			window_info = savedInfo.window_info

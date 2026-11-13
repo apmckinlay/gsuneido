@@ -29,7 +29,7 @@ PassthruController
 		{
 		if Sys.SuneidoJs?()
 			{
-			code = IconFont().MapToCharCode(name)
+			code = Object!(IconFont().MapToCharCode, name)
 			return Object(char: code.char, font: code.font, :color)
 			}
 		return [ImageResource(name), color]

@@ -1,25 +1,25 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 ScintillaAddonsControl
 	{
-	ComponentName: 'ScintillaAddonsRichEditor'
+	ComponentName: #ScintillaAddonsRichEditor
 	New(@args)
 		{
 		super(@.processArgs(args))
-		.textLimit = args.GetDefault('textLimit', false)
+		.textLimit = args.GetDefault(#textLimit, false)
 		if .readonly = args.GetDefault(#readonly, false)
 			.setBackground(GetSysColor(COLOR.BTNFACE))
 		}
 
 	processArgs(args)
 		{
-		.zoom = args.GetDefault('zoom', false)
+		.zoom = args.GetDefault(#zoom, false)
 		zoomArgs = [zoom: .zoom, zoom_ctrl: ScintillaRichWordZoomControl]
 		return args.MergeNew([wrap:, margin: 8, exStyle: WS_EX.STATICEDGE,
 			Addon_url:, Addon_multiple_selection:, Addon_zoom: zoomArgs,
-			font: 		Suneido.logfont.lfFaceName,
-			fontSize: 	'+0',
-			weight: 	FW.NORMAL,
-			italic: 	false])
+			font: Suneido.logfont.lfFaceName,
+			fontSize: "+0",
+			weight: FW.NORMAL,
+			italic: false])
 		}
 
 	setBackground(bgnd)
@@ -75,10 +75,10 @@ ScintillaAddonsControl
 
 	UpdateButtons(states)
 		{
-		.Send('ToggleFontButton', 'bold', states.bold)
-		.Send('ToggleFontButton', 'italic', states.italic)
-		.Send('ToggleFontButton', 'underline', states.underline)
-		.Send('ToggleFontButton', 'strikeout', states.strikeout)
+		.Send(#ToggleFontButton, #bold, states.bold)
+		.Send(#ToggleFontButton, #italic, states.italic)
+		.Send(#ToggleFontButton, #underline, states.underline)
+		.Send(#ToggleFontButton, #strikeout, states.strikeout)
 		}
 
 	EN_CHANGE()
@@ -98,11 +98,7 @@ ScintillaAddonsControl
 		{
 		if .getCached isnt false
 			return .getCached
-
-		s = super.Get()
-		str = ScintillaRichEditorHelper.Build(s, .styles)
-		.getCached = str
-		return str
+		return .getCached = ScintillaRichEditorHelper.Build(super.Get(), .styles)
 		}
 
 	GetText(includeStrikeThrough = false)
@@ -126,7 +122,7 @@ ScintillaAddonsControl
 		.getCached = false
 		}
 
-	styles: #()
+	styles: ()
 	getCached: false
 	Set(s)
 		{
@@ -185,7 +181,7 @@ ScintillaAddonsControl
 		if .readonly
 			return
 		super.SetReadOnly(readOnly)
-		.setBackground(readOnly is true ? GetSysColor(COLOR.BTNFACE) : 0xffffff)
+		.setBackground(readOnly is true ? GetSysColor(COLOR.BTNFACE) : 0xff_ffff)
 		}
 
 	KEYDOWN(wParam, pressed = false)
@@ -196,19 +192,24 @@ ScintillaAddonsControl
 			zoomArgs: [this, .zoom, ScintillaRichWordZoomControl],
 			:pressed)
 		}
+
 	Valid?()
 		{
+		// If raw text already exceeds the limit,
+		// fail early without expensive HTML parsing
+		if .textLimit isnt false and super.GetLength() > .textLimit
+			return false
 		return ScintillaEditorValid(.Get(), .textLimit)
 		}
 
 	ValidData?(@args)
 		{
-		return ScintillaEditorValid(args[0], args.GetDefault('textLimit', false))
+		return ScintillaEditorValid(args[0], args.GetDefault(#textLimit, false))
 		}
 
 	SetValid(valid? = true)
 		{
-		if (GetFocus() is .Hwnd)
+		if GetFocus() is .Hwnd
 			valid? = true
 		// have to check .readonly as well because if we are in a block running from the
 		// ignoring_readonly method (like from Set), then the readonly flag will actually

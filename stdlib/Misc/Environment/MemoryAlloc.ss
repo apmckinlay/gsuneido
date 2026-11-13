@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Suneido Software Corp. All rights reserved worldwide.
-function ()
+function()
 	{
-	return Suneido.GoMetric("/gc/heap/allocs:bytes")
+	return Number!(Suneido.GoMetric("/gc/heap/allocs:bytes"))
 	}

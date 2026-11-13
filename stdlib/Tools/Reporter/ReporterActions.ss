@@ -13,18 +13,19 @@ class
 		{
 		newname = OkCancel([.rename_dialog, rptName, .Prefix], "Rename Report", hwnd)
 		if false is newname
-			return
+			return false
 
 		if Reporter.CheckScheduled(rptName)
-			return
+			return false
 
 		.renameReport(rptName, newname, reporterMode)
+		return newname
 		}
 
 	Delete(rptName, reporterMode = #simple, confirmationDialog = false, hwnd = 0)
 		{
 		if Reporter.CheckScheduled(rptName)
-			return
+			return false
 
 		result = true
 		if confirmationDialog
@@ -33,9 +34,10 @@ class
 				:hwnd, flags: MB.ICONQUESTION)
 
 		if result isnt true
-			return // cancelled
+			return result // cancelled
 
 		.deleteReport(rptName, reporterMode)
+		return result
 		}
 
 	deleteReport(name, reporterMode)
@@ -85,7 +87,7 @@ class
 			}
 		}
 
-	renameReport(name, newname, reporterMode)
+	renameReport(name, newname, reporterMode, skipUpdateBookMenu = false)
 		{
 		Transaction(update:)
 			{|t|
@@ -96,13 +98,16 @@ class
 				x.Update()
 				}
 
-			c = LastContribution(#Reporter)
-			if c.ReporterBook is ""
-				return
+			if not skipUpdateBookMenu
+				{
+				c = LastContribution(#Reporter)
+				if c.ReporterBook is ""
+					return
 
-			t.QueryDo('delete ' $ c.ReporterBook $ '
-				where path =~ ' $ Display(c.GetPath(reporterMode)) $
-				' and name is ' $ Display(name))
+				t.QueryDo('delete ' $ c.ReporterBook $ '
+					where path =~ ' $ Display(c.GetPath(reporterMode)) $
+					' and name is ' $ Display(name))
+				}
 
 			if false is rec = t.Query1(.reportQuery(newname))
 				{
@@ -110,9 +115,9 @@ class
 				return
 				}
 			}
-
-		CustomReportsMenu(newname, GetCustomReportsSource(rec.params.Source),
-			ReporterModel(rec.report).BuildReportText(), :reporterMode)
+		if not skipUpdateBookMenu // for tests
+			CustomReportsMenu(newname, GetCustomReportsSource(rec.params.Source),
+				ReporterModel(rec.report).BuildReportText(), :reporterMode)
 		}
 
 	reportQuery(name)

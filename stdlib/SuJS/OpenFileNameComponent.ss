@@ -44,26 +44,10 @@ Component
 					.magick? = false
 					SuRender().
 						Event(false, #SuneidoLog,
-							[
-								"ERROR: (CAUGHT) failed to load ImageMagick.js from " $
-									"fallback source",
+							["ERROR: (CAUGHT) failed to load ImageMagick.js",
 								caughtMsg: "continue uploading without rotation",
 								params: Object(loadImageMagickErrorName: err.name,
 									loadImageMagickErrorMsg: err.message)])
-					logs = SuUI.GetCurrentWindow().GetLoadLog()
-					if Object?(logs) and logs.NotEmpty?()
-						{
-						for m in logs.Members()
-							try
-								SuRender().
-									Event(false, #SuneidoLog,
-										[
-											"ERROR: (CAUGHT) failed to load " $
-												"ImageMagick.js from " $ "main source",
-											caughtMsg: "loading from main source failed",
-											params: logs[m].logErr])
-						SuUI.GetCurrentWindow().ResetLoadLog()
-						}
 					.uploadAll(hDrop, filter, multi)
 					})
 			}
@@ -104,48 +88,6 @@ window.arrayToString = function(uint8Array) {
 	return result;
 }
 
-window.getLoadLog = function () {
-	window.loadLog = window.loadLog || {};
-	return window.loadLog;
-}
-
-window.setLoadLog = function (id, err) {
-	const log = window.getLoadLog();
-	log[id] = {logErr: err};
-}
-
-window.resetLoadLog = function () {
-	window.loadLog = {};
-}
-
-async function diagnoseImageMagick(url) {
-	try {
-		const response = await fetch(url, {
-			cache: "no-store"
-		});
-
-		const text = await response.text();
-
-		window.setLoadLog("ImageMagickFetch", {
-			ok: response.ok,
-			status: response.status,
-			statusText: response.statusText,
-			responseText: text.slice(0, 200),
-			url: response.url,
-			type: response.type,
-			contentType: response.headers.get("content-type"),
-			contentLength: response.headers.get("content-length")
-		});
-	} catch (err) {
-		window.setLoadLog("ImageMagickFetchFailed", {
-			url: url,
-			name: err?.name,
-			message: err?.message,
-			stack: err?.stack
-		});
-	}
-}
-
 // REFERENCE: 'https://cdn.jsdelivr.net/npm/wasm-imagemagick/dist/bundles/magickApi.js'
 window.loadJsLib = function (jslib, block, catchBlock) {
 	const handler = function (f) {
@@ -161,22 +103,16 @@ window.loadJsLib = function (jslib, block, catchBlock) {
 		import("` $ cdn $ `/" + jslib + "?v="` $ `+v).then(handler).catch(c);
 	}
 
-	const catchWrapper = async function (unused) {
-		if (jslib === 'magickApi.js') {
-			await diagnoseImageMagick("` $ cdn $ `/" + jslib + "?v=1");
-		}
+	const catchWrapper = function (unused) {
 		setTimeout(function () {
 			console.log('Retrying to load ImageMagick');
 			importFunc(function (err) {
-// TMP: 36596
-				import("https://dgs0nprnzsaqw.cloudfront.net/" + jslib).then(
-					handler).catch(catchBlock);
+				import("/sujs_resources/" + jslib).then(handler).catch(catchBlock);
 				}, Date.now())
 			},
 			2000);
 	}
 
-	window.resetLoadLog();
 	importFunc(catchWrapper, 1);
 };
 
@@ -364,6 +300,9 @@ window.downloadFile = function(filename, content) {
 
 	signedUpload(file, msgEl, uploadFile = "")
 		{
+		if .El is false
+			return
+
 		suXhr = SuUI.MakeWebObject(#XMLHttpRequest)
 		if not uploadFile.Blank?()
 			.uploadTasks[uploadFile] = [[xhr: suXhr]]
@@ -382,6 +321,9 @@ window.downloadFile = function(filename, content) {
 
 	rotateAndSend(file, msgEl)
 		{
+		if .El is false
+			return
+
 		uploadFn = .signedUpload
 		file.
 			ArrayBuffer().

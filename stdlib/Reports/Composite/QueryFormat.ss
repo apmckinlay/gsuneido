@@ -1,7 +1,7 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 Generator
 	{
-	Export: false
+	Export:           false
 	grandTotalRecord: 999
 	New(@args)
 		{
@@ -12,22 +12,24 @@ Generator
 				this[m.Capitalize()] = args[m]
 		_report.RegisterForClose(this)
 		.Params = _report.Params
+// ISSUE 38099 - passing original paramsdata down
+		.OrigParams = _report.OrigParams
 
-		query = .Val_or_func('Query')
-		if args.Member?('bookLogQuery') and args.bookLogQuery is true
+		query = .Val_or_func(#Query)
+		if args.Member?(#bookLogQuery) and args.bookLogQuery is true
 			BookLog(query)
 
-		if .Member?('Inputparams')
+		if .Member?(#Inputparams)
 			query = QueryAddWhere(query, _report.GetParamsWhere(@.Inputparams))
-		if not _report.Member?('MainQueryFormat')
+		if not _report.Member?(#MainQueryFormat)
 			_report.MainQueryFormat = this
 		.query = query
 		.q = .Open(query)
 
-		.output = .Val_or_func('Output')
-		.outputformat = .Val_or_func('OutputFormat')
-		if .output is ''
-			.output = .outputformat is false ? Object("Row").Add(@.q.Columns()) : false
+		.output = .Val_or_func(#Output)
+		.outputformat = .Val_or_func(#OutputFormat)
+		if .output is ""
+			.output = .outputformat is false ? [#Row].Add(@.q.Columns()) : false
 		if .output isnt false
 			.output = _report.Construct(.output)
 		if .outputformat is false
@@ -44,7 +46,6 @@ Generator
 				.Close()
 			}
 
-
 		.totals = Object()
 		.counts = Object()
 		for o in .order.Members()
@@ -53,19 +54,19 @@ Generator
 			.counts[o] = Object()
 			}
 		.totals[.grandTotalRecord] = Object() // grand totals
-		.totalFields = .Val_or_func('Total')
+		.totalFields = .Val_or_func(#Total)
 		.counts[.grandTotalRecord] = Object() // grand count
-		.countFields = .Val_or_func('Count')
+		.countFields = .Val_or_func(#Count)
 		}
 
 	tryQNext(block)
 		{
 		try
 			block()
-		catch (unused, 'summarize too large')
+		catch (unused, "summarize too large")
 			{
-			Alert(.getSummarizeMsgWarning(this.Base?(CrosstabFormat)),
-				'Unable to open report')
+			Alert(.getSummarizeMsgWarning(.Base?(CrosstabFormat)),
+				"Unable to open report")
 			.next = false
 			.Close()
 			}
@@ -77,15 +78,16 @@ Generator
 		{
 		msg = .summarizeWarnMsg
 		replacement = baseCrosstab?
-				? 'the "Select..." button'
-				: 'filters'
-		return 'Unable to preform action.\r\n' $ msg.Replace('#REPLACE#', replacement)
+			? 'the "Select..." button'
+			: #filters
+		return "Unable to preform action.\r\n" $ msg.Replace("#REPLACE#", replacement)
 		}
 
 	Open(query) // overridden by ObjectFormat
 		{
 		return _tran.Query(query)
 		}
+
 	More()
 		{
 		do
@@ -93,8 +95,8 @@ Generator
 			.list = Object()
 			if .next is false
 				{
-				.next = "alldone"
-				.add("AfterAll", #{})
+				.next = #alldone
+				.add(#AfterAll, #{})
 				if not .list.Empty?()
 					{
 					for fmt in .list
@@ -103,7 +105,7 @@ Generator
 					return
 					}
 				}
-			if .next is "alldone"
+			if .next is #alldone
 				{
 				_report.UnregisterForClose(this)
 				.Close()
@@ -120,7 +122,7 @@ Generator
 				for o in .order.Members()
 					.reset_summary(o)
 				brk = true
-				.add("Before", data)
+				.add(#Before, data)
 				}
 			for i in .order.Members()
 				{
@@ -134,7 +136,7 @@ Generator
 					}
 				}
 
-			.add("BeforeOutput", data)
+			.add(#BeforeOutput, data)
 
 			.accum_summary(data)
 
@@ -145,30 +147,27 @@ Generator
 				.list.Add(out)
 				}
 
-			.add("AfterOutput", data)
+			.add(#AfterOutput, data)
 
 			if .next is false
 				n = 0
 			else
-				{
 				for (n = 0; .order.Member?(n); ++n)
 					{
 					fld = .order[n]
 					if data[fld] isnt .next[fld]
 						break
 					}
-				}
 			for (i = .order.Size() - 1; i >= n; --i)
 				.add("After_" $ .order[i], .merge_sort_summary(data.Copy(), i))
 			if .next is false
-				.add("After", .merge_sort_summary(data, .grandTotalRecord))
+				.add(#After, .merge_sort_summary(data, .grandTotalRecord))
 			.prev = data
-			}
-			while (.list.Empty?())
+			} while (.list.Empty?())
 
-		for (fmt in .list)
-			super.Output(fmt); // Generator Output
-			// so lack of output isnt taken as eof
+		for fmt in .list
+			super.Output(fmt) // Generator Output
+		// so lack of output isnt taken as eof
 		.list.Delete(all:)
 		}
 
@@ -182,12 +181,12 @@ Generator
 			rec = .q.Next()
 			}
 		SlowQuery.LogIfTooSlow(t, .query)
-			{ |hash|
+			{|hash|
 			.alreadyDetectedSlow = true
-			SuneidoLog('ERRATIC: (' $ hash $ ')' $
-				' Report query takes more than 5 seconds',
-				params: [
-					queryHead: .query[..99], queryTail: .query[-99..]], /*= to not trim */
+			SuneidoLog("ERRATIC: (" $ hash $ ')' $
+					" Report query takes more than 5 seconds",
+				params: [queryHead: .query[..99],
+					queryTail: .query[-99..]], /*= to not trim */
 				switch_prefix_limit: 3)
 			}
 		return rec
@@ -200,11 +199,11 @@ Generator
 		if .alreadyDetectedSlow
 			return true
 		rptArgs = _report.GetReportArgs()
-		if false is rptArgs.GetDefault('slowQueryFilter', false)
+		if false is rptArgs.GetDefault(#slowQueryFilter, false)
 			return true
-		if rptArgs.GetDefault('suppressSlowQuery', false)
+		if rptArgs.GetDefault(#suppressSlowQuery, false)
 			return true
-		if _report.Member?('MainQueryFormat')
+		if _report.Member?(#MainQueryFormat)
 			return _report.MainQueryFormat isnt this
 		return false
 		}
@@ -215,7 +214,7 @@ Generator
 		counts = .counts[o]
 
 		for t in .totalFields.Members()
-			totals[t] = Object?(.totalFields[t]) ? new MoneyBag : 0
+			totals[t] = Object?(.totalFields[t]) ? new MoneyBag() : 0
 
 		for c in .countFields.Members()
 			counts[c] = 0
@@ -228,6 +227,7 @@ Generator
 		for o in .order.Members()
 			.accum_totals1(data, o)
 		}
+
 	accum_totals1(data, o)
 		{
 		for t in .totalFields.Members()
@@ -240,7 +240,7 @@ Generator
 				.totals[o][t] += Number(data[.totalFields[t]])
 		}
 
-	accum_counts1(data /*unused*/, o)
+	accum_counts1(data/*unused*/, o)
 		{
 		for c in .countFields.Members()
 			.counts[o][c] += 1
@@ -267,12 +267,13 @@ Generator
 			}
 		return data
 		}
+
 	merge_sort_summary(data, o)
 		{
 		if .totalFields isnt #()
-			data = .merge_sort_summary1(data, "total_", .totals[o], .totalFields)
+			data = .merge_sort_summary1(data, #total_, .totals[o], .totalFields)
 		if .countFields isnt #()
-			data = .merge_sort_summary1(data, "count_", .counts[o], .countFields)
+			data = .merge_sort_summary1(data, #count_, .counts[o], .countFields)
 		return data
 		}
 
@@ -287,6 +288,7 @@ Generator
 		for o in .order.Members()
 			.subtract_totals1(data, o)
 		}
+
 	subtract_totals1(data, o)
 		{
 		for t in .totalFields.Members()
@@ -298,18 +300,22 @@ Generator
 			else
 				.totals[o][t] -= data[.totalFields[t]]
 		}
+
 	SubtractFromTotals(data)
 		{
 		.subtract_totals(data)
 		}
+
 	GetTotals()
 		{
 		return .totals
 		}
+
 	GetCounts()
 		{
 		return .counts
 		}
+
 	add(brk, data)
 		{
 		.append_data = data
@@ -318,44 +324,53 @@ Generator
 			fmt = this[brk](:data)
 		else if .Member?(brk)
 			fmt = this[brk]
-		else if brk.Prefix?("Before_") or brk.Prefix?("After_")
+		else if brk.Prefix?(#Before_) or brk.Prefix?(#After_)
 			fmt = this[brk.BeforeFirst('_') $ '_'](brk.AfterFirst('_'), :data)
 		if fmt is false
 			return
 		.Append(fmt)
 		}
+
 	Append(@args)
 		{
-		data = args.Member?('data') ? args.data : .append_data
+		data = args.Member?(#data) ? args.data : .append_data
 		for fmt in args.Values(list:)
 			{
-			if Object?(fmt) and fmt.Member?(0) and String?(fmt[0]) and fmt[0][0] is "_"
+			if Object?(fmt) and fmt.Member?(0) and String?(fmt[0]) and fmt[0][0] is '_'
 				{
-				name = fmt[0][1 ..].Capitalize()
+				name = fmt[0][1..].Capitalize()
 				fmt = .outputformat[name](fmt, data)
 				}
 			else
 				{
 				fmt = _report.Construct(fmt)
-				if Instance?(fmt) and fmt.Member?("Data") and fmt.Data is false
-					fmt.Data = (fmt.Member?("Field") ? data[fmt.Field] : data)
+				if Instance?(fmt) and fmt.Member?(#Data) and fmt.Data is false
+					fmt.Data = (fmt.Member?(#Field) ? data[fmt.Field] : data)
 				}
 			.list.Add(fmt)
 			}
 		}
+
 	// default methods
 	Header()
 		{
 		return .outputformat is false ? false : .outputformat.Header()
 		}
-	Output: ''
+
+	Output:       ""
 	OutputFormat: false
 	Total: ()
 	Count: ()
-	Before_(field /*unused*/)
-		{ return false }
-	After_(field /*unused*/)
-		{ return false }
+	Before_(field/*unused*/)
+		{
+		return false
+		}
+
+	After_(field/*unused*/)
+		{
+		return false
+		}
+
 	Close() // overridden by ObjectFormat
 		{
 		// Issue 35186 check if member exists to prevent errors closing when query error

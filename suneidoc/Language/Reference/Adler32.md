@@ -28,5 +28,7 @@ cksum.Value()
 
 
 See also:
+[Argon2id](<Argon2id.md>),
 [Md5](<Md5.md>),
-[Sha1](<Sha1.md>)
+[Sha1](<Sha1.md>),
+[Sha256](<Sha256.md>)

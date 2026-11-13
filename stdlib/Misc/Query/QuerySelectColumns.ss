@@ -3,7 +3,7 @@ class
 	{
 	CallClass(query)
 		{
-		ob = QueryColumns(QueryStripSort(query))
+		ob = QueryColumns(Query.StripSort(query))
 		removeOb = .nonPermissableFields(query)
 		return ob.Difference(removeOb).RemoveIf(Customizable.DeletedField?)
 		}

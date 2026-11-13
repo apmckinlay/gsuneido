@@ -1,30 +1,35 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
+/* README:
+	While BookControl can be constructed with: "book: false", BookMarkContainerControl
+	is only added to the BookControl when "book" is not false. As a result, we can
+	assume throughout this record that "book" will always be set to a valid book name.
+*/
 CursorWndProc
 	{
-	Name:		BookMarkContainer
-	Xstretch:	1
-	Ystretch:	1
-	active:		false
-	highlight:	false
-	depressed:	false
-	scroll:		0
-	New()
+	Name:      #BookMarkContainer
+	Xstretch:  1
+	Ystretch:  1
+	active:    false
+	highlight: false
+	depressed: false
+	scroll:    0
+	New(book)
 		{
 		super(.Name, WS.VISIBLE | WS.CLIPSIBLINGS)
 		.SetFont()
 		.WithSelectObject(.GetFont(), {|hdc| GetTextMetrics(hdc, tm = Object()) })
 		.aveCharWidth = tm.AveCharWidth
-		.marks = Object()
+		.marks = BookMarks(book)
 		.custColors = Object()
 		.tips = .Construct(#ToolTip)
 		.tools = .Construct(BookMarkToolControl)
 		.yoffset = ScaleWithDpiFactor(6 /*= DPI factor*/) + .tools.Ymin
 		.drawing = Object(
-			shadbrush:	GetSysColorBrush(COLOR.TRIDSHADOW),
+			shadbrush: GetSysColorBrush(COLOR.TRIDSHADOW),
 			borderPen: CreatePen(PS.SOLID, 0, GetSysColor(COLOR.TRIDSHADOW)),
 			activeMarkFont: CreateFontIndirect(.LogFont(weight: FW.BOLD)),
 			highlightMarkFont: CreateFontIndirect(.LogFont(underline:)))
-		.tips.AddTool(.Hwnd, '')
+		.tips.AddTool(.Hwnd, "")
 		.SetRelay(.tips.RelayEvent)
 		}
 
@@ -32,15 +37,15 @@ CursorWndProc
 		{
 		if .active is x = .findMark(path)
 			return
-		.repaintMark(.active) 		// Repaint the previous active bookmark
-		.repaintMark(.active = x) 	// Repaint the new active bookmark
+		.repaintMark(.active) // Repaint the previous active bookmark
+		.repaintMark(.active = x) // Repaint the new active bookmark
 		if .active isnt false
 			.ensureMarkVisible(.active)
 		}
 
 	findMark(path)
 		{
-		return .marks.FindIf({ it.path is path })
+		return .marks.Find(path)
 		}
 
 	repaintMark(i)
@@ -51,7 +56,7 @@ CursorWndProc
 
 	getMarkRect(index)
 		{
-		if not .getMarkRect?(index, .w, .marks.Size())
+		if not .getMarkRect?(index, .w, .marks.Count())
 			return false
 		GetClientRect(.Hwnd, rc = Object())
 		top = .yoffset + (index - .scroll) * .markHeight
@@ -72,12 +77,12 @@ CursorWndProc
 
 	AddMark(path)
 		{
-		if path is ''
+		if path is ""
 			return
 		if false is i = .findMark(path)
 			{
-			.marks.Add(Object(:path, color: CLR.YELLOW))
-			.active = i = (nPos = .marks.Size()) - 1
+			.marks.Add(path)
+			.active = i = (nPos = .marks.Count()) - 1
 			.updateScrollBar(nPos)
 			.repaintMarks()
 			}
@@ -101,12 +106,12 @@ CursorWndProc
 	RemoveMark(path)
 		{
 		if false is x = .findMark(path)
-			.AlertInfo('Remove Mark', 'There is no bookmark currently selected.')
+			.AlertInfo("Remove Mark", "There is no bookmark currently selected.")
 		else
 			{
 			if x is .active
 				.active = false
-			.marks.Delete(x)
+			.marks.Remove(x)
 			.updateScrollBar(nPos: .shiftScroll(x > .scroll))
 			.repaintMarks()
 			}
@@ -130,7 +135,7 @@ CursorWndProc
 		{
 		GetClientRect(.Hwnd, rc = Object())
 		.maxVisibleMarks = ((rc.bottom - .yoffset) / .markHeight).RoundDown(0)
-		.maxScroll = .marks.Size() - .maxVisibleMarks
+		.maxScroll = .marks.Count() - .maxVisibleMarks
 		resize? = .maxScroll <= 0
 			? .removeScrollBar()
 			: .addScrollBar(nPos)
@@ -186,7 +191,7 @@ CursorWndProc
 	MouseMove(x, y)
 		{
 		newHover = false
-		.forSelectedMark(Object(:x, :y), { |mark, rc /*unused*/| newHover = mark })
+		.forSelectedMark(Object(:x, :y), {|mark, rc/*unused*/| newHover = mark })
 		prevHighlight = .highlight
 		if .depressed is false
 			.mouseHoverNonSelected(newHover)
@@ -203,7 +208,8 @@ CursorWndProc
 		.repaintMark(.highlight)
 		.repaintMark(.highlight = newHover)
 		SetCursor(.highlight isnt false
-			? LoadCursor(ResourceModule(), IDC.HAND) : LoadCursor(NULL, IDC.ARROW))
+			? LoadCursor(ResourceModule(), IDC.HAND)
+			: LoadCursor(NULL, IDC.ARROW))
 		}
 
 	mouseDragScroll(y, newHover)
@@ -212,7 +218,7 @@ CursorWndProc
 		if y > 0 and y < .h - .yoffset
 			return newHover
 		.setScroll(nPos: .shiftScroll(down? = y >= .y))
-		return Max(Min(.depressed + (down? ? 1 : -1), .marks.Size() - 1), 0)
+		return Max(Min(.depressed + (down? ? 1 : -1), .marks.Count() - 1), 0)
 		}
 
 	mouseHoverSelected(newHover)
@@ -220,7 +226,8 @@ CursorWndProc
 		if .swapMark(newHover, .depressed) is true
 			.depressedMove = true
 		SetCursor(.depressed isnt false
-			? LoadCursor(ResourceModule(), IDC.DRAG1) : LoadCursor(NULL, IDC.ARROW))
+			? LoadCursor(ResourceModule(), IDC.DRAG1)
+			: LoadCursor(NULL, IDC.ARROW))
 		}
 
 	swapMark(index1, index2)
@@ -251,21 +258,22 @@ CursorWndProc
 
 	toolTipText(i)
 		{
-		mark = .marks.GetDefault(i, [])
+		if false is mark = .marks.Get(i)
+			return ""
 		text = mark.path
-		if text is '' or RGBColors.BadContrast?(mark.color.ToRGB())
+		if text is "" or RGBColors.BadContrast?(mark.color.ToRGB())
 			return text
 		GetClientRect(.Hwnd, rc = Object())
 		textSize = (text.Size() * .aveCharWidth).RoundDown(0)
 		return textSize > rc.right - rc.left
 			? text
-			: ''
+			: ""
 		}
 
 	MouseLeave()
 		{
 		.repaintMark(.highlight)
-		.tips.UpdateTipText(.Hwnd, '')
+		.tips.UpdateTipText(.Hwnd, "")
 		.highlight = false
 		}
 
@@ -274,7 +282,7 @@ CursorWndProc
 		BeginPaint(.Hwnd, ps = Object())
 
 		start = Max(.scroll, 0)
-		end = Min(.scroll + .maxVisibleMarks, .marks.Size())
+		end = Min(.scroll + .maxVisibleMarks, .marks.Count())
 
 		GetClientRect(.Hwnd, rc = Object())
 		WithHdcSettings(ps.hdc, [.drawing.borderPen SetBkMode: TRANSPARENT],
@@ -295,7 +303,9 @@ CursorWndProc
 				highlight? = .highlight?(i, .highlight, .depressed)
 				depressed? = .depressed?(i, .highlight, .depressed)
 				WithHdcSettings(hdc, .markSettings(i, highlight?))
-					{ .drawBookMark(i, rc, hdc, highlight?, depressed?) }
+					{
+					.drawBookMark(i, rc, hdc, highlight?, depressed?)
+					}
 				}
 		}
 
@@ -319,12 +329,12 @@ CursorWndProc
 		color = highlight?
 			? COLOR.HIGHLIGHT
 			: COLOR.BTNTEXT
-		return Object(font, brush: .marks[i].color, SetTextColor: GetSysColor(color))
+		return [font, brush: .marks.Get(i).color, SetTextColor: GetSysColor(color)]
 		}
 
 	drawBookMark(i, rc, hdc, highlight?, depressed?)
 		{
-		text = .marks[i].path
+		text = .marks.Get(i).path
 		rc.left += i is .active or highlight? ? 0 : 9
 		.shadowShading(hdc, rc, depressed?, highlight?)
 
@@ -335,15 +345,17 @@ CursorWndProc
 			rc.bottom - rc.top - offset,
 			ROP.PATCOPY)
 
-		rc.left += 2; rc.right -= 2; rc.top += 2; rc.bottom -= 2
+		rc.left += 2
+		rc.right -= 2
+		rc.top += 2
+		rc.bottom -= 2
 		DrawTextEx(
 			hdc,
 			Paths.ToWindows(text), // PATH_ELLIPSIS requires backslashes
 			text.Size(),
 			rc,
 			DT.PATH_ELLIPSIS | DT.VCENTER | DT.NOPREFIX | DT.NOCLIP,
-			NULL
-			)
+			NULL)
 		}
 
 	shadowShading(hdc, rc, depressed?, highlight?)
@@ -351,12 +363,12 @@ CursorWndProc
 		FrameRect(hdc, rc, .drawing.shadbrush)
 		if not (depressed? and highlight?)
 			{
-			rc.bottom--
+			rc.bottom -= 1
 			rc.right--
 			}
 		else
 			{
-			rc.top++
+			rc.top += 1
 			rc.left++
 			}
 		}
@@ -369,7 +381,7 @@ CursorWndProc
 
 	LBUTTONDOWN(lParam)
 		{
-		pt = Object(x: LOSWORD(lParam) y: HISWORD(lParam))
+		pt = Object(x: LOSWORD(lParam), y: HISWORD(lParam))
 		.lButtonDown(pt)
 		return 0
 		}
@@ -377,7 +389,7 @@ CursorWndProc
 	lButtonDown(pt)
 		{
 		.forSelectedMark(pt)
-			{ |i, rc|
+			{|i, rc|
 			.depressed = i
 			InvalidateRect(.Hwnd, rc, false)
 			}
@@ -386,8 +398,7 @@ CursorWndProc
 
 	forSelectedMark(pt, block)
 		{
-		for (mark = .scroll; mark < .marks.Size(); ++mark)
-			{
+		for (mark = .scroll; mark < .marks.Count(); ++mark)
 			if false is rc = .getMarkRect(mark)
 				break
 			else if PtInRect(rc, pt)
@@ -395,17 +406,16 @@ CursorWndProc
 				block(mark, rc)
 				break
 				}
-			}
 		}
 
 	RBUTTONDOWN(lParam)
 		{
-		.forSelectedMark(Object(x: LOSWORD(lParam) y: HISWORD(lParam)))
-			{ |i, rc|
-			color = .marks[i].color
+		.forSelectedMark(Object(x: LOSWORD(lParam), y: HISWORD(lParam)))
+			{|i, rc|
+			color = .marks.Get(i).color
 			result = ChooseColorWrapper(color, .Hwnd, custColors: .custColors)
 			if result isnt false
-				.marks[i].color = result
+				.marks.SetColor(i, result)
 			InvalidateRect(.Hwnd, rc, true)
 			}
 		return 0
@@ -422,21 +432,21 @@ CursorWndProc
 
 	lbuttonUp(lParam, r)
 		{
-		bookmark = .marks[.depressed].path
-		if false is .Send(#ValidBookmark?, bookmark)
+		if false is .marks.Valid?(bookmark = .marks.Get(.depressed).path)
 			{
 			.RemoveMark(bookmark)
-			.AlertInfo('Bookmark Removed', 'Page ' $ bookmark $ ' not found.\n' $
-				'Page may have been deleted or renamed.\nBookmark has been removed')
+			.AlertInfo("Bookmark Removed",
+				"Page " $ bookmark $ " not found.\n" $
+					"Page may have been deleted or renamed.\nBookmark has been removed")
 			return
 			}
 		if .depressedMove is false and
-			PtInRect(r, Object(x: LOSWORD(lParam) y: HISWORD(lParam)))
+			PtInRect(r, Object(x: LOSWORD(lParam), y: HISWORD(lParam)))
 			.Send(#Goto, bookmark)
-		InvalidateRect(.Hwnd, r, true)	// Paint button in 'up' position
+		InvalidateRect(.Hwnd, r, true) // Paint button in 'up' position
 		}
 
-	VSCROLL(wParam, lParam /*unused*/)
+	VSCROLL(wParam, lParam/*unused*/)
 		{
 		action = LOWORD(wParam)
 		if action in (SB.LINEUP, SB.LINEDOWN, SB.THUMBTRACK)
@@ -448,29 +458,11 @@ CursorWndProc
 
 	MOUSEWHEEL(wParam)
 		{
-		if .maxVisibleMarks >= .marks.Size()
+		if .maxVisibleMarks >= .marks.Count()
 			return 0
 		.setScroll(nPos: .shiftScroll(GetWheelScrollInfo(wParam).down?))
-		.tips.UpdateTipText(.Hwnd, '')
+		.tips.UpdateTipText(.Hwnd, "")
 		return 0
-		}
-
-	GetState()
-		{
-		return .marks
-		}
-
-	SetState(stateobject)
-		{
-		.marks = Object()
-		stateobject.Each()
-			{
-			if not String?(it)
-				.marks.Add(it)
-			else
-				.AddMark(it)
-			}
-		.GotoPath(.Controller.CurrentPage())
 		}
 
 	Destroy()

@@ -3,61 +3,62 @@
 //		 the top level control (.Window.Ctrl) must be a Controller
 Controller
 	{
-	Name: "WordPad"
+	Name: #WordPad
 	Unsortable: true
 
 	New(@args)
 		{
 		super(.layout(args))
 		.edit = .Vert.Editor
-		.Redir('On_Bold', .edit)
-		.Redir('On_Italic', .edit)
-		.Redir('On_Underline', .edit)
-		.Redir('On_Strikeout', .edit)
-		.Redir('On_ResetFont', .edit)
+		.Redir(#On_Bold, .edit)
+		.Redir(#On_Italic, .edit)
+		.Redir(#On_Underline, .edit)
+		.Redir(#On_Strikeout, .edit)
+		.Redir(#On_ResetFont, .edit)
 		.bold_button = .FindControl('B')
 		.italic_button = .FindControl('I')
 		.underline_button = .FindControl('U')
 		.strikeout_button = .FindControl('S')
 		.reset_button = .FindControl('X')
-		.Send('Data')
+		.Send(#Data)
 		}
+
 	edit: class // "null" class to avoid checks for .edit existing
 		{
 		Default(@unused)
-			{ return '' }
+			{
+			return ""
+			}
 		}
-	Commands:
-		(
-		(Bold,		"Ctrl+B")
-		(Italic,	"Ctrl+I")
-		(Underline,	"Ctrl+U")
-		(Strikeout, "Ctrl+S")
-		(ResetFont,	"Ctrl+Space")
+	Commands: (
+		(Bold, "Ctrl+B"),
+		(Italic, "Ctrl+I"),
+		(Underline, "Ctrl+U"),
+		(Strikeout, "Ctrl+S"),
+		(ResetFont, "Ctrl+Space")
 		)
 	textLimit: 50_000 /*= text limit with html format*/
 	layout(args)
 		{
-		textLimit = args.GetDefault('textLimit', .textLimit)
+		textLimit = args.GetDefault(#textLimit, .textLimit)
 		args.Set_default(false)
 		.readonly = args.readonly
 		ignoreOb = Object()
 		if args.ignoreList isnt false
 			ignoreOb.ignore = args.ignoreList
-		layout = Object('Vert')
+		layout = [#Vert]
 		if not .readonly
-			layout.Add(Object('Horz',
-				.button('B', 'Bold', 'Bold (Ctrl+B)', weight: 'BOLD'),
-				.button('I', 'Italic', 'Italic (Ctrl+I)', italic:),
-				.button('U', 'Underline', 'Underline (Ctrl+U)', underline:),
-				.button('S', 'Strikeout', 'Strikeout (Ctrl+S)', strikeout:),
-				'Skip',
-				.button('X', 'ResetFont', 'Remove formatting (Ctrl+Space)')
-				))
-		sci = Object('ScintillaAddonsRichEditor',
-			height: args.height, width: args.width,	xmin: args.xmin, ymin: args.ymin,
+			layout.Add([#Horz,
+				.button('B', #Bold, "Bold (Ctrl+B)", weight: #BOLD),
+				.button('I', #Italic, "Italic (Ctrl+I)", italic:),
+				.button('U', #Underline, "Underline (Ctrl+U)", underline:),
+				.button('S', #Strikeout, "Strikeout (Ctrl+S)", strikeout:),
+				#Skip,
+				.button('X', #ResetFont, "Remove formatting (Ctrl+Space)")])
+		sci = [#ScintillaAddonsRichEditor,
+			height: args.height, width: args.width, xmin: args.xmin, ymin: args.ymin,
 			Addon_speller: ignoreOb, zoom: args.zoom, readonly: .readonly,
-			tabthrough: args.tabthrough, :textLimit)
+			tabthrough: args.tabthrough, :textLimit]
 		// If no font or fontSize was specified, don't pass them to
 		// ScintillaAddonsRichEditor. This will default the ScintillaAddonsRichEditor
 		// to use the Suneido.logfont
@@ -67,14 +68,22 @@ Controller
 			sci.fontSize = args.fontSize
 		layout.Add(sci)
 		return layout
-
 		}
-	button(text, command, tip,
-		weight = '', italic = false, underline = false, strikeout = false)
+
+	button(text, command, tip, weight = "", italic = false, underline = false,
+		strikeout = false)
 		{
-		return Object('EnhancedButton', text, :command, :tip, tabover:, :weight,
-			font: 'Verdana', size: 10,
-			:italic, :underline, :strikeout, buttonStyle:, mouseEffect:)
+		return [#EnhancedButton, text, :command, :tip, tabover:, :weight,
+			font: #Verdana, size: 10,
+			:italic, :underline, :strikeout, buttonStyle:, mouseEffect:]
+		}
+
+	startup?: false
+	Startup()
+		{
+		.startup? = true
+		if .edit.HasFocus?()
+			.setAccels()
 		}
 
 	SetReadOnly(readonly = true)
@@ -104,17 +113,20 @@ Controller
 
 	Scintilla_DoubleClick()
 		{
-		.Send('Scintilla_DoubleClick')
+		.Send(#Scintilla_DoubleClick)
 		}
 
 	Scintilla_SetFocus()
 		{
-		.Defer(.setAccels, uniqueID: 'set_accels')
+		.setAccels()
 		}
 
 	accelsSet: false
 	setAccels()
 		{
+		if .startup? is false
+			return
+
 		// make accelerators work inside book
 		if .Destroyed?() or not .Window.Member?(#Ctrl) or
 			not .Window.Ctrl.Base?(Controller) or .accelsSet is true
@@ -122,11 +134,11 @@ Controller
 
 		.accelsSet = true
 		.curAccels = .Window.SetupAccels(.Commands)
-		.Window.Ctrl.Redir('On_Bold', .edit)
-		.Window.Ctrl.Redir('On_Italic', .edit)
-		.Window.Ctrl.Redir('On_Underline', .edit)
-		.Window.Ctrl.Redir('On_Strikeout', .edit)
-		.Window.Ctrl.Redir('On_ResetFont', .edit)
+		.Window.Ctrl.Redir(#On_Bold, .edit)
+		.Window.Ctrl.Redir(#On_Italic, .edit)
+		.Window.Ctrl.Redir(#On_Underline, .edit)
+		.Window.Ctrl.Redir(#On_Strikeout, .edit)
+		.Window.Ctrl.Redir(#On_ResetFont, .edit)
 		}
 
 	Scintilla_KillFocus()
@@ -160,7 +172,7 @@ Controller
 
 	SetSelect(chrg)
 		{
-		if chrg is "end"
+		if chrg is #end
 			chrg = .edit.GetLength()
 		.edit.SetSelect(chrg)
 		.edit.SetFocus()
@@ -188,7 +200,7 @@ Controller
 
 	NewValue(value)
 		{
-		.Send("NewValue", value)
+		.Send(#NewValue, value)
 		}
 
 	MenuSelect(tip)
@@ -204,18 +216,18 @@ Controller
 	ToggleFontButton(button, state)
 		{
 		if not .readonly
-			this['ScintillaRichWordAddonsControl_' $ button $ '_button'].Pushed?(state)
+			this["ScintillaRichWordAddonsControl_" $ button $ "_button"].Pushed?(state)
 		}
 
 	On_Print()
 		{
-		Params.On_Print(Object('ScintillaRichWrap', .Get(), width: 100),
-			title: SelectPrompt(.Name), name: 'print_editor', previewWindow: .Window.Hwnd)
+		Params.On_Print([#ScintillaRichWrap, .Get(), width: 100],
+			title: SelectPrompt(.Name), name: #print_editor, previewWindow: .Window.Hwnd)
 		}
 
 	CloseZoom()
 		{
-		.Send("CloseZoom")
+		.Send(#CloseZoom)
 		}
 
 	ZoomReadonly(value)
@@ -225,7 +237,7 @@ Controller
 
 	ValidData?(@args)
 		{
-		args.GetInit('textLimit', .textLimit)
+		args.GetInit(#textLimit, .textLimit)
 		return ScintillaAddonsRichEditorControl.ValidData?(@args)
 		}
 
@@ -236,13 +248,14 @@ Controller
 
 	Default(@args)
 		{
-		return .edit[args[0]](@+1 args)
+		return .edit[args[0]](@+1args)
 		}
+
 	curAccels: false
 	Destroy()
 		{
 		.resetAccels()
-		.Send('NoData')
+		.Send(#NoData)
 		super.Destroy()
 		}
 	}

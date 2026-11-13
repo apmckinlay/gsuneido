@@ -1,12 +1,12 @@
 // Copyright (C) 2013 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	CallClass(cmd, input = "")
+	CallClass(cmd, input = "") :string
 		{
 		return .WithExitValue(cmd, input).output
 		}
 
-	WithExitValue(cmd, input = "")
+	WithExitValue(cmd, input = "") :object
 		{
 		RunPiped(cmd)
 			{|p|

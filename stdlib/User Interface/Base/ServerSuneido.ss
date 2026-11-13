@@ -5,13 +5,15 @@ class
 		{
 		if Sys.Client?()
 			return ServerEval("ServerSuneido.Get", member, defaultVal)
+		.ensureAllowed(member)
 		return Suneido.GetDefault(member, defaultVal)
 		}
 
 	Set(member, value)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.Set', member, value)
+			return ServerEval("ServerSuneido.Set", member, value)
+		.ensureAllowed(member)
 		Suneido[member] = value
 		return
 		}
@@ -19,7 +21,8 @@ class
 	DeleteMember(member)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.DeleteMember', member)
+			return ServerEval("ServerSuneido.DeleteMember", member)
+		.ensureAllowed(member)
 		Suneido.Delete(member)
 		return
 		}
@@ -27,7 +30,8 @@ class
 	DeleteAt(member, at)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.DeleteAt', member, at)
+			return ServerEval("ServerSuneido.DeleteAt", member, at)
+		.ensureAllowed(member)
 		.validateObject(member)
 		Suneido[member].Delete(at)
 		}
@@ -35,7 +39,8 @@ class
 	RemoveFromMember(member, value)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.RemoveFromMember', member, value)
+			return ServerEval("ServerSuneido.RemoveFromMember", member, value)
+		.ensureAllowed(member)
 		.validateObject(member)
 		Suneido[member].Remove(value)
 		}
@@ -43,7 +48,8 @@ class
 	AddToMember(member, value)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.AddToMember', member, value)
+			return ServerEval("ServerSuneido.AddToMember", member, value)
+		.ensureAllowed(member)
 		.validateObject(member)
 		Suneido[member].Add(value)
 		}
@@ -51,23 +57,26 @@ class
 	Add(member, value, at)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.Add', member, value, at)
+			return ServerEval("ServerSuneido.Add", member, value, at)
+		.ensureAllowed(member)
 		.validateObject(member)
 		Suneido[member][at] = value
 		return
 		}
+
 	validateObject(member)
 		{
 		if not Suneido.Member?(member)
 			Suneido[member] = Object()
 		if not Object?(Suneido[member])
-			throw 'Member ' $ member $ ' is not an object'
+			throw "Member " $ member $ " is not an object"
 		}
 
 	GetAt(member, at, defaultVal = false)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.GetAt', member, at, defaultVal)
+			return ServerEval("ServerSuneido.GetAt", member, at, defaultVal)
+		.ensureAllowed(member)
 		.validateObject(member)
 		return Suneido[member].GetDefault(at, defaultVal)
 		}
@@ -75,8 +84,16 @@ class
 	HasMember?(member)
 		{
 		if Sys.Client?()
-			return ServerEval('ServerSuneido.HasMember?', member)
+			return ServerEval("ServerSuneido.HasMember?", member)
 
+		.ensureAllowed(member)
 		return Suneido.Member?(member)
+		}
+
+	ensureAllowed(mem)
+		{
+		list = GetContributions(#ServerSuneidoWhitelist)
+		Assert(list.exact.Member?(mem) or list.pattern.Any?({ mem =~ it }),
+			"Found disallowed member access - " $ mem)
 		}
 	}

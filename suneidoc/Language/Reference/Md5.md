@@ -31,4 +31,6 @@ cksum.Value().ToHex()
 
 See also:
 [Adler32](<Adler32.md>),
-[Sha1](<Sha1.md>), <a href="/suneidoc/Language/Reference/ResourceCounts">ResourceCounts</a>
+[Argon2id](<Argon2id.md>),
+[Sha1](<Sha1.md>),
+[Sha256](<Sha256.md>), <a href="/suneidoc/Language/Reference/ResourceCounts">ResourceCounts</a>

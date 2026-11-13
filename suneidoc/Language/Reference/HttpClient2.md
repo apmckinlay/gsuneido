@@ -9,7 +9,10 @@
 
 Makes an HTTP request using the specified method (e.g., "GET", "POST", "PUT", "DELETE").
 
-HttpClient is a thin wrapper around [Go net/http](<https://pkg.go.dev/net/http>)
+HttpClient2 is a thin wrapper around [Go net/http](<https://pkg.go.dev/net/http>)
+
+Unlike the HttpClient implementation in stdlib, 
+HttpClient2 handles HTTPS and HTTP/2
 
 **Parameters:**
 

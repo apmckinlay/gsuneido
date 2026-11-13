@@ -2,13 +2,14 @@
 // maintains data for controls
 PassthruController
 	{
-	Name: "Data"
+	Name: #Data
 	New(.ctrl = false, disableFieldProtectRules = false, custom = false,
 		.accessControl = false)
 		{
 		super(.setup(ctrl, disableFieldProtectRules, custom))
 		.dirty? = false
 		}
+
 	setup(ctrl, disableFieldProtectRules, custom)
 		{
 		// need to do setup before super New
@@ -16,55 +17,65 @@ PassthruController
 		.newctrls = Object()
 		.observers = Object()
 		.set_observers = Object()
-		.data = Record()
+		.data = []
 		.data.Observer(.Change)
 		.disableFieldProtectRules = disableFieldProtectRules
 		.Custom = custom
 		return ctrl
 		}
+
 	GetControlLayout()
 		{
 		return .ctrl
 		}
+
 	HasControl?(name)
 		{
 		return .ctrls.Member?(name)
 		}
+
 	GetControl(name)
 		{
 		return .ctrls.Member?(name) ? .ctrls[name][0] : false
 		}
+
 	AddObserver(fn)
 		{
 		.observers.Add(fn)
 		.data.Observer(fn)
 		}
+
 	AddObserversToCurrentRecord()
 		{
 		.data.Observer(.Change)
 		for observer in .observers
 			.data.Observer(observer)
 		}
+
 	RemoveObserver(fn)
 		{
 		.observers.Remove(fn)
 		.data.RemoveObserver(fn)
 		}
+
 	RemoveObserversFromCurrentRecord()
 		{
 		.data.RemoveObserver(.Change)
 		for observer in .observers
 			.data.RemoveObserver(observer)
 		}
+
 	AddSetObserver(fn)
 		{
 		.set_observers.Add(fn)
 		}
+
 	notifySetObservers()
 		{
-		for (set_observer in .set_observers)
+		for set_observer in .set_observers
 			(set_observer)()
 		}
+
 	RemoveSetObserver(fn)
 		{
 		.set_observers.Remove(fn)
@@ -77,17 +88,17 @@ PassthruController
 			return
 
 		if member is ""
-			ProgrammerError('RecordControl: record has blank member name')
+			ProgrammerError("RecordControl: record has blank member name")
 
-		if member isnt .protectField and not member.Suffix?('__protect')
+		if member isnt .protectField and not member.Suffix?("__protect")
 			{
 			if not .ignoreDirty? and .readonly? and .accessControl
-				if not Suneido.Member?("RecordNotInEditMode")
+				if not Suneido.Member?(#RecordNotInEditMode)
 					{
 					Suneido.RecordNotInEditMode = [:member,
 						callstack: FormatCallStack(GetCallStack(limit: 20), levels: 20)]
 					SujsAdapter.CallOnRenderBackend(#DumpStatus,
-						'Record not in edit mode - ' $ member)
+						"Record not in edit mode - " $ member)
 					}
 			.dirty? = true
 			}
@@ -103,7 +114,7 @@ PassthruController
 		{
 		// connect rules to controls (before ignore)
 		// e.g. field__valid => ctrl.valid(.data[field])
-		if member.Has?('__') and .ctrls.Member?(m = member.BeforeLast('__'))
+		if member.Has?("__") and .ctrls.Member?(m = member.BeforeLast("__"))
 			.connectRuleChangeToControl(member, m)
 		else if .ignore is member and .ignore_value is .data[member]
 			.ignore = ""
@@ -114,8 +125,8 @@ PassthruController
 
 	connectRuleChangeToControl(member, m)
 		{
-		method = member.AfterLast('__').Capitalize()
-		if (method is "Protect")
+		method = member.AfterLast("__").Capitalize()
+		if method is #Protect
 			.handle_protects()
 		else
 			for ctrl in .ctrls[m]
@@ -131,7 +142,7 @@ PassthruController
 			for ctrl in .ctrls[fld]
 				{
 				ctrl.Set(.data[fld])
-				if ctrl.Method?("SetValid")
+				if ctrl.Method?(#SetValid)
 					ctrl.SetValid(true)
 				}
 		.newctrls = Object()
@@ -139,7 +150,7 @@ PassthruController
 		.handle_protects()
 		.notifySetObservers()
 
-		.Send('TabsControl_SelectTab', :source)
+		.Send(#TabsControl_SelectTab, :source)
 		}
 
 	// sent by controls to register
@@ -149,19 +160,21 @@ PassthruController
 		.ctrls[fld].Add(source)
 
 		// source.Set(.data[fld])
-			// should be able to do this instead of SelectTab
-			// but some controls aren't completely set up
-			// when they Send("Data")
+		// should be able to do this instead of SelectTab
+		// but some controls aren't completely set up
+		// when they Send("Data")
 		.newctrls.Add(fld)
 		}
+
 	ControlInRecord?(source)
 		{
-		if '' is fld = source.Name
+		if "" is fld = source.Name
 			return false
 		return .ctrls[fld].FindIf({ Same?(it, source) }) isnt false
 		}
+
 	// sent by controls after a new value is entered
-	ignore: ""
+	ignore:       ""
 	ignore_value: ""
 	NewValue(value, source)
 		{
@@ -185,8 +198,9 @@ PassthruController
 		// only work when the control changes the value, it will not handle calls to
 		// RecordControl.SetField or modifying the record directly.
 		if newval
-			.Send("Record_NewValue", source.Name, value)
+			.Send(#Record_NewValue, source.Name, value)
 		}
+
 	// sent by controls when they destroy
 	NoData(source)
 		{
@@ -239,7 +253,7 @@ PassthruController
 	Set(newdata)
 		{
 		if newdata.Member?("")
-			ProgrammerError('RecordControl: Set record has blank member name')
+			ProgrammerError("RecordControl: Set record has blank member name")
 
 		.RemoveObserversFromCurrentRecord()
 		.data = newdata
@@ -252,7 +266,7 @@ PassthruController
 			for ctrl in .ctrls[name]
 				{
 				ctrl.Set(newdata[name])
-				if ctrl.Member?("SetValid")
+				if ctrl.Member?(#SetValid)
 					ctrl.SetValid(true)
 				}
 		.handle_protects()
@@ -260,32 +274,44 @@ PassthruController
 
 		.notifySetObservers()
 		}
+
 	Get(excludeHandleFocus = false)
 		{
 		if not excludeHandleFocus
 			.HandleFocus()
 		return .data
 		}
+
+	CheckPendingEdits()
+		{
+		return true
+		}
+
 	GetControlData()
 		{
-		data = Record()
-		for (ctrl in .ctrls)
+		data = []
+		for ctrl in .ctrls
 			data[ctrl[0].Name] = ctrl[0].Get()
 		return data
 		}
+
 	dirty?: false
-	Dirty?(dirty = '')
+	Dirty?(dirty = "")
 		{
-		Assert(dirty is true or dirty is false or dirty is '')
+		Assert(dirty is true or dirty is false or dirty is "")
 		.HandleFocus()
-		if dirty isnt ''
+		if dirty isnt ""
 			.dirty? = dirty
 		if dirty is false
 			Suneido.Delete(#RecordNotInEditMode)
 		return .dirty?
 		}
-	RecordDirty?(dirty = '')
-		{ .Dirty?(dirty) }
+
+	RecordDirty?(dirty = "")
+		{
+		.Dirty?(dirty)
+		}
+
 	InvalidateFields(fields)
 		{
 		if Object?(fields)
@@ -334,7 +360,7 @@ PassthruController
 
 	handleProtectObject(protect_val)
 		{
-		allbut? = protect_val.GetDefault(0, '') is 'allbut'
+		allbut? = protect_val.GetDefault(0, "") is #allbut
 		for field in .ctrls.Members().Copy()
 			{
 			protect1 = protect_val.Member?(field) isnt allbut?
@@ -375,6 +401,7 @@ PassthruController
 			SetFocus(hwnd)
 			}
 		}
+
 	isControlled?(ctrl)
 		{
 		while ctrl isnt false
@@ -391,9 +418,10 @@ PassthruController
 		{
 		for ob in .ctrls
 			for ctrl in ob
-				if ctrl.Member?("SetValid")
+				if ctrl.Member?(#SetValid)
 					ctrl.SetValid(true)
 		}
+
 	Valid(forceCheck = false)
 		{
 		if not .dirty? and not forceCheck
@@ -408,7 +436,7 @@ PassthruController
 	validControl(ctrl, forceCheck, invalid_list)
 		{
 		control_valid? = ctrl.Valid?(:forceCheck) or
-			(ctrl.GetReadOnly() and .data[ctrl.Name] is '' and
+			(ctrl.GetReadOnly() and .data[ctrl.Name] is "" and
 				.isCustomizedMandatory(ctrl))
 		if not control_valid?
 			invalid_list.Add(PromptOrHeading(ctrl.Name))
@@ -418,13 +446,13 @@ PassthruController
 
 	isCustomizedMandatory(ctrl)
 		{
-		customized = ctrl.GetDefault('Custom', false) // Custom could be false
+		customized = ctrl.GetDefault(#Custom, false) // Custom could be false
 		if not Object?(customized)
 			return false
 		customizedOptions = customized.GetDefault(ctrl.Name, false)
 		if not Object?(customizedOptions)
 			return false
-		return customizedOptions.GetDefault('mandatory', false)
+		return customizedOptions.GetDefault(#mandatory, false)
 		}
 
 	readonly?: false
@@ -442,10 +470,12 @@ PassthruController
 			InvalidateRect(hwnd, NULL, false)
 			}
 		}
+
 	GetReadOnly()
 		{
 		return .readonly?
 		}
+
 	GetRecordControl()
 		{
 		// if inside a RecordControl

@@ -1,17 +1,17 @@
 // Copyright (C) 2001 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	mainList: false
-	selectColumn: 'params_itemselected'
+	mainList:     false
+	selectColumn: #params_itemselected
 	New(field, values)
 		{
 		super(.layout(field, values))
 		.values = values
-		.field = Object?(field) and field.Member?("name") ? field.name : field
+		.field = Object?(field) and field.Member?(#name) ? field.name : field
 		.control = .FindControl(.field)
 		.status = .FindControl(#Status)
-		.listControl = .FindControl('valuesList')
-		.mainList = .FindControl('mainList')
+		.listControl = .FindControl(#valuesList)
+		.mainList = .FindControl(#mainList)
 		.setList(.values)
 		.loadList()
 		}
@@ -19,43 +19,41 @@ Controller
 	layout(field, initialList)
 		{
 		.listInfo = GetControlListInfo(field)
-		ob = Object('Vert')
-		if .listInfo.Member?('query') 		// ListControl w/ check boxes
+		ob = [#Vert]
+		if .listInfo.Member?(#query) // ListControl w/ check boxes
 			ob.Add(.queryLayout(.listInfo, field))
 		else if not .listInfo.Empty?()
-			{
-			if .listInfo[0] is 'ChooseDate'	// ChooseManyDates
+			if .listInfo[0] is #ChooseDate // ChooseManyDates
 				ob.Add(.datesLayout(initialList))
-			else							// ChooseTwoList
+			else // ChooseTwoList
 				ob.Add(.objectLayout(.listInfo, initialList))
-			}
-		else 								// regular field
+		else // regular field
 			ob.Add(.fieldLayout(field))
 
-		ob.Add('Skip',
-			#(HorzEqual
-				(Button Load) Skip (Button Save) Skip
-					'Fill', OkCancel),
+		ob.Add(#Skip,
+			#(HorzEqual,
+				(Button, Load), Skip, (Button, Save), Skip,
+				Fill, OkCancel),
 			#Status)
-		return Object('Record' ob)
+		return [#Record, ob]
 		}
 
 	queryLayout(listInfo, field)
 		{
 		.set = .setEditorList
 		columns = listInfo.columns.Copy()
-		return Object('Vert'
-			Object(KeyListCheckboxView, query: listInfo.query, :columns,
+		return [#Vert,
+			[KeyListCheckboxView, query: listInfo.query, :columns,
 				saveInfoName: field, field: listInfo.field, keys: listInfo.keys,
-				enableMultiSelect:, checkBoxColumn: .selectColumn, name: 'mainList',
-				customizeQueryCols: listInfo.GetDefault(#customizeQueryCols, false)
+				enableMultiSelect:, checkBoxColumn: .selectColumn, name: #mainList,
+				customizeQueryCols: listInfo.GetDefault(#customizeQueryCols, false),
 				optionalRestrictions: listInfo.GetDefault(#optionalRestrictions, #()),
-				excludeSelect: listInfo.GetDefault(#excludeSelect, #()))
-			'Skip'
-			#(Scintilla readonly:, wrap:, height: 2, ystretch: 0, name: 'valuesList')
-			'Skip'
-			#(Button 'Clear List' xmin: 100)
-			xstretch: 1)
+				excludeSelect: listInfo.GetDefault(#excludeSelect, #())],
+			#Skip,
+			#(Scintilla, readonly:, wrap:, height: 2, ystretch: 0, name: valuesList),
+			#Skip,
+			#(Button, "Clear List", xmin: 100)
+			xstretch: 1]
 		}
 
 	datesLayout(initialList)
@@ -63,35 +61,34 @@ Controller
 		.set = .setDates
 		.get = .getDates
 		.clear = .clearDates
-		return Object('Vert'
-			Object('MonthCalDates' initialList.Join(','), name: 'valuesList')
-			'Skip'
-			#(Button 'Clear List' xmin: 100)
-			)
+		return [#Vert,
+			[#MonthCalDates, initialList.Join(','), name: #valuesList],
+			#Skip,
+			#(Button, "Clear List", xmin: 100)]
 		}
 
 	objectLayout(listInfo, initialList)
 		{
 		.set = .setTwoList
 		.get = .getTwoList
-		return Object('TwoList' listInfo, initialList, xstretch: 1, name: 'valuesList')
+		return [#TwoList, listInfo, initialList, xstretch: 1, name: #valuesList]
 		}
 
 	fieldLayout(field)
 		{
 		.set = .setListBox
 		control = .getFieldControl(field)
-		return Object('Vert',
+		return [#Vert,
 			control,
-			'Skip',
-			#(Horz
-				Fill
-				(Button 'Add' xmin: 100)
-				Fill
-				(Button 'Clear List' xmin: 100)
-				Fill)
-			'Skip'
-			#(ListBox xstretch: 1, name: 'valuesList'))
+			#Skip,
+			#(Horz,
+				Fill,
+				(Button, Add, xmin: 100),
+				Fill,
+				(Button, "Clear List", xmin: 100),
+				Fill),
+			#Skip,
+			#(ListBox, xstretch: 1, name: valuesList)]
 		}
 
 	getFieldControl(field)
@@ -100,7 +97,7 @@ Controller
 			return field
 
 		.fieldCtrl = GetControlListInfo.GetControlFromField(field)
-		return Object('Pair', Object('Static', .getFieldPrompt(field)), .fieldCtrl)
+		return [#Pair, [#Static, .getFieldPrompt(field)], .fieldCtrl]
 		}
 
 	getFieldPrompt(field)
@@ -121,10 +118,10 @@ Controller
 	getNameAbbrevSuffix(field)
 		{
 		return field =~ `_name(\>|_)`
-			? ' Name'
+			? " Name"
 			: field =~ `_abbrev(\>|_)`
-				? ' Abbrev'
-				: ''
+				? " Abbrev"
+				: ""
 		}
 
 	get: false // Determined via the layout methods
@@ -171,7 +168,7 @@ Controller
 		displayLimit = 200
 		values = ParamsChooseListControl.DisplayValues(values, .field)
 		if values.Size() > displayLimit
-			text = values[..displayLimit].Join(',') $ '...'
+			text = values[..displayLimit].Join(',') $ "..."
 		else
 			text = values.Join(',')
 		return text
@@ -201,22 +198,22 @@ Controller
 
 	ListBox_ContextMenu(x, y)
 		{
-		list = .FindControl('valuesList')
+		list = .FindControl(#valuesList)
 		if list.GetCurSel() is -1
 			return // click outside items
-		ContextMenu(#('Delete')).ShowCall(this, x, y)
+		ContextMenu(#(Delete)).ShowCall(this, x, y)
 		}
 
-	On_Context_Delete()	// from queryLayout and fieldLayout
+	On_Context_Delete() // from queryLayout and fieldLayout
 		{
-		list = .FindControl('valuesList')
+		list = .FindControl(#valuesList)
 		item = list.GetCurSel()
 		list.DeleteItem(item)
 		.values.Delete(item)
 		.validate(.getList())
 		}
 
-	On_Add()	// from fieldLayout
+	On_Add() // from fieldLayout
 		{
 		// control can be false
 		// multi-user issue - one user renames/deletes custom field on
@@ -225,14 +222,14 @@ Controller
 			return
 		// get the value
 		val = .control.Get()
-		if (val is '' or .values.Has?(val) or not .control.Valid?())
+		if val is "" or .values.Has?(val) or not .control.Valid?()
 			{
 			Beep()
 			return
 			}
 		.values.Add(val)
 		.setList(.values)
-		.control.Set('')
+		.control.Set("")
 		}
 
 	On_Load()
@@ -256,7 +253,7 @@ Controller
 
 	getFieldSaveName()
 		{
-		suffixes = #(num id)
+		suffixes = #(num, id)
 		for suffix in suffixes
 			if .field.Has?('_' $ suffix $ '_')
 				return .field.BeforeFirst('_' $ suffix $ '_') $ '_' $ suffix
@@ -287,8 +284,9 @@ Controller
 
 	On_OK()
 		{
-		.Send("On_OK")
+		.Send(#On_OK)
 		}
+
 	OK()
 		{
 		list = .getList()
@@ -303,11 +301,11 @@ Controller
 		if list.Size() > .limit
 			{
 			.status.SetValid(false)
-			.status.Set('Cannot select more than ' $ .limit $ ' items')
+			.status.Set("Cannot select more than " $ .limit $ " items")
 			return false
 			}
 		.status.SetValid(true)
-		.status.Set('')
+		.status.Set("")
 		return true
 		}
 
@@ -329,10 +327,5 @@ Controller
 		checked = .mainList.GetCheckedRecords()
 		.values = checked.list.Map({ it[.listInfo.field] }).Instantiate()
 		.setList(.values)
-		}
-
-	VirtualList_ModelChanged()
-		{
-		.loadList()
 		}
 	}

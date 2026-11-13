@@ -2,37 +2,37 @@
 // NOTE: see VirtualListMethodsMap for more public methods
 Controller
 	{
-	Ymin:			0
-	Xmin:			0
-	Ystretch:		1
-	Xstretch:		1
-	Name:			"VirtualListView"
-	recMenu: 		false
+	Ymin:     0
+	Xmin:     0
+	Ystretch: 1
+	Xstretch: 1
+	Name:     #VirtualListView
+	recMenu:  false
 
 	New(menu = false, .headerSelectPrompt = false, headerMenu = false, readonly = false,
 		filterBy = false, .checkBoxColumn = false, .checkBoxAmountField = false,
-		.disableSelectFilter = false, .thinBorder = false,
-		.protectField = false, .validField = false, .title = false,
-		option = false, historyFields = false, titleLeftCtrl = false,
-		.hdrCornerCtrl = '', .expandExcludeFields = #(), addons = #(),
-		.filtersOnTop = false, .select = #(), .enableDeleteBar = false, .linked? = false,
-		.preventCustomExpand? = false, .switchToForm = false, .excludeCustomize? = false)
+		.disableSelectFilter = false, .thinBorder = false, .protectField = false,
+		.validField = false, .title = false, option = false, historyFields = false,
+		titleLeftCtrl = false, .hdrCornerCtrl = "", .expandExcludeFields = #(),
+		addons = #(), .filtersOnTop = false, .select = #(), .enableDeleteBar = false,
+		.linked? = false, .preventCustomExpand? = false, .switchToForm = false,
+		.excludeCustomize? = false, .subTableSelect = false)
 		{
 		super(.layout(addons, filterBy, titleLeftCtrl))
 
-		.header = .FindControl('VirtualListHeader')
-		.grid = .FindControl('VirtualListGrid')
-		.thumb = .FindControl('VirtualListThumbBar')
-		.scroll = .FindControl('VirtualListScroll')
+		.header = .FindControl(#VirtualListHeader)
+		.grid = .FindControl(#VirtualListGrid)
+		.thumb = .FindControl(#VirtualListThumbBar)
+		.scroll = .FindControl(#VirtualListScroll)
 
-		addCurrentMenu? = .Send('VirtualList_RecordMenu?') isnt false
+		addCurrentMenu? = .Send(#VirtualList_RecordMenu?) isnt false
 		if addCurrentMenu? or .addGlobalMenu?
 			.recMenu = RecordMenuManager(protectField, option, historyFields, this)
-		.contextMenu = VirtualListContextMenu(
-			menu, headerMenu, .recMenu, addCurrentMenu?, .addGlobalMenu?)
-		.expandBar = .FindControl('VirtualListExpandBar')
-		.expandBtns = .FindControl('VirtualListExpandButtons')
-		.statusBar = .FindControl('Status')
+		.contextMenu = VirtualListContextMenu(menu, headerMenu, .recMenu, addCurrentMenu?,
+			.addGlobalMenu?)
+		.expandBar = .FindControl(#VirtualListExpandBar)
+		.expandBtns = .FindControl(#VirtualListExpandButtons)
+		.statusBar = .FindControl(#Status)
 		.readonly = readonly
 		if .readonly or ReadOnlyAccess(this)
 			.SetReadOnly(true)
@@ -50,14 +50,14 @@ Controller
 
 	getter_addGlobalMenu?()
 		{
-		if 0 is result = .Send('VirtualList_AddGlobalMenu?')
+		if 0 is result = .Send(#VirtualList_AddGlobalMenu?)
 			return .addGlobalMenu? = true
 		return .addGlobarMenu? = result
 		}
 
 	layout(addons, filterBy, titleLeftCtrl)
 		{
-		addons = addons.Copy().Append(GetContributions('FormatContextMenuItems'))
+		addons = addons.Copy().Append(GetContributions(#FormatContextMenuItems))
 		addons.Addon_VirtualListTopFilters = [filtersOnTop: .filtersOnTop,
 			checkBoxAmountField: .checkBoxAmountField]
 		addons.Addon_VirtualListView_Edit = true
@@ -84,14 +84,14 @@ Controller
 				if false isnt row = .model.SetFirstSelection()
 					.grid.SetFocusedRow(row)
 			if .filtersOnTop
-				.Addons.Send('LoadSavedFilters', this)
+				.Addons.Send(#LoadSavedFilters, this)
 
 			// have to do after LoadSavedFilters otherwise extra
 			// buttons are not constructed yet
 			if row isnt false
 				if false isnt rec = .model.GetRecord(row - .model.Offset)
 					{
-					.Send('VirtualList_ItemSelected', rec)
+					.Send(#VirtualList_ItemSelected, rec)
 					.RefreshValid(rec)
 					}
 			}
@@ -99,7 +99,17 @@ Controller
 
 	ToggleFilter()
 		{
-		.Addons.Send('ToggleFilter', this)
+		.Addons.Send(#ToggleFilter, this)
+		}
+
+	UseSubTableFilters?()
+		{
+		return .subTableSelect is true
+		}
+
+	SubTables_Where(selectControls)
+		{
+		return .Send(#VirtualList_ExtraWhere, selectControls)
 		}
 
 	UpdateTopFilters(vals = false)
@@ -108,29 +118,39 @@ Controller
 			.topFilters.Set([conditions: vals is false ? .Select_vals : vals],
 				extra_select_vals: .extra_select_vals)
 		}
+
 	Select_ExtraButtons()
 		{
-		.Send('VirtualList_Select_ExtraButtons')
+		.Send(#VirtualList_Select_ExtraButtons)
 		}
+
 	Select_ExtraLayout()
 		{
-		extraLayout = Object(buttons: .Send('VirtualList_Select_ExtraButtons')
-			checkBoxAmountField: .checkBoxAmountField)
+		extraLayout = Object(buttons: .Send(#VirtualList_Select_ExtraButtons),
+			checkBoxAmountField: .checkBoxAmountField,
+			msg: .Send(#VirtualList_Select_ExtraMsg))
 		if not Object?(extraLayout.buttons)
 			extraLayout.buttons = Object()
+		if not Object?(extraLayout.msg)
+			extraLayout.msg = Object()
 		return extraLayout
 		}
+
 	Select_ExtraFilters()
 		{
-		.Send('VirtualList_ExtraFilters')
+		.Send(#VirtualList_ExtraFilters)
 		}
+
 	Select_ExtraConditions()
 		{
-		.Send("VirtualList_ExtraConditions")
+		.Send(#VirtualList_ExtraConditions)
 		}
+
 	Select_ExtraWhere(selectControls = false)
 		{
-		.Send('VirtualList_ExtraWhere', selectControls)
+		where = .Send(#VirtualList_ExtraWhere, selectControls)
+		.Addons.Send(#SetSubTableFilter, subTableFilter: where isnt "")
+		return where
 		}
 
 	GetDefaultSelect()
@@ -141,22 +161,22 @@ Controller
 	Record_NewValue(field, value, source)
 		{
 		.Field_SetFocus(source)
-		.Addons.SendToOneAddon('Record_NewValue', field, value, source)
+		.Addons.SendToOneAddon(#Record_NewValue, field, value, source)
 		}
 
 	SetFilter(filters = false)
 		{
-		return .Addons.Collect('SetFilter', filters).Join(' ')
+		return .Addons.Collect(#SetFilter, filters).Join(' ')
 		}
 
-	model: 	false
-	SetModel(model, selectName = '', updateWhere = false)
+	model: false
+	SetModel(model, selectName = "", updateWhere = false)
 		{
 		.model = model
 		.expandBar.SetInfo(.model, .grid.RowHeight, .header.Ymin, .expandBtns)
 		.contextMenu.BuildMenu(.model, this, .preventCustomExpand?, .excludeCustomize?)
-		.SetStatusBar('')
-		.Send('VirtualList_ModelChanged')
+		.SetStatusBar("")
+		.Send(#VirtualList_ModelChanged)
 		.setModelWhere(selectName, updateWhere)
 		if .switchToForm isnt true
 			.SetDefaultStatus()
@@ -170,9 +190,8 @@ Controller
 			.model.SetWhere(updateWhere)
 			return
 			}
-		whereStr = .model.ColModel.GetSelectWhere(
-			selectName, this, .model.AllAvailableColumns) $
-			.Addons.Collect('ExtraWhere').Join(' ')
+		whereStr = .model.ColModel.GetSelectWhere(selectName, this,
+				.model.AllAvailableColumns) $ .Addons.Collect("ExtraWhere").Join(' ')
 		if not whereStr.Blank?()
 			.model.SetWhere(whereStr)
 		}
@@ -209,7 +228,7 @@ Controller
 	VirtualListScroll_Resize(width, height)
 		{
 		if .model is false or height is 0
-			return 'none'
+			return #none
 
 		height -= .header.Ymin + .horzScrollSize(width)
 
@@ -230,7 +249,8 @@ Controller
 	horzScrollSize(width)
 		{
 		return .model.ColModel.GetTotalWidths() > width
-			? GetSystemMetrics(SM.CXHSCROLL) : 0
+			? GetSystemMetrics(SM.CXHSCROLL)
+			: 0
 		}
 
 	GetReadOnly()
@@ -246,7 +266,7 @@ Controller
 		}
 
 	// from inner virtual list
-	VirtualList_ItemSelected(rec /*unused*/, source)
+	VirtualList_ItemSelected(rec/*unused*/, source)
 		{
 		.ClearSelect()
 		if .model.ExpandModel isnt false
@@ -255,29 +275,34 @@ Controller
 
 	RefreshValid(rec = false)
 		{
-		.Addons.SendToOneAddon('RefreshValid', this, .statusBar, rec)
+		.Addons.SendToOneAddon(#RefreshValid, this, .statusBar, rec)
 		}
+
 	SetStatusBar(msg, normal = false, warn = false, invalid = false)
 		{
-		.Addons.SendToOneAddon('SetStatusBar', .statusBar, msg, :normal, :warn, :invalid)
+		.Addons.SendToOneAddon(#SetStatusBar, .statusBar, msg, :normal, :warn, :invalid)
 		}
 
 	VirtualListHighlightRecords(recs, clr)
 		{
 		.grid.HighlightRecords(recs, clr)
 		}
+
 	RecordDirty?(dirty?)
 		{
-		.Send('RecordDirty?', dirty?)
+		.Send(#RecordDirty?, dirty?)
 		}
+
 	VirtualListDirty?()
 		{
 		return not .model.EditModel.AllowLeaving?()
 		}
+
 	RecordLocked?(rec)
 		{
 		return .model.EditModel.RecordLocked?(rec)
 		}
+
 	Default(@args)
 		{
 		VirtualListMethodsMap(this, args)
@@ -318,7 +343,7 @@ Controller
 		return .Option
 		}
 
-	AddRecord(record, pos = 'current') // pos: current, start, end
+	AddRecord(record, pos = #current) // pos: current, start, end
 		{
 		.grid.InsertRow(:record, :pos, force:)
 		}
@@ -330,8 +355,8 @@ Controller
 
 	Customizable_ExpandInfo()
 		{
-		if 0 is defaultLayout = .Send('VirtualList_DefaultExpandLayout')
-			defaultLayout = ''
+		if 0 is defaultLayout = .Send(#VirtualList_DefaultExpandLayout)
+			defaultLayout = ""
 		availableFields = .ExpandColumns()
 		return Object(:defaultLayout, :availableFields)
 		}
@@ -339,7 +364,7 @@ Controller
 	ExpandColumns()
 		{
 		fields = .model.ColModel.GetAvailableColumns(.model.GetQuery())
-		if Object?(extraExpandFields = .Send('VirtualList_ExtraExpandFields'))
+		if Object?(extraExpandFields = .Send(#VirtualList_ExtraExpandFields))
 			fields.MergeUnion(extraExpandFields)
 		removeCols = Customizable.GetNonPermissableFields(.model.GetQuery())
 		return fields.Difference(removeCols).Difference(.expandExcludeFields)
@@ -371,7 +396,7 @@ Controller
 		.header.SetColModel(.model.ColModel, .GetPrimarySort(),
 			showExpandBar?: .expandBar.ShowExpand?())
 		.grid.SetModel(.model)
-		if .Send('VirtualList_RepaintDisabled') isnt true // in the middle of setting
+		if .Send(#VirtualList_RepaintDisabled) isnt true // in the middle of setting
 			{
 			.grid.Repaint(:keepPos?)
 			.RepaintExpandBar()
@@ -379,8 +404,8 @@ Controller
 			.thumb.SetSelectPressed(.model.ColModel.HasSelectedVals?())
 			}
 		}
-	/* end of Used by Customize Column dialog */
 
+	/* end of Used by Customize Column dialog */
 	// to avoid repainting other elements, and keep the selection
 	RepaintGrid(checkTotal = false)
 		{
@@ -397,7 +422,7 @@ Controller
 
 	GetAlertTitle()
 		{
-		return .title is false ? "List" : .title // once only
+		return .title is false ? #List : .title // once only
 		}
 
 	// from inner virtual list or expand bar
@@ -472,8 +497,8 @@ Controller
 		if .model.ExpandModel is false
 			return
 		recs = .GetLoadedData()
-		recOnTop = recs.Any?({ values.Has?(it[field]) 		})
-		expanded = recs.Any?({ it.vl_expanded_rows isnt '' 	})
+		recOnTop = recs.Any?({ values.Has?(it[field]) })
+		expanded = recs.Any?({ it.vl_expanded_rows isnt "" })
 		if recOnTop and expanded
 			.CollapseAll(keepPos?:)
 		}
@@ -506,7 +531,7 @@ Controller
 
 	Getter_Option()
 		{
-		if 0 isnt opt = .Send('VirtualList_GetOption')
+		if 0 isnt opt = .Send(#VirtualList_GetOption)
 			return opt
 		return .model.ColModel.GetColumnsSaveName()
 		}
@@ -520,6 +545,7 @@ Controller
 		{
 		return .model.ColModel.GetSelectVals()
 		}
+
 	Getter_Extra_Select_vals()
 		{
 		return .extra_select_vals
@@ -528,7 +554,15 @@ Controller
 	SetSelectVals(select_vals)
 		{
 		.model.ColModel.SetSelectVals(select_vals)
-		FilterButtonControl.UpdateStatus(this, .model.ColModel.HasSelectedVals?())
+		if .UseSubTableFilters?()
+			.Addons.Send(#UpdateFilterItemsButton)
+		else
+			.UpdateFilterButton(.model.ColModel.HasSelectedVals?())
+		}
+
+	UpdateFilterButton(active)
+		{
+		FilterButtonControl.UpdateStatus(this, active)
 		}
 
 	extra_select_vals: false
@@ -543,12 +577,12 @@ Controller
 		return .selectWhere
 		}
 
-	selectWhere: ''
+	selectWhere: ""
 	SetWhere(where)
 		{
 		.selectWhere = .model.ColModel.ExtendWithWhere(where, .model.AllAvailableColumns)
 		.ResetWhere()
-		.Send('VirtualList_SetWhere')
+		.Send(#VirtualList_SetWhere)
 		.expandBar.ShowEditButtons()
 		.SetDefaultStatus()
 		return true
@@ -560,32 +594,33 @@ Controller
 			return
 
 		topClosed? = .topFilters is false
-		.statusBar.SetDefaultMsg(
-			.model.ColModel.GetSelectMgr().UsingDefaultFilter?() and topClosed?
-			? 'initial Select applied'
-			: '')
+		.statusBar.SetDefaultMsg(.model.ColModel.GetSelectMgr().UsingDefaultFilter?() and
+			topClosed?
+			? "initial Select applied"
+			: "")
 		}
 
 	AfterTopFilter(type)
 		{
-		if type is "open" and .statusBar isnt false
+		if type is #open and .statusBar isnt false
 			.statusBar.SetDefaultMsg("")
-		if type is "close"
+		if type is #close
 			.SetDefaultStatus()
 		}
 
 	GetSelectFields()
 		{
 		// option for extra selectable fields but not avaialble on columns
-		if 0 is extra = .Send('VirtualList_ExtraSelectFields')
+		if 0 is extra = .Send(#VirtualList_ExtraSelectFields)
 			extra = #()
 		return .model.ColModel.GetSelectFields(extra)
 		}
+
 	/* end of Used by Select dialog */
 
 	ResetWhere()
 		{
-		updateWhere = .selectWhere $ .Addons.Collect('ExtraWhere').Join(' ')
+		updateWhere = .selectWhere $ .Addons.Collect("ExtraWhere").Join(' ')
 		.SetModel(.model, :updateWhere)
 		}
 
@@ -636,15 +671,15 @@ Controller
 	BeforeRecord(x)
 		{
 		if .extraSetupRecord is false
-			.extraSetupRecord = .Send('VirtualList_ExtraSetupRecordFn')
+			.extraSetupRecord = .Send(#VirtualList_ExtraSetupRecordFn)
 		if .extraSetupRecord isnt 0
 			(.extraSetupRecord)(x, source: this)
-		.Addons.Send('BeforeRecord', x)
+		.Addons.Send(#BeforeRecord, x)
 		}
 
 	ForceSetExtraSetupRecordFn()
 		{
-		.extraSetupRecord = .Send('VirtualList_ExtraSetupRecordFn')
+		.extraSetupRecord = .Send(#VirtualList_ExtraSetupRecordFn)
 		}
 
 	SetSelectApplied(applied)
@@ -662,13 +697,15 @@ Controller
 		{
 		return .model.GetLoadedData().Copy()
 		}
+
 	GetDeleted()
 		{
 		return .model.GetLoadedData().Filter({ it.vl_deleted isnt true })
 		}
+
 	Field_SetFocus(source)
 		{
-		if true isnt .Send('VirtualList_SelectRowOnExpandFocus')
+		if true isnt .Send(#VirtualList_SelectRowOnExpandFocus)
 			return
 		if .model.ExpandModel is false or
 			false is ctrl = .model.ExpandModel.GetControl(source)
@@ -679,6 +716,7 @@ Controller
 
 		.grid.SelectRecord(rec)
 		}
+
 	SelectRecordByFocus(curFocus)
 		{
 		if curFocus isnt false and .model.ExpandModel isnt false and
@@ -719,7 +757,8 @@ Controller
 			: .model.GetRecord(.ExpandedIndex)
 		return rec[field]
 		}
-	SetField(field, value, idx /*unused*/ = false, invalidate /*unused*/ = false,
+
+	SetField(field, value, idx/*unused*/ = false, invalidate/*unused*/ = false,
 		source = false)
 		{
 		rec = source isnt false and not source.Window.Base?(ListEditWindow)
@@ -728,14 +767,17 @@ Controller
 		Assert(rec isnt: false, msg: "VirtualList - cannot find source line")
 		rec[field] = value
 		}
+
 	SetMainRecordField(field, value, source = false)
 		{
 		.SetField(field, value, :source)
 		}
+
 	GetTransQuery()
 		{
 		return .model.GetQuery()
 		}
+
 	/* called from KeyControl messages */
 
 	GetGrid()
@@ -786,7 +828,7 @@ Controller
 
 	FieldPrompt_GetSelectFields(source = false)
 		{
-		.Controller.Send('FieldPrompt_GetSelectFields',
+		.Controller.Send(#FieldPrompt_GetSelectFields,
 			rec: .model.ExpandModel.GetExpandRecord(source), :source)
 		}
 
@@ -818,7 +860,7 @@ Controller
 
 	GetLinkField()
 		{
-		return .Send('GetLinkField')
+		return .Send(#GetLinkField)
 		}
 
 	// This is used to return the query for subtables when doing select.
@@ -826,7 +868,7 @@ Controller
 		{
 		// We CANNOT just use .model.GetQuery() here, as it already has a where for
 		// the CURRENT record tacked on. We need the base query at this point
-		return .Send('GetLinkedQuery')
+		return .Send(#GetLinkedQuery)
 		}
 
 	Valid?()

@@ -5,13 +5,14 @@ RackComposeBase
 		{
 		if -1 is result = .App(:env)
 			return result
-		result = RackServer.ResultOb(result)
-		if result[1].Member?(#Content_Type)
-			return result
 		ext = env.path.AfterLast('.')
-		if false isnt type = MimeTypes.GetDefault(ext, false)
-			result = [result[0],
-				result[1].Copy().Add(type at: #Content_Type), result[2]]
-		return result
+		if false is type = MimeTypes.GetDefault(ext, false)
+			return result
+		if Object?(result) and result.Size() >= 2 and result[1].Member?(#Content_Type)
+			return result
+		code, headers, content = RackServer.Result(result)
+		if not headers.Member?(#Content_Type)
+			headers = headers.Copy().Add(type at: #Content_Type)
+		return [code, headers, content]
 		}
 	}

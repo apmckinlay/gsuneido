@@ -28,24 +28,26 @@ DuplicateFieldInfo: function()
 */
 class
 	{
-	Table: false
-	Name: false
-	contribs: false
+	Table:                false
+	Name:                 false
+	contribs:             false
 
 	// only used if table is shared between screens, so customization is a different name
 	RenamedForCustomize?: false
 	// GetContributions uses Contributions which is Memoized
 	New()
 		{
-		if false is .contribs = GetContributions('Table_' $ .Table)
+		if false is .contribs = GetContributions("Table_" $ .Table)
 			.contribs = #()
 		}
+
 	// these are called in SchemaChecker
 	Columns: ()
 	GetColumns()
 		{
-		return .Columns.Union(.getContribs('Columns'))
+		return .Columns.Union(.getContribs(#Columns))
 		}
+
 	getContribs(type)
 		{
 		return .contribs.GetDefault(type, #())
@@ -54,19 +56,19 @@ class
 	Keys: ()
 	GetKeys()
 		{
-		return .Keys.Copy().Append(.getContribs('Keys'))
+		return .Keys.Copy().Append(.getContribs(#Keys))
 		}
 
 	UniqueIndexes: ()
 	GetUniqueIndexes()
 		{
-		return .UniqueIndexes.Copy().Append(.getContribs('UniqueIndexes'))
+		return .UniqueIndexes.Copy().Append(.getContribs(#UniqueIndexes))
 		}
 
 	Indexes: ()
 	GetIndexes()
 		{
-		indexes = .Indexes.Copy().Append(.getContribs('Indexes'))
+		indexes = .Indexes.Copy().Append(.getContribs(#Indexes))
 		ob = .GetDuplicateFieldInfo()
 		if ob isnt false and TableExists?(ob.configTable)
 			{
@@ -87,7 +89,7 @@ class
 		// Can't use .Append here as there might be multiple foreign keys to the same
 		//	table, and .Append will just overwrite any in the Base list.
 		bContrib = .ForeignKeys.Copy().Set_default(Object())
-		fkContrib = .getContribs('ForeignKeys')
+		fkContrib = .getContribs(#ForeignKeys)
 		for m in fkContrib.Members()
 			bContrib[m] = bContrib[m].Copy().Append(fkContrib[m])
 		return bContrib
@@ -97,14 +99,13 @@ class
 	ExcludeFields: ()
 	GetExcludeFields()
 		{
-		return .ExcludeFields.Copy().Append(.getContribs('ExcludeFields'))
+		return .ExcludeFields.Copy().Append(.getContribs(#ExcludeFields))
 		}
 
 	Schema(withoutForeignKeys = false)
 		{
 		// make sure to use the immutable version of map
-		schema = .Table $ ' ' $
-			'(' $ .GetColumns().Join(',') $ ') ' $
+		schema = .Table $ ' ' $ '(' $ .GetColumns().Join(',') $ ") " $
 			.GetKeys().Map(.schemaKeys).Join(' ') $ ' ' $
 			.GetUniqueIndexes().Map(.schemaUniqueIndexes).Join(' ') $ ' ' $
 			.GetIndexes().Map(.schemaIndexes).Join(' ')
@@ -112,46 +113,52 @@ class
 			schema $= ' ' $ .GetForeignKeys().Map2(.schemaForeignKeys).Join(' ')
 		return schema
 		}
+
 	schemaKeys(key)
 		{
 		if Object?(key)
-			{
-			return 'key (' $ key[0] $ ')' $
-				(key.Member?('in') ? ' in ' $ key.in : "") $
-				(key.Member?('cascade') ? ' cascade' : "")
-			}
-		return 'key (' $ key $ ')'
+			return "key (" $ key[0] $ ')' $ (key.Member?("in") ? " in " $ key.in : "") $
+				(key.Member?("cascade") ? " cascade" : "")
+		return "key (" $ key $ ')'
 		}
+
 	schemaUniqueIndexes(index)
 		{
-		return 'index unique(' $ index $ ')'
+		return "index unique(" $ index $ ')'
 		}
+
 	schemaIndexes(index)
 		{
-		return 'index (' $ index $ ')'
+		return "index (" $ index $ ')'
 		}
+
 	schemaForeignKeys(table, fields)
 		{
 		fks = Object()
 		for key in fields
 			{
-			fk = 'index(' $ key.from $ ') in ' $ table
-			if key.Member?('to')
-				fk $= ' (' $ key.to $ ')'
-			if key.Member?('cascade')
-				fk $= ' cascade'
-			if key.Member?('cascade_update')
-				fk $= ' cascade update'
+			fk = "index(" $ key.from $ ") in " $ table
+			if key.Member?(#to)
+				fk $= " (" $ key.to $ ')'
+			if key.Member?(#cascade)
+				fk $= " cascade"
+			if key.Member?(#cascade_update)
+				fk $= " cascade update"
 			fks.Add(fk)
 			}
 		return fks.Join(' ')
 		}
+
 	Ensure(withoutForeignKeys = false)
 		{
-		Database('ensure ' $ .Schema(:withoutForeignKeys))
+		Database("ensure " $ .Schema(:withoutForeignKeys))
 		}
 
-	DuplicateFieldInfo: function() { return false }
+	DuplicateFieldInfo()
+		{
+		return false
+		}
+
 	GetDuplicateFieldInfo()
 		{
 		info = (.DuplicateFieldInfo)()
@@ -163,21 +170,19 @@ class
 			info.fields = info.fields.Copy().MergeUnion(.getCustomFields())
 			}
 
-		for func in .getContribs('DuplicateFieldInfo')
+		for func in .getContribs(#DuplicateFieldInfo)
 			{
 			x = (func)()
-			for m in x.Members().Remove('fields')
+			for m in x.Members().Remove(#fields)
 				{
 				if info.Member?(m)
-					throw 'Cannot define ' $ m $ ' more than once'
+					throw "Cannot define " $ m $ " more than once"
 				info[m] = x[m]
 				}
-			if x.Member?('fields')
-				{
+			if x.Member?(#fields)
 				info.fields.Append(x.fields)
-				}
 			}
-		if '' isnt excludeFields = info.GetDefault('excludeFields', '')
+		if "" isnt excludeFields = info.GetDefault(#excludeFields, "")
 			info.fields.Remove(@excludeFields)
 		return info is #(fields: ()) ? false : info
 		}
@@ -192,37 +197,58 @@ class
 	GetDepTables()
 		{
 		tables = Object()
-		tables.Add(@.GetKeys().
-			Filter({ Object?(it) and it.Member?('in') }).
-			Map({ it.in }))
+		tables.Add(@.GetKeys().Filter({ Object?(it) and it.Member?(#in) }).Map({ it.in }))
 		tables.Add(@.GetForeignKeys().Members())
 		return tables
 		}
 
 	UserInterfaceColumns()
 		{
-		cols = QueryAvailableColumns(.Table).Difference(.UserInterfaceExclude())
-		contribs = GetContributions('Table_' $ .Table)
-		removeOb = Customizable.GetNonPermissableFields(.Table)
-
-		usrExcludes = Object()
-		if contribs.Member?('UserInterfaceExclude')
-			{
-			for excl in contribs['UserInterfaceExclude']
-				if String?(excl)
-					usrExcludes.AddUnique(excl)
-				else
-					usrExcludes.MergeUnion(excl())
-			}
-
-		cols = cols.Difference(usrExcludes.MergeUnion(removeOb))
-		return cols.RemoveIf(Internal?)
+		cols = QueryAvailableColumns(.Table)
+		excludes = .UserInterfaceExcludeColumns().
+			MergeUnion(Customizable.GetNonPermissableFields(.Table))
+		return cols.Difference(excludes).RemoveIf(Internal?)
 		}
 
-	UserInterfaceExclude() { return #() }
+	UserInterfaceExclude()
+		{
+		return #()
+		}
+
+	UserInterfaceExcludeColumns()
+		{
+		return .UserInterfaceExclude().
+			Copy().
+			MergeUnion(.getContribExcludes(#UserInterfaceExclude))
+		}
+
+	getContribExcludes(member)
+		{
+		excludes = Object()
+		contribs = GetContributions("Table_" $ .Table)
+		if contribs.Member?(member)
+			for excl in contribs[member]
+				if String?(excl)
+					excludes.AddUnique(excl)
+				else
+					excludes.MergeUnion(excl())
+		return excludes
+		}
 
 	BaseQueryWithExcludedCols()
 		{
-		return .Table $ ' project ' $ .UserInterfaceColumns().Join(',')
+		return .Table $ " project " $ .UserInterfaceColumns().Join(',')
+		}
+
+	ReporterExcludes()
+		{
+		return #()
+		}
+
+	ReporterExcludeColumns()
+		{
+		return .ReporterExcludes().
+			Copy().
+			MergeUnion(.getContribExcludes(#ReporterExcludes))
 		}
 	}

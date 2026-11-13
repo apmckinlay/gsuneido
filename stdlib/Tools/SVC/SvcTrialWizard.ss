@@ -12,42 +12,43 @@ Controller
 		{
 		.model = new SvcModel()
 		.model.SetSettings(SvcSettings.Get())
-		.list = .FindControl('localList')
+		.list = .FindControl(#localList)
 		.list.SetReadOnly(true, grayOut: false)
-		.data = .FindControl('Data')
-		.tag = .FindControl('tag')
-		.data.SetField('option', 'Start')
-		.loadList('Start')
+		.data = .FindControl(#Data)
+		.tag = .FindControl(#tag)
+		.data.SetField(#option, #Start)
+		.loadList(#Start)
 		}
 
 	Controls()
 		{
-		.trialTags = LastContribution('Svc_TrialTags')
-		return Object('Vert'
-			Object('Record'
-				Object('Vert'
-				Object('RadioButtons', 'Start', 'End', horz:, name: 'option')
-				Object('Pair'
-					Object('Static', 'Tag'),
-					Object('ChooseList', .trialTags.Map2({ |m, v| m $ ' - ' $ v }),
-						name: 'tag'))))
-			#Skip
-			#(List columns: #(svc_checked, svc_lib, svc_type, svc_date,
-				svc_local_date, svc_name),
-				noShading:,	name: 'localList', defWidth: false, resetColumns:,
-				columnsSaveName: 'svc_local', stretchColumn: 'svc_name',
-				checkBoxColumn: 'svc_checked'))
+		.trialTags = LastContribution(#Svc_TrialTags)
+		return [#Vert,
+			[#Record,
+				[#Vert,
+					[#RadioButtons, #Start, #End, horz:, name: #option],
+					[#Pair,
+						[#Static, #Tag],
+						[#ChooseList, .trialTags.Map2({|m, v| m $ " - " $ v }),
+							name: #tag]]]],
+			#Skip,
+			#(List,
+				columns: (svc_checked, svc_lib, svc_type, svc_date,
+					svc_local_date, svc_name),
+				noShading:, name: localList, defWidth: false, resetColumns:,
+				columnsSaveName: svc_local, stretchColumn: svc_name,
+				checkBoxColumn: svc_checked)]
 		}
 
-	maps: (name: #svc_name,
-		lib: #svc_lib,
-		type: #svc_type,
-		modified: #svc_date,
-		committed: #svc_local_date)
+	maps: (name: svc_name,
+		lib: svc_lib,
+		type: svc_type,
+		modified: svc_date,
+		committed: svc_local_date)
 	Record_NewValue(field, value)
 		{
 		// init
-		if .list is false or field isnt 'option'
+		if .list is false or field isnt #option
 			return
 
 		.loadList(value)
@@ -59,17 +60,17 @@ Controller
 			return
 
 		data = Object()
-		.tag.Set('')
-		if option is 'Start'
+		.tag.Set("")
+		if option is #Start
 			.loadForStart(data)
-		else if option is 'End'
+		else if option is #End
 			.loadForEnd(data)
 		.list.Set(data.Map(.formatRec))
 		}
 
 	loadForStart(data)
 		{
-		.model.SetTable('svc_all_changes')
+		.model.SetTable(#svc_all_changes)
 		for rec in .model.LocalChanges
 			{
 			if rec.type is '-' or
@@ -84,7 +85,6 @@ Controller
 		{
 		libs = Libraries().Append(UnusedStandardLibraries())
 		for lib in libs
-			{
 			try
 				data.Append(QueryAll(lib $ '
 					rename lib_modified to modified,
@@ -97,8 +97,9 @@ Controller
 						Join(' or ')) $ '
 					where group is -1
 					project name, group, lib, modified, committed, svc_checked'))
-			catch (unused, 'nonexistent table|*nonexistent column') { }
-			}
+			catch (unused, "nonexistent table|*nonexistent column")
+				{
+				}
 		}
 
 	formatRec(rec)
@@ -108,7 +109,7 @@ Controller
 
 	List_SingleClick(row, col, source)
 		{
-		if source.GetCol(col) is 'svc_checked' and row isnt false
+		if source.GetCol(col) is #svc_checked and row isnt false
 			{
 			data = source.GetRow(row)
 			data.svc_checked = data.svc_checked isnt true
@@ -117,12 +118,23 @@ Controller
 		return 0
 		}
 
+	List_ContextMenu(x, y)
+		{
+		ContextMenu(#("Version History")).ShowCall(this, x, y)
+		}
+
+	On_Context_Version_History()
+		{
+		if false isnt row = .list.GetCurrentRecord()
+			VersionHistoryControl(row.svc_lib, row.svc_name)
+		}
+
 	OK()
 		{
 		selects = .list.Get().Filter({ it.svc_checked is true })
 		if selects.Empty?()
 			{
-			.AlertError(.Title, 'Please select at least one record')
+			.AlertError(.Title, "Please select at least one record")
 			return false
 			}
 
@@ -130,15 +142,15 @@ Controller
 			return false
 
 		option = .data.Get()
-		if option.option is 'Start' and option.tag is ''
+		if option.option is #Start and option.tag is ""
 			{
 			.tag.SetValid(false)
 			return false
 			}
 
-		block = option.option is 'Start' ? .copyAndRestore : .renameAndDelete
+		block = option.option is #Start ? .copyAndRestore : .renameAndDelete
 		.forEachSelects(selects, block, option.tag)
-		PubSub.PublishConsolidate('LibraryTreeChange', force:)
+		PubSub.PublishConsolidate(#LibraryTreeChange, force:)
 		return true
 		}
 
@@ -152,11 +164,11 @@ Controller
 
 		if false is destRec = svcTable.Get(destName, :t)
 			svcTable.Output([
-				name: destName,
-				parent: srcRec.parent,
-				text: srcRec.text,
-				lib_invalid_text: srcRec.lib_invalid_text
-				], :t)
+					name: destName,
+					parent: srcRec.parent,
+					text: srcRec.text,
+					lib_invalid_text: srcRec.lib_invalid_text],
+				:t)
 		else
 			{
 			destRec.lib_invalid_text = srcRec.lib_invalid_text
@@ -186,12 +198,12 @@ Controller
 			}
 		}
 
-	forEachSelects(selects, block, tag = '')
+	forEachSelects(selects, block, tag = "")
 		{
 		lib = false
 		svcTable = false
 		Transaction(update:)
-			{ |t|
+			{|t|
 			for select in selects
 				{
 				if select.svc_lib isnt lib

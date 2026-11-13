@@ -22,11 +22,15 @@ AstFmtDoc
 		}
 
 	// Leading consumes trivia up to pos; comments come out on their own line
-	// when the source had a newline after them, else attached with a space
-	Leading(curr, pos, unusedParam = false)
+	// when the source had a newline after them, else attached with a space.
+	// Blank lines after comments are preserved only when leading a code node,
+	// not when consuming trailing comments before a closing delimiter.
+	Leading(curr, pos, unusedParam = false, allowBlank = false)
 		{
 		docs = Object()
 		pend = false
+		hadComments = false
+		hadBlank = false
 		while curr.done < pos and curr.i < .toks.Size()
 			{
 			tok = .toks[curr.i]
@@ -40,19 +44,29 @@ AstFmtDoc
 					docs.Add(.Text(' '))
 					}
 				pend = .suppress?(tok.text, unusedParam) ? false : .comment(tok)
+				if pend isnt false
+					hadComments = true
+				hadBlank = false
 				}
-			else if tok.kind is #NEWLINE and pend isnt false
-				{
-				docs.Add(pend)
-				docs.Add(.Hard)
-				pend = false
-				}
+			else if tok.kind is #NEWLINE
+				if pend isnt false
+					{
+					docs.Add(pend)
+					docs.Add(.Hard)
+					pend = false
+					if hadComments and .blank?(tok.text)
+						hadBlank = true
+					}
+				else if hadComments and .blank?(tok.text)
+					hadBlank = true
 			}
 		if pend isnt false
 			{
 			docs.Add(pend)
 			docs.Add(.Text(' '))
 			}
+		if allowBlank and hadBlank
+			docs.Add(.Blank)
 		return .Catl(docs)
 		}
 
@@ -122,7 +136,7 @@ AstFmtDoc
 		for (j = curr.i; j < .toks.Size(); ++j)
 			if .toks[j].kind not in (#COMMENT, #NEWLINE, #WHITESPACE)
 				return .Leading(curr, .toks[j].end - .toks[j].text.Size())
-		return .Leading(curr, 9_999_999)
+		return .Leading(curr, 9_999_999) /*= max */
 		}
 
 	SkipTo(curr, pos) // advance the cursor silently, e.g. past verbatim slices

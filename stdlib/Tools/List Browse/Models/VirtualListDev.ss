@@ -10,6 +10,19 @@ class
 	GoToFieldDefinition(fieldName)
 		{
 		if fieldName isnt false
-			GotoLibView('Field_' $ fieldName)
+			GotoLibView("Field_" $ fieldName)
+		}
+
+	GoToQueryView(query, rec = false, keys = #())
+		{
+		if rec isnt false and not keys.Empty?()
+			query = .keyQuery(query, keys, rec)
+		GotoQueryView(query)
+		}
+
+	keyQuery(query, keys, rec)
+		{
+		where = keys.Map({ it $ " = " $ Display(rec[it]) }).Join(" and ")
+		return QueryHelper.StripSort(query) $ Opt(" where ", where)
 		}
 	}

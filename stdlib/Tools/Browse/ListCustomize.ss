@@ -15,11 +15,11 @@ class
 
 	checkCustomFieldCreation(table)
 		{
-		if table is ''
+		if table is ""
 			{
 			Alert("Could not create a custom field for this table",
 				"Create Custom Column", flags: MB.ICONERROR)
-			SuneidoLog('WARNING: Could not create a custom field', calls:)
+			SuneidoLog("WARNING: Could not create a custom field", calls:)
 			return false
 			}
 		return true
@@ -28,16 +28,16 @@ class
 	SubTitle(ctrl, linkField)
 		{
 		if linkField is false
-			return ''
+			return ""
 
-		if 0 is sub_title = ctrl.Send('TabGetSelectedName')
-			sub_title = ''
-		return sub_title $ ' List'
+		if 0 is sub_title = ctrl.Send(#TabGetSelectedName)
+			sub_title = ""
+		return sub_title $ " List"
 		}
 
 	AddCustomColumns(query, columns)
 		{
-		if columns is false or query is ''
+		if columns is false or query is ""
 			return columns
 		new_cols = columns.Copy()
 		for c in .getPermissableFields(query)
@@ -73,9 +73,9 @@ class
 
 	mandatoryAndEmpty?(rec, field, customFields)
 		{
-		return .GetControlOption(customFields, field, 'mandatory') and
+		return .GetControlOption(customFields, field, #mandatory) and
 			CustomizeField.ConsideredEmpty?(field, rec) and
-			not .GetControlOption(customFields, field, 'readonly')
+			not .GetControlOption(customFields, field, #readonly)
 		}
 
 	InvalidField?(rec, field, customFields, protectField)
@@ -88,36 +88,37 @@ class
 
 	ReasonProtected(record, protectField, hwnd, query = false, foreignKeyUsage? = false)
 		{
-		allowDeleteMsg = ''
-		if (query isnt false and
-			('' isnt allowDeleteMsg = RecordAllowDelete(query, record)))
-			allowDeleteMsg = 'This record can not be deleted.\n\n' $ allowDeleteMsg
+		allowDeleteMsg = ""
+		if query isnt false and
+			("" isnt allowDeleteMsg = RecordAllowDelete(query, record))
+			allowDeleteMsg = "This record can not be deleted.\n\n" $ allowDeleteMsg
 
 		foreignKeyUsageMsg = query isnt false and foreignKeyUsage?
-			? RecordForeignKeyUsage(query, record) : ''
+			? RecordForeignKeyUsage(query, record)
+			: ""
 
-		protect = protectField is false ? '' : record[protectField]
-		if .noInfo(protect) and allowDeleteMsg is '' and foreignKeyUsageMsg is ''
+		protect = protectField is false ? "" : record[protectField]
+		if .noInfo(protect) and allowDeleteMsg is "" and foreignKeyUsageMsg is ""
 			{
-			.alert('No Information', hwnd)
+			.alert("No Information", hwnd)
 			return
 			}
 		if Object?(protect)
-			protect = protect.reason
-		.alert(allowDeleteMsg $ Opt('\n\n', protect) $
-			Opt('\n\n', foreignKeyUsageMsg), hwnd)
+			protect = protect.Member?(#reason) ? protect.reason : ""
+		.alert(allowDeleteMsg $ Opt("\n\n", protect) $ Opt("\n\n", foreignKeyUsageMsg),
+			hwnd)
 		}
 
 	noInfo(protect)
 		{
-		return (protect is '' or protect is false or protect is true or
-			(Object?(protect) and not protect.Member?('reason')) or
-			(Object?(protect) and protect.Member?('reason') and protect.reason is ""))
+		return (protect is "" or protect is false or protect is true or
+			(Object?(protect) and not protect.Member?(#reason)) or
+			(Object?(protect) and protect.Member?(#reason) and protect.reason is ""))
 		}
 
 	alert(msg, hwnd)
 		{
-		Alert(msg, 'Reason Protected', hwnd, MB.ICONINFORMATION)
+		Alert(msg, "Reason Protected", hwnd, MB.ICONINFORMATION)
 		}
 
 	MandatoryColumn?(column, mandatoryFields, customFields)
@@ -126,16 +127,16 @@ class
 			return true
 
 		if Object?(customFields) and customFields.Member?(column) and
-			customFields[column].GetDefault('mandatory', false) is true
+			customFields[column].GetDefault(#mandatory, false) is true
 			return true
 
 		ctrl = Datadict(column).Control
-		return ctrl.Member?('mandatory') and ctrl.mandatory is true
+		return ctrl.Member?(#mandatory) and ctrl.mandatory is true
 		}
 
 	Customize(query, columns, customKey, linkField, ctrl)
 		{
-		sfOb = Object(cols: columns.Copy().Remove('listrow_deleted'), excludeFields: #())
+		sfOb = Object(cols: columns.Copy().Remove(#listrow_deleted), excludeFields: #())
 
 		table = QueryGetTable(query, nothrow:)
 		if false is custom_fields = .InitCustomFields(table, columns)
@@ -157,7 +158,7 @@ class
 		if title is false
 			return false
 		table = QueryGetTable(query, nothrow:)
-		return title $ ' ~ ' $ table
+		return title $ " ~ " $ table
 		}
 
 	AddRemoveCustomFields(custom_fields, columns)

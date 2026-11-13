@@ -240,7 +240,7 @@ WndProc
 			.commands[cmd[0]] = Object(
 				accel: cmd.GetDefault(1, ""),
 				help: cmd.GetDefault(2, ""),
-				bitmap: cmd.GetDefault(3, cmd[0]),
+				bitmap: cmd.GetDefault(3, cmd[0]), /*= 3rd is image */
 				id: .Mapcmd(cmd[0]))
 		return .SetupAccels(cmds)
 		}
@@ -248,11 +248,10 @@ WndProc
 	Commands()
 		{
 		return .commands
-		// accelerator stuff =============================================
 		}
 
+	// accelerator stuff =============================================
 	haccel: 0
-	accels: ""
 	getter_accelGroups()
 		{
 		return .accelGroups = Object()
@@ -279,30 +278,28 @@ WndProc
 		.commands[name] = Object(help: "", bitmap: "", accel: s, :id)
 		accelInfo = .make_accel(s, id)
 		.accelGroups.Add([accelInfo])
-		.accels $= accelInfo.accel
 		}
 
 	make_accel(s, cmd)
 		{
-		ctrl = alt = shift = false
-		ac = Object(fVirt: 0, :cmd)
+		ac = Object(fVirt: 0, :cmd, ctrl: false, alt: false, shift: false, key: "")
 		if s.Has?("Ctrl+")
 			{
-			ac.fVirt |= FCONTROL
 			s = s.Replace("Ctrl[+]", "")
-			ctrl = true
+			ac.fVirt |= FCONTROL
+			ac.ctrl = true
 			}
 		if s.Has?("Alt+")
 			{
-			ac.fVirt |= FALT
 			s = s.Replace("Alt[+]", "")
-			alt = true
+			ac.fVirt |= FALT
+			ac.alt = true
 			}
 		if s.Has?("Shift+")
 			{
-			ac.fVirt |= FSHIFT
 			s = s.Replace("Shift[+]", "")
-			shift = true
+			ac.fVirt |= FSHIFT
+			ac.shift = true
 			}
 		if VK.Member?(u = s.Upper())
 			{
@@ -315,11 +312,9 @@ WndProc
 				s = s.Lower()
 			ac.key = s.Asc()
 			if ((ac.fVirt & FCONTROL) isnt 0 and 'a' <= s and s <= 'z')
-				ac.key -= 0x60
+				ac.key -= 0x60 /*= lower case to control offset */
 			}
-		else
-			return Object(accel: "", id: cmd, :ctrl, :alt, :shift, key: "")
-		return Object(accel: ACCEL(ac), id: cmd, :ctrl, :alt, :shift, key: ac.key)
+		return ac
 		}
 
 	RestoreAccels(accels)
@@ -334,7 +329,7 @@ WndProc
 			for item in group
 				if item.key is key and item.ctrl is ctrl and item.alt is alt and
 					item.shift is shift
-					return item.id
+					return item.cmd
 		return false
 		}
 
@@ -350,27 +345,19 @@ WndProc
 		.ResetAccels()
 		if .destroying is true
 			return
-		.buildAccel()
-		if .accels isnt ""
-			{
-			.haccel = CreateAcceleratorTable(.accels, .accels.Size() / ACCEL.Size())
-			Assert(.haccel isnt 0)
-			if .haccel is 1
-				Print("WARNING: " $ Display(this) $ "
-					got an HACCEL equal to 1, will kill MessageLoop()!")
-			SetWindowLongPtr(.Hwnd, GWL.USERDATA, .haccel)
-			}
-		}
-
-	buildAccel()
-		{
-		.accels = ""
+		accels = Object()
 		for group in .accelGroups
-			for item in group
-				.accels $= item.accel
+			for ac in group
+				if ac.key isnt ""
+					accels.Add(ac)
+		if accels.Size() is 0
+			return
+		.haccel = CreateAcceleratorTable(accels)
+		SetWindowLongPtr(.Hwnd, GWL.USERDATA, .haccel)
 		}
 
 	// end of accelerator stuff ======================================
+
 	GetChildren()
 		{
 		return [.Ctrl]
@@ -517,7 +504,7 @@ WndProc
 		// snap to edges of work area
 		StructModify(RECT, lParam)
 			{|r|
-			snap = ScaleWithDpiFactor(4)
+			snap = ScaleWithDpiFactor(4) /* = snap distance */
 			wa = GetWorkArea(r)
 			if ((d = wa.left - r.left).Abs() < snap or
 				(d = wa.right - r.right).Abs() < snap)

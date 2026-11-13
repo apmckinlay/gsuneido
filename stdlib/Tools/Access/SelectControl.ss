@@ -3,18 +3,18 @@ Controller
 	{
 	Xmin: 750
 	Ymin: 475 // within a few pixels of previous min. height
-	CallClass(ctrl, name = '', okbutton = false, defaultButton = '',
+	CallClass(ctrl, name = "", okbutton = false, defaultButton = "",
 		noUserDefaultSelects? = false, setSelectVals = false, hideCount = false)
 		{
 		ToolDialog(0,
-			Object(this, ctrl, name, :okbutton, :defaultButton, :noUserDefaultSelects?,
-				:setSelectVals, :hideCount),
-				closeButton?: false, keep_size: 'Select~' $ name)
+			[this, ctrl, name, :okbutton, :defaultButton, :noUserDefaultSelects?,
+				:setSelectVals, :hideCount],
+			closeButton?: false, keep_size: "Select~" $ name)
 		}
 
-	Title: "Select"
+	Title:           #Select
 	subTableSelects: false
-	New(access, .name, okbutton = false, defaultButton = '',
+	New(access, .name, okbutton = false, defaultButton = "",
 		noUserDefaultSelects? = false, setSelectVals = false, .hideCount = false)
 		{
 		super(.layout(access, okbutton, defaultButton, noUserDefaultSelects?,
@@ -22,10 +22,10 @@ Controller
 		.select2 = .FindControl(.name)
 		.subSelectRepeats()
 		}
+
 	subSelectRepeats()
 		{
-		if .access.Method?('UseSubTableFilters?') and
-			.access.UseSubTableFilters?() is true
+		if .access.Method?(#UseSubTableFilters?) and .access.UseSubTableFilters?() is true
 			{
 			.subTableSelects = Object()
 			for idx in .linkedBrowses.Members().Sort!()
@@ -43,31 +43,29 @@ Controller
 		.DefaultButton = defaultButton
 		.access = access
 
-
 		.sf = access.GetSelectFields()
 		selects = setSelectVals is false ? access.Select_vals : setSelectVals
 		.remove_invalid_selects(selects)
 
-		layout = Object('Vert',
-			Object('SelectRepeat', .sf, selects, .name, option: access.Option,
-				title: access.Title, :noUserDefaultSelects?))
+		layout = [#Vert,
+			[#SelectRepeat, .sf, selects, .name, option: access.Option,
+				title: access.Title, :noUserDefaultSelects?]]
 
 		// .access could also be a KeyListView
-		if .access.Method?('UseSubTableFilters?') and
-			.access.UseSubTableFilters?() is true
+		if .access.Method?(#UseSubTableFilters?) and .access.UseSubTableFilters?() is true
 			{
 			.linkedBrowses = .access.GetLinkedBrowseTabs()
 			.layoutSubtables(layout)
 			}
 
-		buttons = okbutton is true ? .buttons("Select") : .buttons(@.AccessButtons)
+		buttons = okbutton is true ? .buttons(#Select) : .buttons(@.AccessButtons)
 		return layout.Add(buttons)
 		}
 
 	layoutSubtables(layout)
 		{
 		AccessSubtables.Layout(.access)
-			{ |control, unused, unused|
+			{|control, unused, unused|
 			layout.Add(control)
 			}
 		}
@@ -75,37 +73,37 @@ Controller
 	// this name is the saved name in userselects
 	subTableFilterName(linkedBrowse)
 		{
-		return linkedBrowse.GetColumnsSaveName() $ ' Filter'
+		return linkedBrowse.GetColumnsSaveName() $ " Filter"
 		}
 
-	AccessButtons: ("First", "Last", "Current") // public to allow overriding
+	AccessButtons: (First, Last, Current) // public to allow overriding
 	remove_invalid_selects(selects)
 		{
 		selects.RemoveIf()
 			{
-			not it.Member?('condition_field') or not .sf.Fields.Has?(it.condition_field)
+			not it.Member?(#condition_field) or not .sf.Fields.Has?(it.condition_field)
 			}
 		}
 
-	CountBtnTip: 'Show the number of records matching the current Select'
+	CountBtnTip: "Show the number of records matching the current Select"
 	buttons(@list)
 		{
-		ob = Object('HorzEven', 'Skip')
+		ob = [#HorzEven, #Skip]
 		if not .hideCount
-			list.Add('Count')
-		tip = ''
-		for button in list.Add("Uncheck All", "Cancel")
+			list.Add(#Count)
+		tip = ""
+		for button in list.Add("Uncheck All", #Cancel)
 			{
-			if button is 'Count'
+			if button is #Count
 				tip = .CountBtnTip
-			ob.Add(Object('Button', button, :tip), 'Skip')
+			ob.Add([#Button, button, :tip], #Skip)
 			}
 		return ob
 		}
 
 	On_First()
 		{
-		if (false is .set_query())
+		if false is .set_query()
 			return
 		.access.On_First()
 		.closeDialog()
@@ -114,7 +112,7 @@ Controller
 	closeDialog(noChange = false)
 		{
 		if not noChange
-			.access.Send('SelectControl_Changed')
+			.access.Send(#SelectControl_Changed)
 		if .access.Base?(VirtualListViewControl)
 			.access.CloseSelectFromWindow()
 		.Window.Result("")
@@ -122,7 +120,7 @@ Controller
 
 	On_Last()
 		{
-		if (false is .set_query())
+		if false is .set_query()
 			return
 		.access.On_Last()
 		.closeDialog()
@@ -138,7 +136,7 @@ Controller
 
 	On_Select()
 		{
-		if (false is .set_query())
+		if false is .set_query()
 			return
 		.closeDialog()
 		}
@@ -148,9 +146,10 @@ Controller
 		if false is where = .where()
 			return false
 		if .access.Base?(VirtualListViewControl)
-			return .access.SelectFromWindow(.select2)
+			return .access.SelectFromWindow(.select2, .subTableSelects)
 		return .access.SetWhere(where)
 		}
+
 	where()
 		{
 		// Close the select control as the access has been destroyed
@@ -166,11 +165,10 @@ Controller
 		headerWhere = .sf.Joins(where.joinflds) $ where.where
 
 		lineItemWhere = ""
-		if .access.Method?('UseSubTableFilters?') and
-			.access.UseSubTableFilters?() is true
+		if .access.Method?(#UseSubTableFilters?) and .access.UseSubTableFilters?() is true
 			lineItemWhere $= .access.SubTables_Where(.subTableSelects)
 // Need to handle if this returns something NOT in the current re-name
-		return headerWhere $ '\r\n' $ lineItemWhere
+		return headerWhere $ "\r\n" $ lineItemWhere
 		}
 
 	On_Uncheck_All()
@@ -178,6 +176,7 @@ Controller
 		newConditions = .select2.Get().conditions.Map({ it.check = false; it })
 		.select2.Set([conditions: newConditions])
 		}
+
 	On_Cancel()
 		{
 		.closeDialog(noChange:)
@@ -185,7 +184,7 @@ Controller
 
 	On_Count()
 		{
-		if (false is .set_query())
+		if false is .set_query()
 			return
 		.access.On_Count()
 		}

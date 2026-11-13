@@ -7,13 +7,27 @@ Test
 		((a: 123), "--- \na: 123\n"),
 		((a: 123, b: fred), 'a: 123\nb: "fred"\n'),
 		((a: "'lisp"), 'a: "\'lisp"\n'),
-		((a: (b: 123)), "a: \n    b: 123\n")
+		((a: (b: 123)), "a:\n  b: 123\n")
 		)
 
 	Test_FromObject()
 		{
 		for c in .cases
 			Assert(Yaml.FromObject(c[0]) is: c[1].Replace("^--- \n", ""))
+		}
+
+	Test_FromObject_numeric_string_keys()
+		{
+		Assert(Yaml.FromObject(Object("123": #value))
+			is: '"123": "value"\n')
+		Assert(Yaml.FromObject(Object("123": #value, a: 1, "456": 2))
+			is: '"123": "value"\n"456": 2\na: 1\n')
+		Assert(Yaml.FromObject(Object(nested: Object("99": #val)))
+			is: "nested:\n  \"99\": \"val\"\n")
+		Assert(Yaml.FromObject(Object("1.2": 1, "-1": 2, "+3": 3, "1e5": 4, ".5": 5))
+			is: '"+3": 3\n"-1": 2\n".5": 5\n"1.2": 1\n"1e5": 4\n')
+		Assert(Yaml.FromObject(Object("1a": 1, a1: 2))
+			is: "1a: 1\na1: 2\n")
 		}
 
 	Test_FromObject_nested()
@@ -25,8 +39,8 @@ Test
 				),
 			d: yes)
 		Assert(Yaml.FromObject(ob),
-			is: "a: 123\n" $ 'b: "testyaml"\n' $ "c: \n" $ "    c1: \n" $
-				'        field: "testfield"\n' $ "    c2: \n" $ '        type: "date"\n' $
+			is: "a: 123\n" $ 'b: "testyaml"\n' $ "c:\n" $ "  c1:\n" $
+				'    field: "testfield"\n' $ "  c2:\n" $ '    type: "date"\n' $
 				'd: "yes"\n')
 		}
 
@@ -95,5 +109,84 @@ Test
 		f = Yaml.Yaml_flow
 		Assert(f(Object(a: Object(c: 1), b: Object(d: Object(e: 2))))
 			is: "{'a': {'c': 1}, 'b': {'d': {'e': 2}}}")
+		}
+
+	Test_FromObject_block()
+		{
+		Assert(Yaml.FromObject([1, 2, 3], blockStyle?:)
+			is: "- 1\n- 2\n- 3\n")
+		Assert(Yaml.FromObject(['x', 'y'], blockStyle?:)
+			is: "- x\n- y\n")
+		Assert(Yaml.FromObject([1, [2, 3], Object(b: 4)], blockStyle?:)
+			is: "- 1\n- - 2\n  - 3\n- b: 4\n")
+		Assert(Yaml.FromObject(Object(), blockStyle?:) is: "")
+		Assert(Yaml.FromObject([1, 2, 3], "    ", blockStyle?:)
+			is: "    - 1\n    - 2\n    - 3\n")
+		Assert(Yaml.FromObject(Object(x: 1, y: [2, 3]), blockStyle?:)
+			is: "x: 1\ny:\n  - 2\n  - 3\n")
+		Assert(Yaml.FromObject(Object(a: Object()), blockStyle?:)
+			is: "a: []\n")
+		Assert(Yaml.FromObject(Object(a: ['x', 'y'], b: [1, Object(z: 2)]),
+				blockStyle?:)
+			is: "a:\n  - x\n  - y\nb:\n  - 1\n  - z: 2\n")
+		}
+
+	Test_FromObject_block_empty()
+		{
+		Assert(Yaml.FromObject([Object(), [Object()]], blockStyle?:)
+			is: "- []\n- - []\n")
+		Assert(Yaml.FromObject(Object(), "    ", blockStyle?:)
+			is: "    []\n")
+		}
+
+	Test_FromObject_block_scalars()
+		{
+		Assert(Yaml.FromObject(
+				[#fred, "", 'a "b" c', 123, 0, 1.5, -1.5,
+					true, false, #20200101], blockStyle?:)
+			is: '- fred\n- \n- a "b" c' $
+				"\n- 123\n- 0\n- 1.5\n- -1.5\n- true\n- false\n- #20200101\n")
+		for value in #("true", FALSE, yes, null, "123", "1.5",
+			"a: b", "a #comment", "", " leading", "trailing ", "- item", "[1]")
+			{
+			Assert(Yaml.FromObject([value], blockStyle?:)
+				is: "- " $ value $ '\n')
+			Assert(Yaml.FromObject(Object(text: value), blockStyle?:)
+				is: "text: " $ value $ '\n')
+			}
+		}
+
+	Test_FromObject_block_hash_strings()
+		{
+		for value in #('#', "#/components/schemas/Item", '#text "quoted"')
+			{
+			Assert(Yaml.FromObject([value], blockStyle?:)
+				is: "- " $ Display(value) $ '\n')
+			Assert(Yaml.FromObject(Object(ref: value), blockStyle?:)
+				is: "ref: " $ Display(value) $ '\n')
+			}
+		Assert(Yaml.FromObject(["text#hash"], blockStyle?:)
+			is: "- text#hash\n")
+		}
+
+	Test_FromObject_block_mappings()
+		{
+		Assert(Yaml.FromObject([Object(b: 2, a: 1), Object("123": #value)],
+				blockStyle?:)
+			is: '- a: 1\n  b: 2\n- "123": value\n')
+		Assert(Yaml.FromObject([[0, 1, a: 2]], blockStyle?:)
+			is: "- 0: 0\n  1: 1\n  a: 2\n")
+		Assert(Yaml.FromObject([Object(a: Object(c: [1, [2]]))],
+				blockStyle?:)
+			is: "- a:\n    c:\n      - 1\n      - - 2\n")
+		}
+
+	Test_FromObject_block_servers()
+		{
+		ob = Object(servers: [Object(description: "ETA REST API",
+				url: "http://127.0.0.1:3247/EtaRestAPI/")])
+		Assert(Yaml.FromObject(ob, blockStyle?:)
+			is: "servers:\n  - description: ETA REST API\n" $
+				"    url: http://127.0.0.1:3247/EtaRestAPI/\n")
 		}
 	}

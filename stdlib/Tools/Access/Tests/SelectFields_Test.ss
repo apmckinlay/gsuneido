@@ -4,25 +4,70 @@ Test
 	cache: false
 	Setup()
 		{
-		.cache = Suneido.GetDefault("ForeignKeyTables", false)
-		Suneido.Delete('ForeignKeyTables')
+		.cache = Suneido.GetDefault(#ForeignKeyTables, false)
+		Suneido.Delete(#ForeignKeyTables)
 		.sf = SelectFields(#())
 		for f in .fields
 			.sf.AddField(@f)
 		}
-	fields:
-		(
-		('amount', 'Amount')
-		('tax', 'Tax')
-		('totamount', 'Total Amount')
-		('totamount', 'Total Amount Sold')
-		('invnum', 'Invoice #')
-		('printed', 'Printed?')
-		('compercent', '% Commission')
-		('ab', 'A / B')
-		('ref1', 'Ref (1)')
-		('test_date', 'Date')
+
+	fields: (
+		(amount, Amount),
+		(tax, Tax),
+		(totamount, "Total Amount"),
+		(totamount, "Total Amount Sold"),
+		(invnum, "Invoice #"),
+		(printed, Printed?),
+		(compercent, "% Commission"),
+		(ab, "A / B"),
+		(ref1, "Ref (1)"),
+		(test_date, Date)
 		)
+	Test_SerializeEmpty()
+		{
+		sf = SelectFields()
+		restored = SelectFields.Deserialize(sf.Serialize())
+		Assert(restored.OrigFields() is: #())
+		Assert(restored.Fields is: #())
+		Assert(restored.GetConverted() is: #())
+		Assert(restored.AllJoins() is: "")
+		restored.AddField(#amount, #Amount)
+		Assert(restored.PromptToField(#Amount) is: #amount)
+		Assert(sf.HasPrompt?(#Amount) is: false)
+		}
+
+	Test_Serialize()
+		{
+		sf = SelectFields([#amount], headerSelectPrompt: #no_prompts)
+		sf.AddField(#tax, #Tax)
+		sf.GetConverted().custom_test_num = #custom_test_name
+		data = sf.Serialize()
+		for initialized in #(false, true)
+			{
+			if initialized
+				sf.FormulaFields("amount + Tax")
+			Assert(sf.Serialize() is: data)
+			restored = SelectFields.Deserialize(sf.Serialize())
+			Assert(restored.OrigFields() is: sf.OrigFields())
+			Assert(restored.Fields is: sf.Fields)
+			Assert(restored.GetConverted() is: sf.GetConverted())
+			Assert(restored.SelectFields_headerSelectPrompt is: #no_prompts)
+			Assert(restored.Prompts() equalsSet: sf.Prompts())
+			Assert(restored.PromptToField(#Tax) is: #tax)
+			Assert(restored.FieldToPrompt(#tax) is: #Tax)
+			Assert(restored.FormulaFields("amount + Tax + Unknown")
+				is: #(amount, tax))
+			Assert(restored.FormulaPromptsToFields("amount + Tax", Object())
+				is: "amount + tax")
+			restored.AddField(#totamount, "Total Amount")
+			restored.OrigFields().Add(#tax)
+			restored.GetConverted().custom_test_num = #changed
+			Assert(sf.HasPrompt?("Total Amount") is: false)
+			Assert(sf.OrigFields() is: #(amount))
+			Assert(sf.GetConverted().custom_test_num is: #custom_test_name)
+			}
+		}
+
 	Test_FormulaPromptsToFields()
 		{
 		for f in .fields
@@ -31,25 +76,28 @@ Test
 			for g in .fields
 				Assert(f[0] $ '/' $ g[0]
 					is: .sf.FormulaPromptsToFields(f[1] $ '/' $ g[1], Object()))
-		Assert('(amount+tax).Abs()',
-			is: .sf.FormulaPromptsToFields('(Amount+Tax).Abs()', Object()))
-		Assert('Date()' is: .sf.FormulaPromptsToFields('Date()', Object()))
+		Assert("(amount+tax).Abs()",
+			is: .sf.FormulaPromptsToFields("(Amount+Tax).Abs()", Object()))
+		Assert("Date()" is: .sf.FormulaPromptsToFields("Date()", Object()))
 		}
+
 	Test_FormulaFields()
 		{
-		Assert(#(amount, tax), is: .sf.FormulaFields('(Amount+Tax).Abs()'))
+		Assert(#(amount, tax), is: .sf.FormulaFields("(Amount+Tax).Abs()"))
 		}
+
 	Test_PromptToField()
 		{
 		sf = SelectFields
 			{
-			SelectFields_field_ob: #(One: one, Two: two, Three: three)
+			SelectFields_field_ob: (One: one, Two: two, Three: three)
 			}
-		Assert(sf.PromptToField("One") is: "one")
-		Assert(sf.PromptToField("Two") is: "two")
-		Assert(sf.PromptToField("Three") is: "three")
-		Assert(sf.PromptToField("Four") is: false)
+		Assert(sf.PromptToField(#One) is: #one)
+		Assert(sf.PromptToField(#Two) is: #two)
+		Assert(sf.PromptToField(#Three) is: #three)
+		Assert(sf.PromptToField(#Four) is: false)
 		}
+
 	Test_CustomFieldDuplicatePrompts()
 		{
 		p1 = .TempTableName()
@@ -61,7 +109,7 @@ Test
 		.MakeLibraryRecord(
 			[name: "Field_" $ dupFieldNoSelect, text: .fakeCustomField(p2)])
 
-		dupFieldWithSelect = "custom_" $ p2 $ '_2'
+		dupFieldWithSelect = "custom_" $ p2 $ "_2"
 		.MakeLibraryRecord(
 			[name: "Field_" $ dupFieldWithSelect, text: .fakeCustomField(p2, true)])
 
@@ -71,14 +119,14 @@ Test
 		.MakeLibraryRecord(
 			[name: "Field_" $ dupFieldWithSelect2, text: .fakeCustomField(p3, true)])
 
-		dupFieldNoSelect2 = "custom_" $ p3 $ '_2'
+		dupFieldNoSelect2 = "custom_" $ p3 $ "_2"
 		.MakeLibraryRecord(
 			[name: "Field_" $ dupFieldNoSelect2, text: .fakeCustomField(p3)])
 
-		fields = Object(uniqueField, dupFieldNoSelect, dupFieldWithSelect,
-			dupFieldNoSelect2, dupFieldWithSelect2)
+		fields = [uniqueField, dupFieldNoSelect, dupFieldWithSelect,
+			dupFieldNoSelect2, dupFieldWithSelect2]
 		//PromptToField should not depend on order of field processed
-		for fieldOb in Object(fields, fields.Copy().Reverse!())
+		for fieldOb in [fields, fields.Copy().Reverse!()]
 			{
 			sf = new SelectFields(fieldOb, joins: false)
 			Assert(sf.PromptToField(p1) is: uniqueField)
@@ -105,52 +153,64 @@ Test
 		{
 		excludeFn = SelectFields.SelectFields_exclude_fields
 		mock = Mock()
-		field_list = Object('string', 'internal', 'abc', 'number')
-		Assert(mock.Eval(excludeFn, field_list, #('abc'), false) is:
-			#('string', 'number'))
+		field_list = [#string, #internal, #abc, #number]
+		Assert(mock.Eval(excludeFn, field_list, #(abc), false)
+			is: #(string, number))
 		}
+
 	Test_ScanFormula()
 		{
-		.test_ScanFormula('\r\n', '')
-		.test_ScanFormula('', '')
-		.test_ScanFormula('123 + Total Amount', '123 + totamount')
-		.test_ScanFormula('Total Amount + Total Amount Sold', 'totamount + totamount')
+		.test_ScanFormula("\r\n", "")
+		.test_ScanFormula("", "")
+		.test_ScanFormula("123 + Total Amount", "123 + totamount")
+		.test_ScanFormula("Total Amount + Total Amount Sold", "totamount + totamount")
 		.test_ScanFormula("'Ref (1) is ' $ Ref (1)", "'Ref (1) is ' $ ref1")
 		.test_ScanFormula('"Total Amount % Commission" $ Total Amount $ "Tax"',
 			'"Total Amount % Commission" $ totamount $ "Tax"')
 		}
+
 	test_ScanFormula(src, expected)
 		{
-		s = ''
+		s = ""
 		block = { s $= it }
 		.sf.ScanFormula(src, block, block)
 		Assert(s, is: expected)
 		}
+
 	Test_ScanFields()
 		{
-		Assert(.sf.ScanFields('\r\n') is: #())
-		Assert(.sf.ScanFields('') is: #())
+		Assert(.sf.ScanFields("\r\n") is: #())
+		Assert(.sf.ScanFields("") is: #())
 
-		Assert(.sf.ScanFields('123 + 456') is: #(
-			#(pos: 0, end: 3)
-			#(pos: 6, end: 9)))
+		Assert(.sf.ScanFields("123 + 456")
+			is: #(
+				(pos: 0, end: 3),
+				(pos: 6, end: 9)
+				))
 
-		Assert(.sf.ScanFields('((123 + 456) + Tax)') is: #(
-			#(pos: 2, end: 5)
-			#(pos: 8, end: 11)
-			#(pos: 15, end: 18)))
+		Assert(.sf.ScanFields("((123 + 456) + Tax)")
+			is: #(
+				(pos: 2,  end: 5),
+				(pos: 8,  end: 11),
+				(pos: 15, end: 18)
+				))
 
-		Assert(.sf.ScanFields('123 + 456 + Total Amount Sold') is: #(
-			#(pos: 0, end: 3)
-			#(pos: 6, end: 9)
-			#(pos: 12, end: 29)))
+		Assert(.sf.ScanFields("123 + 456 + Total Amount Sold")
+			is: #(
+				(pos: 0,  end: 3),
+				(pos: 6,  end: 9),
+				(pos: 12, end: 29)
+				))
 
-		Assert(.sf.ScanFields('123 + 456 + Total Amount Sold $ "123 Amount"') is: #(
-			#(pos: 0, end: 3)
-			#(pos: 6, end: 9)
-			#(pos: 12, end: 29)
-			#(pos: 32, end: 44)))
+		Assert(.sf.ScanFields('123 + 456 + Total Amount Sold $ "123 Amount"')
+			is: #(
+				(pos: 0,  end: 3),
+				(pos: 6,  end: 9),
+				(pos: 12, end: 29),
+				(pos: 32, end: 44)
+				))
 		}
+
 	Test_text_match()
 		{
 		fn = SelectFields.SelectFields_text_match
@@ -163,68 +223,70 @@ Test
 				Assert(fn(first, s) is: s)
 				}
 
-		Assert(fn('1', '123abc') is: '')
-		Assert(fn('`', '`123') is: '')
-		Assert(fn('"', '"123') is: '')
+		Assert(fn('1', "123abc") is: "")
+		Assert(fn('`', "`123") is: "")
+		Assert(fn('"', '"123') is: "")
 		Assert(fn('"', `"abc\"!@#'"123`) is: `"abc\"!@#'"`)
 		}
+
 	Test_number_match()
 		{
 		fn = SelectFields.SelectFields_number_match
 
-		Assert(fn(false, '123') is "123")
-		Assert(fn(false, '123.123') is "123.123")
-		Assert(fn(false, '.123') is ".123")
-		Assert(fn(false, '.123 * 100') is ".123")
-		Assert(fn(false, '.123.456 * 100') is ".123")
-		Assert(fn(false, '100.123.456 * 100') is "100.123")
-		Assert(fn(false, 'aaa100.123.456 * 100') is "")
-		Assert(fn(false, ' 100.123.456 * 100') is "")
+		Assert(fn(false, "123") is "123")
+		Assert(fn(false, "123.123") is "123.123")
+		Assert(fn(false, ".123") is ".123")
+		Assert(fn(false, ".123 * 100") is ".123")
+		Assert(fn(false, ".123.456 * 100") is ".123")
+		Assert(fn(false, "100.123.456 * 100") is "100.123")
+		Assert(fn(false, "aaa100.123.456 * 100") is "")
+		Assert(fn(false, " 100.123.456 * 100") is "")
 		}
+
 	Test_first()
 		{
 		m = SelectFields.SelectFields_first
-		Assert(m('Test this') is: 'Test')
-		Assert(m('Test + This') is: 'Test')
-		Assert(m('Test_abc + This') is: 'Test_abc')
-		Assert(m('_abc + This') is: '_abc')
+		Assert(m("Test this") is: #Test)
+		Assert(m("Test + This") is: #Test)
+		Assert(m("Test_abc + This") is: #Test_abc)
+		Assert(m("_abc + This") is: "_abc")
 		u = '_'.Repeat(300)
-		Assert(m(u $ ' Test') is: u)
-		Assert(m('(Amount+Tax).Abs()') is: '(')
-		Assert(m('ABC') is: 'ABC')
+		Assert(m(u $ " Test") is: u)
+		Assert(m("(Amount+Tax).Abs()") is: '(')
+		Assert(m(#ABC) is: #ABC)
 		Assert(m('A') is: 'A')
-		Assert(m('A+BC') is: 'A')
-		Assert(m('+ABC') is: '+')
-		Assert(m('/ABC') is: '/')
-		Assert(m('++ABC') is: '+')
-		Assert(m('((ABC+BC)*D)') is: '(')
+		Assert(m("A+BC") is: 'A')
+		Assert(m("+ABC") is: '+')
+		Assert(m("/ABC") is: '/')
+		Assert(m("++ABC") is: '+')
+		Assert(m("((ABC+BC)*D)") is: '(')
 		}
 
 	Test_Joins()
 		{
-		mastertable1 = .MakeTable('(sftest_num, sftest_name, sftest_abbrev)
-			key(sftest_num)')
-		mastertable2 = .MakeTable('(sftest2_num, sftest2_name, sftest2_abbrev)
-			key(sftest2_num)')
+		mastertable1 = .MakeTable("(sftest_num, sftest_name, sftest_abbrev)
+			key(sftest_num)")
+		mastertable2 = .MakeTable("(sftest2_num, sftest2_name, sftest2_abbrev)
+			key(sftest2_num)")
 		.MakeTable('(sftest_num, sftrantest_num, sftrantest_desc, sftest2_num_billto)
 			key(sftrantest_num)
 			index(sftest_num) in ' $ mastertable1 $
 			' index(sftest2_num_billto) in ' $ mastertable2 $ '(sftest2_num)')
-		.MakeLibraryRecord([name: "Field_sftest_num",
+		.MakeLibraryRecord([name: #Field_sftest_num,
 			text: `Field_string { Prompt: "sftest_num" }`])
-		.MakeLibraryRecord([name: "Field_sftest2_num",
+		.MakeLibraryRecord([name: #Field_sftest2_num,
 			text: `Field_string { Prompt: "sftest2_num" }`])
-		.MakeLibraryRecord([name: "Field_sftrantest_num", text: `Field_internal {} `])
-		.MakeLibraryRecord([name: "Field_sftrantest_desc",
+		.MakeLibraryRecord([name: #Field_sftrantest_num, text: `Field_internal {} `])
+		.MakeLibraryRecord([name: #Field_sftrantest_desc,
 			text: `Field_string { Prompt: "sftestdesc" }`])
-		fields = #("sftest_num", "sftrantest_desc", "sftest2_num_billto")
+		fields = #(sftest_num, sftrantest_desc, sftest2_num_billto)
 		sf = SelectFields(fields)
-		Assert(sf.Fields hasSubset: #(
-			"sftest2_num_billto Abbrev": "sftest2_abbrev_billto",
-			"sftest2_num_billto Name": "sftest2_name_billto",
-			"sftest_num Abbrev": "sftest_abbrev", "sftest_num Name": "sftest_name",
-			sftestdesc: "sftrantest_desc"))
-		joins = sf.Joins(#("sftest_num Abbrev", "sftest_num Name", "sftestdesc",
+		Assert(sf.Fields
+			hasSubset: #("sftest2_num_billto Abbrev": sftest2_abbrev_billto,
+				"sftest2_num_billto Name": sftest2_name_billto,
+				"sftest_num Abbrev": sftest_abbrev, "sftest_num Name": sftest_name,
+				sftestdesc: sftrantest_desc))
+		joins = sf.Joins(#("sftest_num Abbrev", "sftest_num Name", sftestdesc,
 			"sftest2_num_billto Abbrev", "sftest2_num_billto Name"))
 		q1 = " leftjoin by(sftest_num) (" $ mastertable1 $
 			" project sftest_num, sftest_name, sftest_abbrev) "
@@ -236,30 +298,45 @@ Test
 			"rename sftest2_abbrev to sftest2_abbrev_billto)"
 		Assert(joins has: q2)
 
-		joinob = sf.JoinsOb(#("sftest_num Abbrev", "sftest_num Name", "sftestdesc",
-			"sftest2_num_billto Abbrev", "sftest2_num_billto Name"), withDetails?:)
+		joinob = sf.JoinsOb(
+			#("sftest_num Abbrev", "sftest_num Name", sftestdesc,
+				"sftest2_num_billto Abbrev", "sftest2_num_billto Name"), withDetails?:)
 		pos1 = joinob.FindIf({ it.str is q1 })
-		Assert(pos1 isnt: false, msg: 'pos 1')
+		Assert(pos1 isnt: false, msg: "pos 1")
 		Assert(joinob[pos1].fields equalsSet: #(sftest_abbrev, sftest_name))
 		pos2 = joinob.FindIf({ it.str.Trim() is q2.Trim() })
-		Assert(pos2 isnt: false, msg: 'pos 2')
+		Assert(pos2 isnt: false, msg: "pos 2")
 		Assert(joinob[pos2].fields.Sort!()
 			is: #(sftest2_abbrev_billto, sftest2_name_billto))
+
+		sf.AddNumField(#sftest_num_extra, #Extra)
+		restored = SelectFields.Deserialize(sf.Serialize())
+		Assert(restored.Fields is: sf.Fields)
+		Assert(restored.AllJoins() is: sf.AllJoins())
+		Assert(restored.JoinsOb(sf.Prompts(), withDetails?:)
+			is: sf.JoinsOb(sf.Prompts(), withDetails?:))
+		for field in #(sftest_name, sftest2_name_billto, sftest_name_extra)
+			{
+			Assert(restored.NameAbbrev?(field))
+			Assert(restored.FieldSuffix(field) is: sf.FieldSuffix(field))
+			Assert(restored.GetJoinNumField(field) is: sf.GetJoinNumField(field))
+			}
 		}
 
 	Test_nameAndAbbrevExist()
 		{
-		fields = Object('prefix_num', 'prefix_abbrev', 'prefix_name')
-		Assert(SelectFields.SelectFields_nameAndAbbrevExist(fields, 'prefix',
-			'prefix_num'))
+		fields = [#prefix_num, #prefix_abbrev, #prefix_name]
+		Assert(SelectFields.SelectFields_nameAndAbbrevExist(fields, #prefix,
+			#prefix_num))
 
-		fields = Object('prefix_num_suffix', 'prefix_abbrev_suffix', 'prefix_name_suffix')
-		Assert(SelectFields.SelectFields_nameAndAbbrevExist(fields, 'prefix',
-			'prefix_num_suffix'))
+		fields = [#prefix_num_suffix, #prefix_abbrev_suffix, #prefix_name_suffix]
+		Assert(SelectFields.SelectFields_nameAndAbbrevExist(fields, #prefix,
+			#prefix_num_suffix))
 
-		fields = Object('prefix_num', 'otherField_name', 'otherField_abbrev')
-		Assert(SelectFields.SelectFields_nameAndAbbrevExist(fields, 'prefix',
-			'prefix_num') is: false)
+		fields = [#prefix_num, #otherField_name, #otherField_abbrev]
+		Assert(
+			SelectFields.SelectFields_nameAndAbbrevExist(fields, #prefix,
+				#prefix_num) is: false)
 		}
 
 	Teardown()
@@ -267,7 +344,7 @@ Test
 		if .cache isnt false
 			Suneido.ForeignKeyTables = .cache
 		else
-			Suneido.Delete('ForeignKeyTables')
+			Suneido.Delete(#ForeignKeyTables)
 		super.Teardown()
 		}
 	}

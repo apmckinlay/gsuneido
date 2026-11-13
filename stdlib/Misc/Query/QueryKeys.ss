@@ -3,7 +3,7 @@ Memoize
 	{
 	Func(query)
 		{
-		return WithQuery(QuerySuppress(QueryStripSort(query)))
+		return WithQuery(QuerySuppress(Query.StripSort(query)))
 			{|q|
 			q.Keys()
 			}

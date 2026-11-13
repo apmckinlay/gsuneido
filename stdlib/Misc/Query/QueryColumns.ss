@@ -9,13 +9,13 @@ Memoize
 
 	getColumns(query)
 		{
-		query = QuerySuppress(QueryStripSort(query))
+		query = QuerySuppress(Query.StripSort(query))
 		try
 			return WithQuery(query)
 				{|q|
 				q.Columns()
 				}
-		catch (unused, '*nonexistent table')
+		catch (unused, "*nonexistent table")
 			return #()
 		}
 	}

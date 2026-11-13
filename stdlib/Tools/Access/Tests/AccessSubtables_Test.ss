@@ -9,12 +9,12 @@ Test
 
 		PromptToField(prompt)
 			{
-			return prompt is .prompt ? .field : 'unknown_field'
+			return prompt is .prompt ? .field : #unknown_field
 			}
 
 		FieldToPrompt(field)
 			{
-			return field is .field ? .prompt : 'unknown_prompt'
+			return field is .field ? .prompt : #unknown_prompt
 			}
 		}
 
@@ -24,18 +24,20 @@ Test
 			{
 			.select_vals = vals is false ? Object() : vals
 			}
+
 		Select_vals()
 			{
 			return .select_vals
 			}
+
 		SetSelectVals(.select_vals, sf/*unused*/)
 			{
 			}
 		}
 
-	makeCondition(field, check, operation = "equals", value = "test", value2 = '')
+	makeCondition(field, check, operation = #equals, value = #test, value2 = "")
 		{
-		cond = Record()
+		cond = []
 		cond.condition_field = field
 		cond[field] = Object(:operation, :value, :value2)
 		cond.check = check
@@ -47,65 +49,65 @@ Test
 		fn = AccessSubtables.AccessSubtables_updateUnchecked
 
 		// Test 1: sets check false when matching unchecked
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		currentConditions = Object(.makeCondition("field_a", false))
+		sCondition = .makeCondition(#field_a, true)
+		currentConditions = [.makeCondition(#field_a, false)]
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 1: sCondition.check should be set to false")
 
 		// Test 2: does not change sCondition when no match
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		currentConditions = Object(.makeCondition("field_b", false))
+		sCondition = .makeCondition(#field_a, true)
+		currentConditions = [.makeCondition(#field_b, false)]
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 2: sCondition.check should get unchecked when there is no match")
 
 		// Test 3: skips when sCondition already false
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", false)
-		currentConditions = Object(.makeCondition("field_a", false))
+		sCondition = .makeCondition(#field_a, false)
+		currentConditions = [.makeCondition(#field_a, false)]
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 3: sCondition.check should remain false")
 
 		// Test 4: with renamed fields
-		csf = .sf("field_y", "Common Prompt")
-		ssf = .sf("field_x", "Common Prompt")
+		csf = .sf(#field_y, "Common Prompt")
+		ssf = .sf(#field_x, "Common Prompt")
 
-		sCondition = .makeCondition("field_x", true)
-		currentConditions = Object(.makeCondition("field_y", false))
+		sCondition = .makeCondition(#field_x, true)
+		currentConditions = [.makeCondition(#field_y, false)]
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 4: sCondition.check should be false when renamed fields match")
 
 		// Test 5: ignores checked cConditions
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		currentConditions = Object(.makeCondition("field_a", true))
+		sCondition = .makeCondition(#field_a, true)
+		currentConditions = [.makeCondition(#field_a, true)]
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is true,
 			msg: "Test 5: sCondition.check should remain true when cCondition is checked")
 
 		// Test 6: with empty currentConditions
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
+		sCondition = .makeCondition(#field_a, true)
 		currentConditions = Object()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
@@ -119,12 +121,12 @@ Test
 		fn = AccessSubtables.AccessSubtables_updateChecked
 
 		// Test 1: sets cCondition.check to true when matching sCondition is checked
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		cCondition = .makeCondition("field_a", false)
-		currentConditions = Object(cCondition)
+		sCondition = .makeCondition(#field_a, true)
+		cCondition = .makeCondition(#field_a, false)
+		currentConditions = [cCondition]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
@@ -132,29 +134,29 @@ Test
 			msg: "Test 1: cCondition.check should be set to true")
 
 		// Test 2: adds to selectMgr when no matching cCondition found
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		currentConditions = Object(.makeCondition("field_b", false))
+		sCondition = .makeCondition(#field_a, true)
+		currentConditions = [.makeCondition(#field_b, false)]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 2: condition should be added to selectMgr when no match")
 		added = selectMgr.Select_vals()[0]
-		Assert(added.condition_field is "field_a",
+		Assert(added.condition_field is #field_a,
 			msg: "Test 2: added condition should have correct field")
 		Assert(added.check is true,
 			msg: "Test 2: added condition should have check true")
 
 		// Test 3: does nothing when sCondition.check is false
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", false)
-		cCondition = .makeCondition("field_a", false)
-		currentConditions = Object(cCondition)
+		sCondition = .makeCondition(#field_a, false)
+		cCondition = .makeCondition(#field_a, false)
+		currentConditions = [cCondition]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
@@ -165,12 +167,12 @@ Test
 			msg: "Test 3: nothing should be added when sCondition is unchecked")
 
 		// Test 4: with renamed fields, sets cCondition.check to true
-		csf = .sf("field_y", "Common Prompt")
-		ssf = .sf("field_x", "Common Prompt")
+		csf = .sf(#field_y, "Common Prompt")
+		ssf = .sf(#field_x, "Common Prompt")
 
-		sCondition = .makeCondition("field_x", true)
-		cCondition = .makeCondition("field_y", false)
-		currentConditions = Object(cCondition)
+		sCondition = .makeCondition(#field_x, true)
+		cCondition = .makeCondition(#field_y, false)
+		currentConditions = [cCondition]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
@@ -178,27 +180,27 @@ Test
 			msg: "Test 4: cCondition.check should be true with renamed fields match")
 
 		// Test 5: with renamed fields, adds to selectMgr when no match
-		csf = .sf("field_y", "Common Prompt")
-		ssf = .sf("field_x", "Common Prompt")
+		csf = .sf(#field_y, "Common Prompt")
+		ssf = .sf(#field_x, "Common Prompt")
 
-		sCondition = .makeCondition("field_x", true)
-		currentConditions = Object(.makeCondition("other_field", false))
+		sCondition = .makeCondition(#field_x, true)
+		currentConditions = [.makeCondition(#other_field, false)]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 5: renamed condition should be added when no match")
 		added = selectMgr.Select_vals()[0]
-		Assert(added.condition_field is "field_y",
+		Assert(added.condition_field is #field_y,
 			msg: "Test 5: added condition should have renamed field")
 		Assert(added.check is true,
 			msg: "Test 5: added condition should have check true")
 
 		// Test 6: with empty currentConditions, adds to selectMgr
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
+		sCondition = .makeCondition(#field_a, true)
 		currentConditions = Object()
 		selectMgr = .selectMgr()
 
@@ -206,18 +208,18 @@ Test
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 6: condition should be added with empty currentConditions")
 		added = selectMgr.Select_vals()[0]
-		Assert(added.condition_field is "field_a",
+		Assert(added.condition_field is #field_a,
 			msg: "Test 6: added condition should have correct field")
 		Assert(added.check is true,
 			msg: "Test 6: added condition should have check true")
 
 		// Test 7: does not modify sCondition
-		csf = .sf("field_a", "Prompt A")
-		ssf = .sf("field_a", "Prompt A")
+		csf = .sf(#field_a, "Prompt A")
+		ssf = .sf(#field_a, "Prompt A")
 
-		sCondition = .makeCondition("field_a", true)
-		cCondition = .makeCondition("field_a", false)
-		currentConditions = Object(cCondition)
+		sCondition = .makeCondition(#field_a, true)
+		cCondition = .makeCondition(#field_a, false)
+		currentConditions = [cCondition]
 		selectMgr = .selectMgr()
 
 		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
@@ -231,10 +233,12 @@ Test
 			{
 			super(dynamic?)
 			}
+
 		AccessSubtables_initSelectMgr(saveName, fields/*unused*/)
 			{
 			return .testSelectMgrs[saveName]
 			}
+
 		AccessSubtables_initSelectFields(columns/*unused*/, saveName)
 			{
 			return .testSfs[saveName]
@@ -244,48 +248,46 @@ Test
 	Test_integration()
 		{
 		// Setup stub select fields for multiple subtables
-		sf1 = .sf("field_a", "Prompt A")
-		sf2 = .sf("field_b", "Prompt B")
+		sf1 = .sf(#field_a, "Prompt A")
+		sf2 = .sf(#field_b, "Prompt B")
 
 		// Setup stub select managers with pre-existing saved conditions
-		cond1 = .makeCondition("field_a", true)
-		cond2 = .makeCondition("field_b", true)
+		cond1 = .makeCondition(#field_a, true)
+		cond2 = .makeCondition(#field_b, true)
 
-		sm1 = .selectMgr(Object(cond1))
-		sm2 = .selectMgr(Object(cond2))
+		sm1 = .selectMgr([cond1])
+		sm2 = .selectMgr([cond2])
 
 		// Create AccessSubtables instance (non-dynamic)
 		testSelectMgrs = Object(
-			"subtable1": sm1,
-			"subtable2": sm2
-			)
+			subtable1: sm1,
+			subtable2: sm2)
 		testSfs = Object(
-			"subtable1": Object(sf: sf1, asf: sf1),
-			"subtable2": Object(sf: sf2, asf: sf2)
-			)
+			subtable1: Object(sf: sf1, asf: sf1),
+			subtable2: Object(sf: sf2, asf: sf2))
 		ast = .cl(false, testSelectMgrs, testSfs)
 
 		// Step 1: SetSubtableSelectFields for subtable1
-		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "subtable1")
-		Assert(ast.AccessSubtables_linkedSelectFields.Member?("subtable1"),
+		ast.SetSubtableSelectFields(#(field_a), #(field_a), #subtable1)
+		Assert(ast.AccessSubtables_linkedSelectFields.Member?(#subtable1),
 			msg: "subtable1 should be in linkedSelectFields")
 
 		// Step 2: SetSubtableSelectMgr for subtable1
-		result = ast.SetSubtableSelectMgr(#("field_a"), "subtable1")
+		result = ast.SetSubtableSelectMgr(#(field_a), #subtable1)
 		Assert(result is sm1,
 			msg: "SetSubtableSelectMgr should return the selectMgr")
 
 		// Step 3: SetSubtableSelectFields for subtable2
-		ast.SetSubtableSelectFields(#("field_b"), #("field_b"), "subtable2")
-		Assert(ast.AccessSubtables_linkedSelectFields.Member?("subtable2"),
+		ast.SetSubtableSelectFields(#(field_b), #(field_b), #subtable2)
+		Assert(ast.AccessSubtables_linkedSelectFields.Member?(#subtable2),
 			msg: "subtable2 should be in linkedSelectFields")
 
 		// Step 4: SetSubtableSelectMgr for subtable2
-		ast.SetSubtableSelectMgr(#("field_b"), "subtable2")
+		ast.SetSubtableSelectMgr(#(field_b), #subtable2)
 
 		// Step 5: SetSubTableSelectVals for subtable1 with new conditions
-		newConditions = Object(.makeCondition("field_a", false))
-		ast.SetSubTableSelectVals("subtable1", newConditions)
+		newConditions = [.makeCondition(#field_a, false)]
+		ast.SetSubTableSelectVals(#subtable1, newConditions)
 
 		// Verify the saved condition was unchecked
 		Assert(sm1.Select_vals()[0].check is false,
@@ -299,12 +301,12 @@ Test
 	Test_integration_dynamic()
 		{
 		// Setup stub select fields - same prompt means renamed fields
-		sf1 = .sf("field_a", "Common Prompt")
-		sf2 = .sf("field_x", "Common Prompt")
+		sf1 = .sf(#field_a, "Common Prompt")
+		sf2 = .sf(#field_x, "Common Prompt")
 
 		// Setup stub select manager with a checked saved condition
-		savedCond = .makeCondition("field_a", true)
-		sm1 = .selectMgr(Object(savedCond))
+		savedCond = .makeCondition(#field_a, true)
+		sm1 = .selectMgr([savedCond])
 
 		// Setup empty select manager for second subtable
 		sm2 = .selectMgr()
@@ -312,35 +314,33 @@ Test
 		// Create AccessSubtables instance (dynamic mode)
 		testSelectMgrs = Object(
 			"table|linkedBrowse": sm1,
-			"table2|linkedBrowse": sm2
-			)
+			"table2|linkedBrowse": sm2)
 		testSfs = Object(
 			"table|linkedBrowse": Object(sf: sf1, asf: sf2),
-			"table2|linkedBrowse": Object(sf: sf2, asf: sf2)
-			)
+			"table2|linkedBrowse": Object(sf: sf2, asf: sf2))
 		ast = .cl(true, testSelectMgrs, testSfs)
 
 		// Step 1: Initialize first subtable
-		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "table|linkedBrowse")
-		ast.SetSubtableSelectMgr(#("field_a"), "table|linkedBrowse")
+		ast.SetSubtableSelectFields(#(field_a), #(field_a), "table|linkedBrowse")
+		ast.SetSubtableSelectMgr(#(field_a), "table|linkedBrowse")
 
 		// Step 2: Initialize second subtable (different field, same prompt)
 		// This triggers updateChecked via handleDynamic
-		ast.SetSubtableSelectFields(#("field_x"),#("field_x"), "table2|linkedBrowse")
-		ast.SetSubtableSelectMgr(#("field_x"), "table2|linkedBrowse")
+		ast.SetSubtableSelectFields(#(field_x), #(field_x), "table2|linkedBrowse")
+		ast.SetSubtableSelectMgr(#(field_x), "table2|linkedBrowse")
 
 		// Verify the condition was added to sm2 (renamed from field_a to field_x)
 		Assert(sm2.Select_vals().Size() is 1,
 			msg: "condition should be added to second selectMgr in dynamic mode")
 		added = sm2.Select_vals()[0]
-		Assert(added.condition_field is "field_x",
+		Assert(added.condition_field is #field_x,
 			msg: "added condition should have renamed field")
 		Assert(added.check is true,
 			msg: "added condition should have check true")
 
 		// Step 3: SetSubTableSelectVals on second subtable
 		// This triggers updateUnchecked
-		newConditions = Object(.makeCondition("field_x", false))
+		newConditions = [.makeCondition(#field_x, false)]
 		ast.SetSubTableSelectVals("table2|linkedBrowse", newConditions)
 
 		// Verify the saved condition in sm1 was unchecked
@@ -351,36 +351,34 @@ Test
 	Test_integration_multipleSubtables()
 		{
 		// Setup stub select fields for three subtables
-		sf1 = .sf("field_a", "Prompt A")
-		sf2 = .sf("field_b", "Prompt B")
-		sf3 = .sf("field_c", "Prompt C")
+		sf1 = .sf(#field_a, "Prompt A")
+		sf2 = .sf(#field_b, "Prompt B")
+		sf3 = .sf(#field_c, "Prompt C")
 
 		// Setup stub select managers with various conditions
-		sm1 = .selectMgr(Object(.makeCondition("field_a", true)))
-		sm2 = .selectMgr(Object(.makeCondition("field_b", true)))
-		sm3 = .selectMgr(Object(.makeCondition("field_c", false)))
+		sm1 = .selectMgr([.makeCondition(#field_a, true)])
+		sm2 = .selectMgr([.makeCondition(#field_b, true)])
+		sm3 = .selectMgr([.makeCondition(#field_c, false)])
 
 		testSelectMgrs = Object(
-			"subtable1": sm1,
-			"subtable2": sm2,
-			"subtable3": sm3
-			)
+			subtable1: sm1,
+			subtable2: sm2,
+			subtable3: sm3)
 		testSfs = Object(
-			"subtable1": Object(sf: sf1, asf: sf1),
-			"subtable2": Object(sf: sf2, asf: sf2),
-			"subtable3": Object(sf: sf3, asf: sf3)
-			)
+			subtable1: Object(sf: sf1, asf: sf1),
+			subtable2: Object(sf: sf2, asf: sf2),
+			subtable3: Object(sf: sf3, asf: sf3))
 		ast = .cl(false, testSelectMgrs, testSfs)
 
 		// Initialize all three subtables
-		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "subtable1")
-		ast.SetSubtableSelectMgr(#("field_a"), "subtable1")
+		ast.SetSubtableSelectFields(#(field_a), #(field_a), #subtable1)
+		ast.SetSubtableSelectMgr(#(field_a), #subtable1)
 
-		ast.SetSubtableSelectFields(#("field_b"), #("field_b"), "subtable2")
-		ast.SetSubtableSelectMgr(#("field_b"), "subtable2")
+		ast.SetSubtableSelectFields(#(field_b), #(field_b), #subtable2)
+		ast.SetSubtableSelectMgr(#(field_b), #subtable2)
 
-		ast.SetSubtableSelectFields(#("field_c"), #("field_c"), "subtable3")
-		ast.SetSubtableSelectMgr(#("field_c"), "subtable3")
+		ast.SetSubtableSelectFields(#(field_c), #(field_c), #subtable3)
+		ast.SetSubtableSelectMgr(#(field_c), #subtable3)
 
 		// Verify all subtables are registered
 		Assert(ast.AccessSubtables_subTableMgrs.Size() is 3,
@@ -389,8 +387,8 @@ Test
 			msg: "should have 3 select fields registered")
 
 		// SetSubTableSelectVals on subtable2 with unchecked condition
-		newConditions = Object(.makeCondition("field_b", false))
-		ast.SetSubTableSelectVals("subtable2", newConditions)
+		newConditions = [.makeCondition(#field_b, false)]
+		ast.SetSubTableSelectVals(#subtable2, newConditions)
 
 		// Verify only subtable2's condition was affected
 		Assert(sm1.Select_vals()[0].check is true,
@@ -401,4 +399,91 @@ Test
 			msg: "subtable3's condition should remain unchecked")
 		}
 
+	Test_renamedCondition()
+		{
+		// Definition for csf, casf, ssf, and sasf is in the header of AccessSubtables
+		fn = AccessSubtables.AccessSubtables_renamedCondition
+
+		// Find a match for Saved Select in Current Select
+		// saved has fieldA current has FieldB, search on fieldA shoud find fieldB
+		// and swap it in sCondition
+		fieldA = .MakeDatadict(Prompt: "Test Field")
+		fieldB = .MakeDatadict(Prompt: "Test Field")
+		sCondition = [condition_field: fieldA, check:]
+		sCondition[fieldA] = #(operation: "does not contain", value: a, value2: "")
+		csf = SelectFields([fieldB])
+		casf = SelectFields([fieldB])
+		ssf = SelectFields([fieldA])
+		sasf = SelectFields([fieldA])
+		cCondition = fn(sCondition, ssf, sasf, csf, casf)
+		Assert(cCondition hasMember: fieldB)
+		Assert(cCondition.check)
+		Assert(cCondition[fieldB]
+			is: #(operation: "does not contain", value: a, value2: ""))
+
+		// Match is NOT found in csf, but IS found in casf
+		// also need to make sure field gets added to csf
+		csf = SelectFields(Object())
+		Assert(csf.HasPrompt?("Test Field") is: false)
+		mCondition = fn(sCondition, ssf, sasf, csf, casf)
+		Assert(mCondition hasMember: fieldB)
+		Assert(mCondition.check)
+		Assert(mCondition[fieldB]
+			is: #(operation: "does not contain", value: a, value2: ""))
+		Assert(csf.HasPrompt?("Test Field"))
+
+		// Match in NOT found in csf or casf
+		// use the same Condition, but NEED to add a prompt/field into csf
+		fieldC = .MakeDatadict(Prompt: "Test Field 2")
+		sCondition = [condition_field: fieldC, check:]
+		sCondition[fieldC] = #(operation: "does not contain", value: a, value2: "")
+		csf = SelectFields(Object())
+		Assert(csf.HasPrompt?("Test Field 2") is: false)
+		casf = SelectFields(Object())
+		ssf = SelectFields([fieldC])
+		sasf = SelectFields([fieldC])
+		mCondition = fn(sCondition, ssf, sasf, csf, casf)
+		Assert(mCondition hasMember: fieldC)
+		Assert(mCondition.check)
+		Assert(mCondition[fieldC]
+			is: #(operation: "does not contain", value: a, value2: ""))
+		Assert(csf.HasPrompt?("Test Field 2"))
+
+		// Match is NOT found in csf, but IS found in casf
+		// BUT is a _name, _num, _abbrev
+		// need to ensure that correct suffix is used, and that
+		// _name, and _abbrev get added to csf
+		fieldD = .MakeIdField()
+		sCondition = [condition_field: fieldD.name, check:]
+		sCondition[fieldD.name] = #(operation: "does not contain", value: a, value2: "")
+		csf = SelectFields(Object())
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Name") is: false)
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Abbrev") is: false)
+		casf = SelectFields([fieldD.num])
+		ssf = SelectFields([fieldD.num])
+		sasf = SelectFields([fieldD.num])
+		mCondition = fn(sCondition, ssf, sasf, csf, casf)
+		Assert(mCondition hasMember: fieldD.name)
+		Assert(mCondition.check)
+		Assert(mCondition[fieldD.name]
+			is: #(operation: "does not contain", value: a, value2: ""))
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Name"))
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Abbrev"))
+
+		// Match in NOT found in csf or casf
+		// BUT is a _name, _num, _abbrev
+		// need to ensure that correct suffix is used,
+		// _name, and _abbrev get added to csf
+		csf = SelectFields(Object())
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Name") is: false)
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Abbrev") is: false)
+		casf = SelectFields(Object())
+		mCondition = fn(sCondition, ssf, sasf, csf, casf)
+		Assert(mCondition hasMember: fieldD.name)
+		Assert(mCondition.check)
+		Assert(mCondition[fieldD.name]
+			is: #(operation: "does not contain", value: a, value2: ""))
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Name"))
+		Assert(csf.HasPrompt?(Prompt(fieldD.num) $ " Abbrev"))
+		}
 	}

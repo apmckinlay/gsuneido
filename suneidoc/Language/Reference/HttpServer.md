@@ -3,7 +3,7 @@
 ### HttpServer
 
 ``` suneido
-(port, app)
+(port, app, stop = false)
 ```
 
 A simple HTTP server that listens on the given TCP port and forwards each
@@ -96,6 +96,12 @@ e.g. env.Some_Header instead of env["Some-Header"]
 or #(Some_Header: "value") instead of #("Some-Header": "value")
 
 Single values are strings, multiple values (duplicate headers) are list objects.
+
+#### Stop
+
+If an object is passed as a third `stop` argument,
+then a function will be assigned to a `stop` member in it.
+This function may be called to stop the server.
 
 #### Example
 

@@ -5,27 +5,26 @@ QueryFormat
 		{
 		if title is ""
 			title = query
-		query = QueryStripSort(query)
+		query = Query.StripSort(query)
 		fields = QueryColumns(query)
 		sf = SelectFields(fields, excludeFields)
 
-		return Object('Params',
-			Object(this, Sf: sf, Basequery: query),
+		return [#Params,
+			[this, Sf: sf, Basequery: query],
 			name: "Global_Print - " $ title,
-			validField: "globalreport_valid",
+			validField: #globalreport_valid,
 			SetParams: Object(:sf),
-			Params: Object(.paramsCtrl, title, sf)
-			)
+			Params: [.paramsCtrl, title, sf]]
 		}
 
 	Header()
 		{
-		font = #(name: 'Arial', size: 6.5)
-		return Object('Vert',
-			Object('PageHead', .Params.title),
-			Object('Text', 'Sort By: ' $ .Params.sort, :font)
-			'Vskip'
-			super.Header())
+		font = #(name: Arial, size: 6.5)
+		return [#Vert,
+			[#PageHead, .Params.title],
+			[#Text, "Sort By: " $ .Params.sort, :font],
+			#Vskip,
+			super.Header()]
 		}
 
 	Query()
@@ -36,7 +35,7 @@ QueryFormat
 		query = .Basequery $ .Sf.Joins(.Params.fields $ ',' $ .Params.sort)
 		sortfields = .Sf.PromptsToFields(.Params.sort)
 		if not sortfields.Empty?()
-			query $= ' sort ' $ sortfields.Join(',')
+			query $= " sort " $ sortfields.Join(',')
 		return query
 		}
 
@@ -47,7 +46,7 @@ QueryFormat
 
 	getter_format()
 		{
-		return .format = Object("Row").Add(@.fields) // once only
+		return .format = [#Row].Add(@.fields) // once only
 		}
 
 	Total()
@@ -57,14 +56,14 @@ QueryFormat
 
 	After(data)
 		{
-		format = Object('_output')
+		format = ["_output"]
 		total_fields = .Sf.PromptsToFields(.Params.total_fields.Split(','))
 		// wrap field format in Total format
 		for field in total_fields
 			{
 			field_fmt = Datadict(field).Format.Copy()
-			field_fmt.data = data['total_' $ field]
-			f = Object("Total", field_fmt)
+			field_fmt.data = data["total_" $ field]
+			f = [#Total, field_fmt]
 			format.Add(f, at: field)
 			}
 		return format
@@ -83,34 +82,31 @@ QueryFormat
 		controls(sf)
 			{
 			fields = sf.Prompts().Sort!()
-			return Object('Horz',
-				Object('Vert'
-					Object('Pair',
-						Object('Static', 'Title')
-						Object('Field', name: "title"))
-					Object('Pair',
-						Object('Static', 'Columns')
-						Object('ChooseTwoList', fields, title: 'Columns', name: "fields"))
-					Object('Pair',
-						Object('Static', 'Sort By')
-						Object('ChooseTwoList', fields, title: 'Sort By', name: "sort"))
-					Object('Pair',
-						Object('Static', 'Total Fields')
-						Object('ChooseMany', fields, name: "total_fields"))
-					)
-				'Skip'
-				#(Vert
-					(Button 'Save' xstretch: 0)
-					(Button 'Load...' xstretch: 0)
-					(Button 'Clear' xstretch: 0)
-					Fill
-					)
-				)
+			return [#Horz,
+				[#Vert,
+					[#Pair,
+						[#Static, #Title],
+						[#Field, name: #title]],
+					[#Pair,
+						[#Static, #Columns],
+						[#ChooseTwoList, fields, title: #Columns, name: #fields]],
+					[#Pair,
+						[#Static, "Sort By"],
+						[#ChooseTwoList, fields, title: "Sort By", name: #sort]],
+					[#Pair,
+						[#Static, "Total Fields"],
+						[#ChooseMany, fields, name: #total_fields]]],
+				#Skip,
+				#(Vert,
+					(Button, Save, xstretch: 0),
+					(Button, "Load...", xstretch: 0),
+					(Button, Clear, xstretch: 0),
+					Fill)]
 			}
 
 		On_Save()
 			{
-			data = .Send('Get')
+			data = .Send(#Get)
 			if data.title is ""
 				{
 				Alert("Please enter a Title")
@@ -120,19 +116,19 @@ QueryFormat
 			QueryDo("delete params where report is " $ Display(save_as))
 
 			params = data.Project(@.save_fields)
-			QueryOutput("params", [user: Suneido.User, report: save_as, :params])
+			QueryOutput(#params, [user: Suneido.User, report: save_as, :params])
 			}
 
-		save_fields: (title fields sort total_fields)
+		save_fields: (title, fields, sort, total_fields)
 		On_Load()
 			{
-			if false is rpt = ToolDialog(.Window.Hwnd, Object(.load_ctrl, .title))
+			if false is rpt = ToolDialog(.Window.Hwnd, [.load_ctrl, .title])
 				return
-			x = Query1("params", report: rpt)
-			data = .Send("Get")
+			x = Query1(#params, report: rpt)
+			data = .Send(#Get)
 			for field in .save_fields
 				data[field] = x.params[field]
-			.Send("Set", data)
+			.Send(#Set, data)
 			}
 
 		load_ctrl: Controller
@@ -148,20 +144,17 @@ QueryFormat
 					}
 				}
 
-			Controls:
-				(Vert
-					(ListBox xmin: 200)
-					(Skip 5)
-					(Horz
-						Fill
-						(Button Load)
-						Skip
-						(Button Cancel)
-						Fill
-					)
-				)
+			Controls: (Vert,
+				(ListBox, xmin: 200),
+				(Skip, 5),
+				(Horz,
+					Fill,
+					(Button, Load),
+					Skip,
+					(Button, Cancel),
+					Fill))
 
-			ListBoxDoubleClick(sel /*unused*/)
+			ListBoxDoubleClick(sel/*unused*/)
 				{
 				.On_Load()
 				}
@@ -180,10 +173,10 @@ QueryFormat
 
 		On_Clear()
 			{
-			data = .Send("Get")
+			data = .Send(#Get)
 			for field in .save_fields
 				data[field] = ""
-			.Send("Set", data)
+			.Send(#Set, data)
 			}
 		}
 	}

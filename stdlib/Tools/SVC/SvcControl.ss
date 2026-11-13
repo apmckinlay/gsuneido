@@ -720,7 +720,7 @@ Controller
 	getHighlightedCheckNotEmpty()
 		{
 		changes = .getHighlighted()
-		if changes.Empty?()
+		if not Object?(changes) or changes.Empty?()
 			{
 			.info("Please highlight a local change")
 			return false
@@ -738,7 +738,8 @@ Controller
 
 	On_Context_Review_With_AI()
 		{
-		if false is changes = .getHighlightedCheckNotEmpty()
+		changes = .getHighlightedCheckNotEmpty()
+		if not Object?(changes)
 			return
 		setText =
 			"review the changes in " $ changes.Map({ it.lib $ ':' $ it.name }).Join(", ")

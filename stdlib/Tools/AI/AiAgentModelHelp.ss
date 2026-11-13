@@ -22,7 +22,7 @@ Controller
 		lines = text.Lines()
 		return [#Vert,
 			[#ScintillaAddons, name: #models, wrap:, xstretch: 0,
-				ystretch: 0, width: lines.Map(#Size).Max() + 2, /*= margins */
+				ystretch: 0, width: lines.Map(#Size).Max() + 3, /*= margins */
 				height: lines.Size() + 1, Addon_url:, set: text]]
 		}
 
@@ -32,7 +32,7 @@ Controller
 		w0 = models.Members().Map({ .openrouterUrl(it).Size() }).Max()
 		w1 = 7
 		w2 = 5
-		w3 = 5
+		w3 = 6
 		s = "Link".RightFill(w0) $ "Context".LeftFill(w1) $ "In".LeftFill(w2) $
 			"Out".LeftFill(w3) $ '\n'
 		s $= '-'.Repeat(w0 + w1 + w2 + w3) $ '\n'

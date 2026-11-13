@@ -7,28 +7,28 @@ class
 			.runJob()
 		catch (err)
 			{
-			AddFile('stillRunningResults.txt', '\nERROR: ' $ err)
+			AddFile("stillRunningResults.txt", "\nERROR: " $ err)
 			Shutdown(true)
 			}
 		}
 
 	runJob()
 		{
-		.Log('AmazonContinuousTestRunner', 'starting')
-		job = Json.Decode(GetFile('job.json'))
-		.Log('AmazonContinuousTestRunner', job)
+		.Log(#AmazonContinuousTestRunner, #starting)
+		job = Json.Decode(GetFile("job.json"))
+		.Log(#AmazonContinuousTestRunner, job)
 		Suneido.NoCredentials = true
-		Unuse('axonlib')
+		Unuse(#axonlib)
 		.useLibs(job)
-		ServerSuneido.Set('ServerContinuousTestInfo', job)
-		.Log('RunningTests', job)
-		if job.testGroup is 'Standalone'
+		ServerSuneido.Set(#ServerContinuousTestInfo, job)
+		.Log(#RunningTests, job)
+		if job.testGroup is #Standalone
 			{
-			ContinuousTest_Base.Run('ServerContinuousTestInfo')
+			ContinuousTest_Base.Run(#ServerContinuousTestInfo)
 			Exit()
 			}
 		else // Client/Server
-			RunContinuousTest('ServerContinuousTestInfo')
+			RunContinuousTest(#ServerContinuousTestInfo)
 		}
 
 	useLibs(job)
@@ -42,9 +42,12 @@ class
 		LibraryTags.Reset()
 		}
 
-	Log(type, text = '')
+	Log(type, text = "")
 		{
-		try ServerEval('AddFile', 'running.log',
-			String(Timestamp()) $ ': ' $ type $ ' - ' $ String(text) $ '\r\n')
+		if Sys.Client?()
+			return ServerEval("AmazonContinuousTestRunner.Log", type, text)
+		try
+			AddFile("running.log",
+				String(Timestamp()) $ ": " $ type $ " - " $ String(text) $ "\r\n")
 		}
 	}

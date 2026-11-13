@@ -9,7 +9,7 @@ Singleton
 
 	Register(spy)
 		{
-		key = spy.Lib $ ":" $ spy.Name
+		key = spy.Lib $ ':' $ spy.Name
 		Assert(.spysMap[key].HasIf?({ it.Paths is spy.Paths }) is: false,
 			msg: "Duplicate Spy on " $ key $ Opt('.', spy.Paths.Join('.')))
 		.spysMap[key].Add(spy)
@@ -20,14 +20,15 @@ Singleton
 	updateOverride(key)
 		{
 		lib = key.BeforeFirst(':')
-		name =  key.AfterFirst(':')
+		name = key.AfterFirst(':')
 		spys = .spysMap[key]
 
 		LibraryOverride(lib, name)
 		if spys.Empty?()
 			return
 
-		rec = Query1(lib, :name, group: -1)
+		// NOTE: this won't handle _<Name> inheritance in another library tag record
+		rec = LibraryTags.GetRecord(name, lib)
 		Assert(rec isnt: false, msg: "SpyManager can't find library record - " $ name)
 		source = rec.text
 
@@ -39,42 +40,40 @@ Singleton
 
 	hasNestedClass?(spys)
 		{
-		return spys.Any?({|spy| spy.Paths.Size() > 1})
+		return spys.Any?({|spy| spy.Paths.Size() > 1 })
 		}
 
 	buildInsert(spy)
 		{
-		"\r\nres = SpyManager().Spy(" $ Display(spy.Id) $
-			", " $ .buildParams(spy.Params) $ ")\r\n" $
-		"if res.action is 'nothing' { return }\r\n" $
-		(spy.InNew? ? "" : "if res.action is 'return' { return res.value }\r\n") $
-		"if res.action is 'throw' { throw res.value }\r\n"
+		"\r\nres = SpyManager().Spy(" $ Display(spy.Id) $ ", " $
+			.buildParams(spy.Params) $ ")\r\n" $
+			"if res.action is 'nothing' { return }\r\n" $
+			(spy.InNew? ? "" : "if res.action is 'return' { return res.value }\r\n") $
+			"if res.action is 'throw' { throw res.value }\r\n"
 		}
 
 	buildParams(params)
 		{
 		ClassHelp.RetrieveParamsList(params, list = Object())
-		return 'Object(' $ list.Map({ ':' $ it }).Join(', ') $ ')'
+		return "Object(" $ list.Map({ ':' $ it }).Join(", ") $ ')'
 		}
 
 	buildCodeWithClassHelp(source, spys)
 		{
 		if spys[0].Method? is false
-			{
 			return .buildFuncWithSpy(source, spys[0])
-			}
 		methodRanges = ClassHelp.MethodRanges(source)
 		replaces = Object()
 		spys.Each()
-			{ |spy|
+			{|spy|
 			.buildReplaceMethods(spy, methodRanges, replaces, source)
 			}
 		replaces.Sort!(By(#from))
-		code = ''
+		code = ""
 		prev = 0
 		replaces.Each()
 			{
-			code $= source[prev..it.from] $ it.text
+			code $= source[prev .. it.from] $ it.text
 			prev = it.to
 			}
 		return code $ source[prev..]
@@ -83,7 +82,8 @@ Singleton
 	buildReplaceMethods(spy, methodRanges, replaces, source)
 		{
 		method = spy.Paths[0]
-		if false is methodRange = methodRanges.FindOne({
+		if false is methodRange = methodRanges.FindOne(
+			{
 			it.name is method or method.Suffix?(it.name)
 			})
 			{
@@ -97,7 +97,7 @@ Singleton
 			}
 		else
 			{
-			methodText = source[methodRange.from..methodRange.to]
+			methodText = source[methodRange.from .. methodRange.to]
 			replaces.Add(Object(from: methodRange.from, to: methodRange.to,
 				text: .buildFuncWithSpy(methodText, spy)))
 			}
@@ -107,9 +107,7 @@ Singleton
 		{
 		paramsEnd = ClassHelp.RetrieveParamsList(text, Object())
 		statementsStart = text.Find('{', paramsEnd)
-		return text[..statementsStart + 1] $
-			.buildInsert(spy) $
-			text[statementsStart + 2..]
+		return text[.. statementsStart+1] $ .buildInsert(spy) $ text[statementsStart+2 ..]
 		}
 
 	Spy(id, locals)
@@ -123,7 +121,7 @@ Singleton
 		for key in .spysMap.Members()
 			{
 			lib = key.BeforeFirst(':')
-			name =  key.AfterFirst(':')
+			name = key.AfterFirst(':')
 			LibraryOverride(lib, name)
 			}
 		.spysMap.Delete(all:)
@@ -132,7 +130,7 @@ Singleton
 
 	RemoveOne(spy)
 		{
-		key = spy.Lib $ ":" $ spy.Name
+		key = spy.Lib $ ':' $ spy.Name
 		.spysMap[key].Remove(spy)
 		.spysIdMap.Delete(spy.Id)
 		.updateOverride(key)

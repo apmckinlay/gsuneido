@@ -33,7 +33,7 @@ AstFmtDoc
 			{
 			if node.end isnt 0
 				cctx = .With(ctx, [parentEnd: node.end])
-			parts.Add(.Cm.Leading(curr, pos, :unusedParam))
+			parts.Add(.Cm.Leading(curr, pos, :unusedParam, allowBlank:))
 			}
 		return cctx
 		}

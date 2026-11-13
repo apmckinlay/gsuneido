@@ -5,28 +5,62 @@
 // - block sequences ("- ") and flow sequences ("[...]")
 class
 	{
-	FromObject(ob, indentation = "")
+	FromObject(ob, indentation = "", blockStyle? = false)
 		{
 		if Object?(ob) and not ob.HasNamed?()
 			{
 			if ob.Empty?()
 				return Opt(indentation, "[]\n")
-			return indentation $ .flow(ob) $ '\n'
+			return blockStyle?
+				? .blockSequence(ob, indentation)
+				: indentation $ .flow(ob) $ '\n'
 			}
 		s = ""
 		for m in ob.Members().Sort!()
 			{
 			value = ob[m]
-			s $= indentation $ m $ ':'
+			s $= indentation $ .formatMember(m) $ ':'
 			if Object?(value)
-				if value.HasNamed?()
-					s $= " \n" $ .FromObject(value, indentation $ "    ")
+				if value.HasNamed?() or (blockStyle? and not value.Empty?())
+					s $= '\n' $ .FromObject(value, indentation $ "  ", :blockStyle?)
 				else
 					s $= (value.Empty?() ? " []" : ' ' $ .flow(value)) $ '\n'
 			else
-				s $= ' ' $ Display(value) $ '\n'
+				s $= ' ' $ (blockStyle? ? .blockScalar(value) : Display(value)) $ '\n'
 			}
 		return s
+		}
+
+	blockSequence(ob, indentation)
+		{
+		s = ""
+		for value in ob
+			{
+			s $= indentation $ '-'
+			if Object?(value) and not value.Empty?()
+				{
+				childIndent = indentation $ "  "
+				child = .FromObject(value, childIndent, blockStyle?:)
+				s $= ' ' $ child[childIndent.Size() ..]
+				}
+			else
+				s $= ' ' $ .blockScalar(value) $ '\n'
+			}
+		return s
+		}
+
+	blockScalar(value)
+		{
+		return String?(value) and value !~ "^#" ? value : .flow(value)
+		}
+
+	// YAML treats bare numeric-looking strings as numbers/booleans/null,
+	// so quote them to preserve the string type
+	formatMember(m)
+		{
+		return String?(m) and m.Number?()
+			? Display(m)
+			: m
 		}
 
 	flow(value)

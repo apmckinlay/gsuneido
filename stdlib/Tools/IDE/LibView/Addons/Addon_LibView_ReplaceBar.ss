@@ -4,17 +4,20 @@ LibViewAddon
 	Commands(cmds)
 		{
 		cmds.Add(
-			#(Replace, 'Ctrl+H', 'Find and replace text in the current item'),
-			#(Replace_Current, 'F8')
-			)
+			#(Replace, "Ctrl+H", "Find and replace text in the current item"),
+			#(Replace_Current, F8))
 		}
 
-	saveReplaceData: #()
+	saveReplaceData: ()
 	Getter_Initialized()
-		{ return .View isnt false and .Editor isnt false and .container isnt false }
+		{
+		return .View isnt false and .Editor isnt false and .container isnt false
+		}
 
 	getter_container()
-		{ return .View.FindControl(.View.BottomLeft) }
+		{
+		return .View.FindControl(.View.BottomLeft)
+		}
 
 	Explorer_DeselectTab(oldView)
 		{
@@ -29,7 +32,9 @@ LibViewAddon
 		}
 
 	getReplaceBar(control)
-		{ return control.FindControl(#ReplaceBar) }
+		{
+		return control.FindControl(#ReplaceBar)
+		}
 
 	setCtrl(oldCtrl, newCtrl)
 		{
@@ -50,7 +55,7 @@ LibViewAddon
 			.saveReplaceData = .saveReplaceData.Empty?()
 				? .Editor.FindReplaceData()
 				: .saveReplaceData
-			ctrl = .container.Append(['ReplaceBar', .saveReplaceData])
+			ctrl = .container.Append([#ReplaceBar, .saveReplaceData])
 			}
 		ctrl.Select()
 		return ctrl
@@ -64,11 +69,20 @@ LibViewAddon
 
 	On_Replace_Current()
 		{
+		if not .allowedToReplace?()
+			return
 		.setReplace()
 		if not .Editor.ReplaceOne()
 			Beep()
 		.Editor.On_Find_Next()
 		.Editor.SetFocus()
+		}
+
+	allowedToReplace?()
+		{
+		if false is ctrl = .container.FindControl(#FindBar)
+			return false
+		return ctrl.AllowedToReplace?()
 		}
 
 	setReplace()
@@ -78,10 +92,14 @@ LibViewAddon
 		}
 
 	On_ReplaceBar_ReplaceAll()
-		{ .replace('Entire Text') }
+		{
+		.replace("Entire Text")
+		}
 
 	replace(replaceIn)
 		{
+		if not .allowedToReplace?()
+			return
 		.setReplace()
 		.Editor.FindReplaceData().replaceIn = replaceIn
 		.Editor.ReplaceAll()
@@ -89,8 +107,12 @@ LibViewAddon
 		}
 
 	On_ReplaceBar_ReplaceCurrent()
-		{ .On_Replace_Current() }
+		{
+		.On_Replace_Current()
+		}
 
 	On_ReplaceBar_ReplaceInSelection()
-		{ .replace('Selection') }
+		{
+		.replace(#Selection)
+		}
 	}

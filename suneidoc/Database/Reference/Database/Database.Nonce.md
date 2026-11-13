@@ -6,6 +6,6 @@
 () => string
 ```
 
-Returns a single use random binary string that is used for Database.Auth
+Returns a single use random binary string that is used for [Database.Auth](<Database.Auth.md>)
 
 Note: A nonce is specific to a database connection.

@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Axon Development Corporation All rights reserved worldwide.
 class
 	{
+	// Run in login request - using server Suneido
 	CreateToken(user)
 		{
 		for i in ..20 /*=try*/
@@ -23,46 +24,57 @@ class
 		{
 		.Synchronized()
 			{
-			if ServerSuneido.Get(#SuSessionTokens, Object()).Member?(token)
+			if Suneido.GetDefault(#SuSessionTokens, #()).Member?(token)
 				return false
 
 			now = Date()
-			if ServerSuneido.Get(#SuSessionTokenCandidates, Object()).
+			if Suneido.
+				GetInit(#SuSessionTokenCandidates, Object).
 				GetDefault(token, false) > now
 				return false
 
-			ServerSuneido.Add(#SuSessionTokenCandidates, now.Plus(minutes: 5), token)
+			Suneido.SuSessionTokenCandidates[token] = now.Plus(minutes: 5)
 			return true
 			}
 		}
 
+	// Run in client sessions - using client Suneido
 	Register(token, key)
 		{
+		if Sys.Client?()
+			return ServerEval("SuJsSessionToken.Register", token, key)
+
 		.Synchronized()
 			{
-			ServerSuneido.Add(#SuSessionTokens, key, token)
-			ServerSuneido.DeleteAt(#SuSessionTokenCandidates, token)
+			Suneido.GetInit(#SuSessionTokens, Object)[token] = key
+			Suneido.SuSessionTokenCandidates.Delete(token)
 			}
 		}
 
+	// Run in client sessions  - using client Suneido
 	Unregister(token)
 		{
+		if Sys.Client?()
+			return ServerEval("SuJsSessionToken.Unregister", token)
+
 		.Synchronized()
 			{
-			ServerSuneido.DeleteAt(#SuSessionTokens, token)
+			Suneido.SuSessionTokens.Delete(token)
 			}
 		}
 
+	// Run in Http request handler - using server Suneido
 	Validate(env)
 		{
 		if not env.queryvalues.Member?(#token)
 			return false
 
 		token = env.queryvalues.token
-		if false is key = ServerSuneido.GetAt(#SuSessionTokens, token, false)
+		if false is
+			key = Suneido.GetInit(#SuSessionTokens, Object).GetDefault(token, false)
 			return false
 
-		if env.GetDefault('cookie', '').Has?(token $ '=' $ key)
+		if env.GetDefault(#cookie, "").Has?(token $ '=' $ key)
 			return true
 
 		return false

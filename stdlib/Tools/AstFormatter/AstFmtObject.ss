@@ -64,7 +64,24 @@ AstFmtCore
 			last = false is node[i+1]
 			p = Object()
 			cctx = .LeadComments(m, mctx, curr, p)
-			p.Add(.objectMember(m, cctx, curr, :last, :pad))
+			// Avoid the member-value helper chain for nested positional constants.
+			// Twelve levels (Objects_Test) otherwise nearly fill the value stack.
+			src = not m.named and Type(m.value) is #AstNode
+				? .Style.MemberSrc(m)
+				: false
+			if not m.named and Type(m.value) is #AstNode and
+				(src is false or
+					(not src.Has?('`') and not (m.value.pos is false and src.Has?('\n'))))
+				{
+				vctx = src isnt false and src[0] is '['
+					? .With(cctx, [bracket:])
+					: cctx
+				p.Add(.Fmt(m.value, vctx, curr))
+				if not last
+					p.Add(.Text(','))
+				}
+			else
+				p.Add(.objectMember(m, cctx, curr, :last, :pad))
 			.TrailComments(m, mctx, curr, p, allowBlank: not last)
 			docs.Add(.Catl(p))
 			}

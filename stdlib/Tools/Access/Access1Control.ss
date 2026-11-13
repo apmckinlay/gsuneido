@@ -142,6 +142,7 @@ AccessBase
 		.Data.Set(x)
 		.Status.SetValid()
 		.Status.Set("")
+		.pendingEditMessage = false
 		}
 
 	On_Edit()
@@ -149,12 +150,17 @@ AccessBase
 		if ReadOnlyAccess(this) is true
 			return
 
-		// saving will switch the edit mode off if successful,
-		// otherwise it will be left in edit mode
-		if .Data.Dirty?() and .EditMode?()
+		if .EditMode?()
 			{
-			.Save()
-			return
+			if not .checkPendingEdits()
+				return
+			// saving will switch the edit mode off if successful,
+			// otherwise it will be left in edit mode
+			if .Data.Dirty?()
+				{
+				.doSave()
+				return
+				}
 			}
 
 		if not .EditMode?()
@@ -251,6 +257,31 @@ AccessBase
 		}
 
 	Save()
+		{
+		if not .checkPendingEdits()
+			return false
+		return .doSave()
+		}
+
+	pendingEditMessage: false
+	checkPendingEdits()
+		{
+		if true isnt msg = .Data.CheckPendingEdits()
+			{
+			.pendingEditMessage = msg
+			.Status.Set(msg, invalid:)
+			return false
+			}
+		if .pendingEditMessage isnt false and .Status.Get() is .pendingEditMessage
+			{
+			.Status.SetValid()
+			.Status.Set("")
+			}
+		.pendingEditMessage = false
+		return true
+		}
+
+	doSave()
 		{
 		if not .Data.Dirty?()
 			return true

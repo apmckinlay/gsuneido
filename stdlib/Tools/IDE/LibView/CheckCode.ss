@@ -191,6 +191,7 @@ class
 		{
 		.regex()
 		.ast()
+		.comby()
 		.lineEnds()
 		}
 
@@ -294,7 +295,6 @@ class
 		(`\<ResourceCounts\(`,					'use Suneido.Info',				warning:)
 		(`[^.]\<Sleep\(`,						'use Thread.Sleep')
 		(`\<CreateDir\(`,						'use EnsureDir',				warning:)
-		(`\.ServerEval\(`,						'use ServerEval(...)')
 		(`{ *(([A-Z]\w*)?[.])?[A-Z][a-zA-Z0-9_?!]*\(it\) *}`,
 												'unnecessary block',			warning:)
 		(`[.]SpyOn[(]["'#]`,					'use the value, not a string',	warning:)
@@ -312,7 +312,6 @@ class
 			warning:)
 		(`(?q)Thread.Main?()`,					'use Sys.MainThread?',			warning:,
 			filter: function (name) { return name is 'Sys' })
-		(`\<Each2\(`,							'use: for m, v',				warning:)
 		(`\<Curry\(`,							'use a block or Bind')
 		)
 
@@ -379,6 +378,33 @@ class
 		("DeleteFile(f) is false",
 			"use: isnt true"),
 		("DeleteFile(f) isnt false",
-			"use: is true")
+			"use: is true"),
+		("s.SplitOnFirst(t)[i]",
+			"use: (Before|After)First", warning:),
+		("s.SplitOnLast(t)[i]",
+			"use: (Before|After)Last", warning:)
 		)
+
+	comby()
+		{
+		for bad in .badComby
+			{
+			hint = CombyMatch.GetHint(bad[0])
+			if hint isnt false and not .code.Has?(hint)
+				continue
+			for match in CombyMatch.All(bad[0], .code)
+				{
+				len = match.end - match.pos
+				if bad.Member?(#filter) and (bad.filter)(.code, match.pos, len)
+					continue
+				msg = (bad.GetDefault(#warning, false) ? "WARNING" : "ERROR") $
+					": use of " $
+					.code[match.pos .. match.end].Tr(" \t\r\n", ' ').Trim() $
+					Opt(" - ", bad[1])
+				.result(msg, match.pos, len)
+				}
+			}
+		}
+
+	badComby: ()
 	}

@@ -7,7 +7,7 @@ NOTE: This should never be called directly. Use SvcTable as a interface for this
 */
 class
 	{
-	Type: 'book'
+	Type: #book
 	book: false
 	New(table)
 		{
@@ -19,19 +19,19 @@ class
 		return not SvcDisabledBooks().Has?(.book)
 		}
 
-	deletedPrefix: '<deleted>'
+	deletedPrefix: "<deleted>"
 	Query(deleted = false)
 		{
 		criteria = ' path.Prefix?("' $ .deletedPrefix $ '")'
-		deletedWhere = ' where ' $ (deleted ? '' : 'not') $ criteria
+		deletedWhere = " where " $ (deleted ? "" : "not") $ criteria
 		return .book $ .Where() $ deletedWhere
 		}
 
 	Where()
 		{
 		where = ' where not path.Prefix?("commitRec")'
-		if .book is OptContribution('Svc_IncludeReporterReports', '') or
-			not QueryColumns(.book).Has?('plugin')
+		if .book is OptContribution(#Svc_IncludeReporterReports, "") or
+			not QueryColumns(.book).Has?(#plugin)
 			return where
 		return where $ ' and plugin isnt true and
 			not path.Has?("Reporter Reports") and
@@ -47,13 +47,13 @@ class
 		{
 		name = Display(.splitName(pathname))
 		path = Display(.deletedPath(.splitPath(pathname), :deleted))
-		return .Query(:deleted) $ ' where name is ' $ name $ ' and path is ' $ path
+		return .Query(:deleted) $ " where name is " $ name $ " and path is " $ path
 		}
 
-	GetData(rec, t /*unused*/ = false)
+	GetData(rec, t/*unused*/ = false)
 		{
-		if not BookResource?(rec.name) and rec.path !~ '^/res\>'
-			rec.text = 'Order: ' $ rec.order $ '\r\n\r\n' $ rec.text
+		if not BookResource?(rec.name) and rec.path !~ "^/res\>"
+			rec.text = "Order: " $ rec.order $ "\r\n\r\n" $ rec.text
 		}
 
 	MakeName(rec, clean = false)
@@ -71,7 +71,7 @@ class
 	splitName(pathname)
 		{
 		i = pathname.FindLast('/')
-		return i is false ? pathname : pathname[i + 1 ..]
+		return i is false ? pathname : pathname[i+1 ..]
 		}
 
 	splitPath(pathname)
@@ -84,7 +84,7 @@ class
 		return rec.path
 		}
 
-	FormatData(rec, t /*unused*/, deleted = false)
+	FormatData(rec, t/*unused*/, deleted = false)
 		{
 		rec.path = .deletedPath(rec.path, deleted)
 		rec.name = .splitName(rec.name)
@@ -93,9 +93,7 @@ class
 
 	FormatText(text, name)
 		{
-		return BookResource?(name)
-			? text
-			: text.Trim()
+		return BookResource?(name) ? text : text.Trim()
 		}
 
 	deletedPath(path, deleted)
@@ -112,18 +110,18 @@ class
 
 	SplitText(rec)
 		{
-		if BookResource?(.MakeName(rec)) or not rec.text.Prefix?('Order:')
+		if BookResource?(.MakeName(rec)) or not rec.text.Prefix?("Order:")
 			return
 		order = rec.text.BeforeFirst('\n')
-		rec.text = rec.text.AfterFirst(order.Suffix?('\r') ? '\r\n\r\n' : '\n\n')
-		rec.order = order.AfterFirst('Order:').Trim()
-		if rec.order isnt ''
+		rec.text = rec.text.AfterFirst(order.Suffix?('\r') ? "\r\n\r\n" : "\n\n")
+		rec.order = order.AfterFirst("Order:").Trim()
+		if rec.order isnt ""
 			rec.order = Number(rec.order)
 		}
 
 	Move(movedRec, newParent, t)
 		{
-		newPath = newParent is -1 ? '' : .MakeName(t.Query1(.book, num: newParent))
+		newPath = newParent is -1 ? "" : .MakeName(t.Query1(.book, num: newParent))
 		.move(movedRec, newPath, t)
 		}
 
@@ -142,7 +140,7 @@ class
 		// Output a new record to be the parent of the children records
 		.processRecForMove(movedRec, restore, newPath)
 		svcTable.VerifyModified(movedRec)
-		svcTable.Output(movedRec, t, committed: movedRec.lib_modified is '')
+		svcTable.Output(movedRec, t, committed: movedRec.lib_modified is "")
 
 		// Move all the children record to the new parent
 		newPath = .MakeName(movedRec)
@@ -160,7 +158,7 @@ class
 
 	childrenQuery(name)
 		{
-		return .book $ ' where path is ' $ Display(.clean(name))
+		return .book $ " where path is " $ Display(.clean(name))
 		}
 
 	processRecForMove(movedRec, restoreRec, newPath)
@@ -181,7 +179,7 @@ class
 
 	Rename(rec, oldName, t)
 		{
-		t.QueryApply(.book $ ' where path is ' $ Display(oldName))
+		t.QueryApply(.book $ " where path is " $ Display(oldName))
 			{
 			.move(it, rec.name, t)
 			}
@@ -205,13 +203,13 @@ class
 
 	FormatMaxCommitRecord(rec)
 		{
-		rec.path = 'commitRec'
+		rec.path = #commitRec
 		}
 
 	MaxCommitQuery()
 		{
-		return .book $
-			' where name is "' $ SvcTable.MaxCommitName $ '" and path is "commitRec"'
+		return .book $ ' where name is "' $ SvcTable.MaxCommitName $
+			'" and path is "commitRec"'
 		}
 
 	Compare(local, master, discrepancies)
@@ -229,11 +227,11 @@ class
 		if type is '-' or BookResource?(.MakeName(rec))
 			return #()
 		results = Object()
-		if rec.text =~ '\r[^\n]' or rec.text.Suffix?('\r')
-			results.Add('Please ensure that this record does ' $
-				'not have any invalid newlines.')
+		if rec.text =~ "\r[^\n]" or rec.text.Suffix?('\r')
+			results.Add(
+				"Please ensure that this record does " $ "not have any invalid newlines.")
 		if BookContent.Type(.book) is #html and
-			not rec.text.Prefix?('<!-- skipXmlCheck -->')
+			not rec.text.Prefix?("<!-- skipXmlCheck -->")
 			try
 				XmlCheckNest(rec.text)
 			catch (e)
@@ -243,11 +241,10 @@ class
 
 	Dir(num) // not sure about this, since folders have text
 		{
-		rec = Query1(.book, :num)
-		query = .book $
-			' where path = ' $ Display(rec.path $ '/' $ rec.name) $
-			' sort path, order, name'
-		return QueryAll(query).Map!({ it.name }).Join('\r\n')
+		rec = MustQuery1(.book, :num)
+		query = .book $ " where path = " $ Display(rec.path $ '/' $ rec.name) $
+			" sort path, order, name"
+		return QueryAll(query).Map!({ it.name }).Join("\r\n")
 		}
 
 	ResetSvcDisabledCache()

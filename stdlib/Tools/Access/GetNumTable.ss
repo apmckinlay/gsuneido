@@ -8,9 +8,10 @@ Memoize
 		x = QueryFirst("columns
 			where column in " $ Display(cols)[1 ..] $ "
 			summarize table, count
-			where count = 3 sort table")
-		return x is false or
-			QueryEmpty?("indexes", table: x.table, key: true, columns: cols[0])
-			? false : x.table
+			where count = 3
+			sort table")
+		return x is false or QueryEmpty?(#indexes, table: x.table, key:, columns: cols[0])
+			? false
+			: x.table
 		}
 	}

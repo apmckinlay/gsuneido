@@ -13,31 +13,33 @@ class
 			}
 		.deleted = Object()
 		}
+
 	get_data_from_query()
-		// post: the data member is filled with the records from the
+		{ // post: the data member is filled with the records from the
 		// query.
-		{
 		if .query is ""
 			return
 		Transaction(read:)
-			{ |t|
+			{|t|
 			q = t.Query(.query)
-			while (false isnt x = q.Next())
+			while false isnt x = q.Next()
 				{
-				x.PreSet("Explorer_PreviousData", x.Copy())
+				x.PreSet(#Explorer_PreviousData, x.Copy())
 				.data.Add(x)
 				}
 			.fields = q.Columns()
 			}
 		}
+
 	NewRecord(add = true)
 		{
-		r = Record()
+		r = []
 		.setHeaderFields(r, .headerData)
 		if add
 			.data.Add(r)
 		return r
 		}
+
 	SetHeaderData(data)
 		{
 		.headerData = data
@@ -45,16 +47,19 @@ class
 		for r in .data
 			.setHeaderFields(r, .headerData)
 		}
+
 	SetRecordHeaderData(r)
 		{
 		if .headerData isnt false
 			.setHeaderFields(r, .headerData)
 		}
+
 	setHeaderFields(r, headerData)
 		{
 		for field in .headerFields
 			r.PreSet(field, headerData[field])
 		}
+
 	Observer_HeaderData(member)
 		{
 		if not .headerFields.Has?(member)
@@ -62,24 +67,29 @@ class
 		for r in .data
 			r.PreSet(member, .headerData[member])
 		}
+
 	GetData()
 		{
 		return .data
 		}
+
 	GetHeaderFields()
 		{
 		return .headerFields
 		}
+
 	GetFields()
 		{
 		return .fields
 		}
+
 	Output(rec)
 		{
 		rec.Explorer_Output_NewRecord = true
 		.data_changed = true
 		return true
 		}
+
 	Update(item)
 		{
 		i = .index_from_record(item)
@@ -88,9 +98,10 @@ class
 		.data_changed = true
 		return true
 		}
+
 	DeleteItem(item)
 		{
-		if item.Member?('Explorer_Output_NewRecord')
+		if item.Member?(#Explorer_Output_NewRecord)
 			return true
 		i = .index_from_item(item)
 		if i is false
@@ -100,32 +111,37 @@ class
 		.data_changed = true
 		return true
 		}
+
 	GetDeleted()
 		{
 		return .deleted
 		}
+
 	SetDeleted(deleted)
 		{
 		.deleted = deleted
 		}
+
 	Clear() // i.e. header delete
 		{
 		.data = Object()
 		.deleted = Object()
 		.data_changed = false
 		}
+
 	Restore()
-		// post: model's data is set back to the original records from the query
-		{
+		{ // post: model's data is set back to the original records from the query
 		.Clear()
 		.get_data_from_query()
 		}
+
 	Save(tran = false)
 		{
 		.save_result = true
 		KeyExceptionTransaction(tran, block: .SaveChanges)
 		return .save_result
 		}
+
 	SaveChanges(t)
 		{
 		// Note: order of the save is import to avoid conflicts, clear flags is done
@@ -133,17 +149,16 @@ class
 		if not .needToSave?()
 			return .saveResult(true)
 
-		.base_query = QueryStripSort(.query)
+		.base_query = Query.StripSort(.query)
 		.handleDeletes(t)
 		outputs = Object()
 		for x in .data
 			{
-			if x.Member?('Explorer_RecordDeleted?')
+			if x.Member?(#Explorer_RecordDeleted?)
 				continue
-			if x.Member?('Explorer_Output_NewRecord')
+			if x.Member?(#Explorer_Output_NewRecord)
 				outputs.Add(x)
-			else if x.Member?('Explorer_UpdateRecord') and
-				false is .updateRecord(x, t)
+			else if x.Member?(#Explorer_UpdateRecord) and false is .updateRecord(x, t)
 				return .saveResult(false)
 			}
 		.handleOutputs(t, outputs)
@@ -174,7 +189,7 @@ class
 		if false is updateRec = t.Query1(.Make_where(record))
 			{
 			AlertDelayed("List can't find record to update",
-				title: 'Error', flags: MB.ICONERROR)
+				title: #Error, flags: MB.ICONERROR)
 			return true
 			}
 		if RecordConflict?(record.Explorer_PreviousData, updateRec, .fields)
@@ -186,7 +201,7 @@ class
 	handleOutputs(t, outputs)
 		{
 		t.Query(.query)
-			{ |q|
+			{|q|
 			for rec in outputs
 				q.Output(rec)
 			}
@@ -195,21 +210,22 @@ class
 	clearAllRecordFlags()
 		{
 		for record in .data
-			if record.Member?('Explorer_Output_NewRecord') or
-				record.Member?('Explorer_UpdateRecord')
+			if record.Member?(#Explorer_Output_NewRecord) or
+				record.Member?(#Explorer_UpdateRecord)
 				.clearRecordFlags(record)
 		}
 
 	clearRecordFlags(record)
 		{
-		record.Delete('Explorer_Output_NewRecord')
-		record.Delete('Explorer_UpdateRecord')
-		record.Delete('Explorer_PreviousData')
-		record.PreSet("Explorer_PreviousData", record.Copy())
+		record.Delete(#Explorer_Output_NewRecord)
+		record.Delete(#Explorer_UpdateRecord)
+		record.Delete(#Explorer_PreviousData)
+		record.PreSet(#Explorer_PreviousData, record.Copy())
 		}
+
 	Make_where(x)
 		{
-		if x.Member?('Explorer_PreviousData')
+		if x.Member?(#Explorer_PreviousData)
 			x = x.Explorer_PreviousData
 
 		conditions = Object()
@@ -218,34 +234,40 @@ class
 
 		return .base_query $ " where " $ conditions.Join(" and ")
 		}
+
 	GetKey()
 		{
 		return .keyfields
 		}
+
 	GetQuery()
 		{
 		return .query
 		}
+
 	GetBaseQuery()
 		{
 		return .base_query
 		}
+
 	SetBaseQuery(base_query)
 		{
 		.base_query = base_query
 		}
+
 	Get(item)
 		{
 		return item
 		}
+
 	index_from_record(record)
 		{
-		if record.Member?('Explorer_PreviousData')
+		if record.Member?(#Explorer_PreviousData)
 			record = record.Explorer_PreviousData
 		for i in .data.Members()
 			{
 			r = .data[i]
-			if r.Member?('Explorer_PreviousData')
+			if r.Member?(#Explorer_PreviousData)
 				r = r.Explorer_PreviousData
 			rec? = true
 			for field in .keyfields
@@ -256,6 +278,7 @@ class
 			}
 		return false
 		}
+
 	index_from_item(item)
 		{
 		for i in .data.Members()
@@ -272,14 +295,17 @@ class
 			params: Object(data: .data, keyfields: .keyfields))
 		return false
 		}
+
 	GetEntries()
 		{
 		return .data
 		}
+
 	GetDataChanged()
 		{
 		return .data_changed
 		}
+
 	ChangeQuery(query)
 		{
 		.Clear()

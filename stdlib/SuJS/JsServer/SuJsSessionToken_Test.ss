@@ -3,29 +3,34 @@ Test
 	{
 	Setup()
 		{
-		SuJsSessionToken.Register('token', 'key')
+		if false is .exist? = Suneido.Member?(#SuSessionTokens)
+			Suneido.SuSessionTokens = Object()
+		Suneido.SuSessionTokens.token = #key
 		}
 
 	Test_validate()
 		{
-		env = Object(queryvalues: Object(token: 'token'), cookie: 'token=key')
+		env = Object(queryvalues: Object(token: #token), cookie: "token=key")
 		Assert(SuJsSessionToken.Validate(env))
 
-		env = Object(queryvalues: Object(), cookie: 'token=key')
+		env = Object(queryvalues: Object(), cookie: "token=key")
 		Assert(not SuJsSessionToken.Validate(env))
 
-		env = Object(queryvalues: Object(token: 'token'))
+		env = Object(queryvalues: Object(token: #token))
 		Assert(SuJsSessionToken.Validate(env) is: false)
 
-		env = Object(queryvalues: Object(token: 'token_wrong'), cookie: 'token=key')
+		env = Object(queryvalues: Object(token: #token_wrong), cookie: "token=key")
 		Assert(SuJsSessionToken.Validate(env) is: false)
 
-		env = Object(queryvalues: Object(token: 'token'), cookie: 'token=wrong_key')
+		env = Object(queryvalues: Object(token: #token), cookie: "token=wrong_key")
 		Assert(SuJsSessionToken.Validate(env) is: false)
 		}
 
 	Teardown()
 		{
-		SuJsSessionToken.Unregister('token')
+		if .exist?
+			Suneido.SuSessionTokens.Delete(#token)
+		else
+			Suneido.Delete(#SuSessionTokens)
 		}
 	}

@@ -3,10 +3,10 @@ Addon_VirtualListViewBase
 	{
 	On_Context_Go_To_QueryView()
 		{
-		.Model.GoToQueryView()
+		.Model.GoToQueryView(.GetContextMenu().ContextRec)
 		}
 
-	On_Context_Inspect_Control()
+	On_Context_Inspect()
 		{
 		.Grid.KEYDOWN(VK.F8)
 		}

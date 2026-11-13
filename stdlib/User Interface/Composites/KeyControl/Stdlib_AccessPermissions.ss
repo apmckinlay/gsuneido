@@ -1,12 +1,15 @@
 // Copyright (C) 2014 Suneido Software Corp. All rights reserved worldwide.
 #(cl: class
-	{
-	DefaultBook: '???'
+		{
+		DefaultBook: "???"
 
-	// permissions to Accesses can be redefined by a contribution in your library
-	Permission(option /*unused*/, user /*unused*/)
-		{ return true }
+		// permissions to Accesses can be redefined by a contribution in your library
+		Permission(option/*unused*/, user/*unused*/, userRoles/*unused*/)
+			{
+			return true
+			}
 
-	VerifyOption(option /*unused*/)
-		{  }
-	})
+		VerifyOption(option/*unused*/)
+			{
+			}
+		})

@@ -4,14 +4,14 @@ class
 	CallClass()
 		{
 		.initDev()
-		ServerEval('CSDevServerWindow.SetServerPrint')
-		ServerSuneido.Set('SchedulerStopEmail', true)
-		ServerSuneido.Set('CSDev?', true)
+		ServerEval("CSDevServerWindow.SetServerPrint")
+		ServerSuneido.Set(#SchedulerStopEmail, true)
+		ServerSuneido.Set(#CSDev?, true)
 		.DoExtraSetups()
-		if not Thread.List().Any?({ it =~ 'Rack Server' })
+		if not Thread.List().Any?({ it =~ "Rack Server" })
 			Thread(RunHttpServer)
 		// start client at end, so server has enough time to start serving
-		.StartClient('CSDevServerWindow.OpenWindow()')
+		.StartClient("CSDevServerWindow.OpenWindow()")
 		.setSystemInfo()
 		}
 
@@ -26,18 +26,19 @@ class
 			if rec.pos.master isnt false
 				break
 			}
-		libs = rec.pos.master isnt false ? rec.pos.master : #("stdlib")
+		libs = rec.pos.master isnt false ? rec.pos.master : #(stdlib)
 		loadliberrors = Object()
 		for lib in libs
-			try Use(lib)
+			try
+				Use(lib)
 			catch (e)
 				loadliberrors.Add(e)
 		LibraryTags.Reset()
-		Suneido.User = Suneido.User_Loaded = 'none'
-		Suneido.user_roles = #('none')
+		Suneido.User = Suneido.User_Loaded = #none
+		Suneido.user_roles = #(none)
 		if not loadliberrors.Empty?()
-			CSDevServerPrint("ERROR: Problems loading libraries " $
-				loadliberrors.Join(","))
+			CSDevServerPrint(
+				"ERROR: Problems loading libraries " $ loadliberrors.Join(','))
 		}
 
 	DoExtraSetups()
@@ -47,11 +48,11 @@ class
 			if not SuneidoJSEnabled?()
 				return
 
-			if not Thread.List().Any?({ it.Has?('SuJS Server') })
-				Thread(RunSuJSHttpServer, name: 'SuJS Server')
+			if not Thread.List().Any?({ it.Has?("SuJS Server") })
+				Thread(RunSuJSHttpServer, name: "SuJS Server")
 			}
 		catch (e)
-			CSDevServerPrint('EXTRA SETUP ERROR: ' $ e)
+			CSDevServerPrint("EXTRA SETUP ERROR: " $ e)
 		}
 
 	SetServerPrint()
@@ -62,27 +63,25 @@ class
 
 	OpenWindow()
 		{
-		try
+		CodeRecoveryControl(exit?:)
 			{
-			Database.SessionId('CSDevServerWindow')
+			Database.SessionId(#CSDevServerWindow)
 			Thread(.thread)
 			.startupSuneidoLog()
-			Window(CSDevServerWindowControl, title: 'Suneido Server IDE',
+			Window(CSDevServerWindowControl, title: "Suneido Server IDE",
 				w: 480, h: 640)
-			ServerSuneido.Set('CSDevServerWindowProc', GetCurrentProcessId())
-			.StartClient('CSDevServerWindow.StartIDE()')
+			ServerSuneido.Set(#CSDevServerWindowProc, GetCurrentProcessId())
+			.StartClient("CSDevServerWindow.StartIDE()")
 			}
-		catch(err)
-			SuneidoLog('SERVER START ERROR: ' $ err)
 		}
 
 	StartClient(cmd)
 		{
 		if "" is serverIP = ServerIP()
-			serverIP = '127.0.0.1'
-		args = Object(P.NOWAIT, .getExe(), '-c', serverIP, '-p', String(ServerPort()))
+			serverIP = "127.0.0.1"
+		args = [P.NOWAIT, .getExe(), "-c", serverIP, "-p", String(ServerPort())]
 		if ClientTokenRequired?()
-			args.Add('t:' $ Base64.Encode(Database.Token()))
+			args.Add("t:" $ Base64.Encode(NewAuth?() ? Auth.Token() : Database.Token()))
 		args.Add(cmd)
 		Spawn(@args)
 		}
@@ -92,62 +91,62 @@ class
 		{
 		return FileExists?(.defaultExe)
 			? .defaultExe
-			: 'axon.exe'
+			: "axon.exe"
 		}
 
 	setSystemInfo()
 		{
-		for startup in Contributions('DevServerStartup')
+		for startup in Contributions(#DevServerStartup)
 			startup()
 		}
 
 	StartUnauthorizedClient()
 		{
-		Spawn(P.NOWAIT, 'gsuneido.exe', '-c', '-iv', '-p', String(ServerPort()))
+		Spawn(P.NOWAIT, "gsuneido.exe", "-c", "-iv", "-p", String(ServerPort()))
 		}
 
 	StartIDE()
 		{
-		Database.SessionId('IDE')
+		Database.SessionId(#IDE)
 		PersistentWindow.Load()
 		}
 
 	threadErrorDelay: 5
-	threadLoopDelay: 100
+	threadLoopDelay:  100
 	thread()
 		{
 		Thread.Name("ServerWindowUpdate-thread")
 		path = Paths.ToLocal(Sys.ServerDir() $ '/')
-		initialSize = FileExists?(path $ 'golang.log')
-			? Dir1(path $ 'golang.log', details:).size
+		initialSize = FileExists?(path $ "golang.log")
+			? Dir1(path $ "golang.log", details:).size
 			: 0
 		forever
 			{
 			Thread.Sleep(.threadLoopDelay)
 			try
 				{
-				if Suneido.Member?('DevServerLog')
+				if Suneido.Member?(#DevServerLog)
 					{
 					// to trigger the size change
-					GetFile(path $ 'golang.log', limit: 10)
+					GetFile(path $ "golang.log", limit: 10)
 					// can't use last modified date. It stays set to the file
 					// creation date until the server closes the file
 					// need to use file size instead
-					newSize = FileExists?(path $ 'golang.log')
-						? Dir1(path $ 'golang.log', details:).size
+					newSize = FileExists?(path $ "golang.log")
+						? Dir1(path $ "golang.log", details:).size
 						: 0
 					.readNewLog(initialSize, newSize, path)
 					initialSize = newSize
-					if not ServerSuneido.Get('csDevPrint', Object()).Empty?()
+					if not ServerSuneido.Get(#csDevPrint, Object()).Empty?()
 						Defer(Suneido.DevServerLog)
 					}
-				if ServerSuneido.Get('SafeShutdown', false)
+				if ServerSuneido.Get(#SafeShutdown, false)
 					Defer(Exit)
 				}
-			catch(err)
+			catch (err)
 				{
-				AddFile(path $ 'devError.log', Display(err) $ '\r\n')
-				SuneidoLog('Dev ERROR: ' $ err)
+				AddFile(path $ "devError.log", Display(err) $ "\r\n")
+				SuneidoLog("Dev ERROR: " $ err)
 				Thread.Sleep(.threadErrorDelay.SecondsInMs())
 				}
 			}
@@ -156,43 +155,45 @@ class
 	// handle suneidologs that occur durring startup
 	startupSuneidoLog()
 		{
-		if false is start = ServerSuneido.Get('start_time', false)
+		if false is start = ServerSuneido.Get(#start_time, false)
 			return
-		QueryApply('suneidolog where sulog_timestamp >= ' $
-			Display(start.Plus(seconds: -1)))
+		if not TableExists?(#suneidolog)
+			return
+		QueryApply(
+			"suneidolog where sulog_timestamp >= " $ Display(start.Plus(seconds: -1)))
 			{
-			ServerPrint('SuneidoLog [' $ Display(it.sulog_timestamp) $ ']: ' $
-				it.sulog_message)
+			ServerPrint(
+				"SuneidoLog [" $ Display(it.sulog_timestamp) $ "]: " $ it.sulog_message)
 			}
 		}
 
 	readNewLog(initialSize, newSize, path)
 		{
-		if initialSize is false or  newSize > initialSize
+		if initialSize is false or newSize > initialSize
 			{
 			fileLines = Object()
-			File(path $ 'golang.log')
+			File(path $ "golang.log")
 				{
 				it.Seek(initialSize)
 				while false isnt s = it.Readline()
-					fileLines.Add(s $ '\r\n')
+					fileLines.Add(s $ "\r\n")
 				}
-			ServerEval('CSDevServerWindow.UpdateDevPrint', fileLines)
+			ServerEval("CSDevServerWindow.UpdateDevPrint", fileLines)
 			}
 		}
 
 	UpdateDevPrint(ob)
 		{
-		csDevPrint = Suneido.GetInit('csDevPrint', Object())
+		csDevPrint = Suneido.GetInit(#csDevPrint, Object())
 		for ib in ob
 			csDevPrint.Add(ib)
 		}
 
 	ShutdownAll()
 		{
-		if 0 isnt System('taskkill /PID ' $ ServerSuneido.Get('CSDevServerWindowProc') $
-			' /F')
-			ErrorLog('ERROR: CSDevServerWindow - could not kill task')
+		if 0 isnt
+			System("taskkill /PID " $ ServerSuneido.Get("CSDevServerWindowProc") $ " /F")
+			ErrorLog("ERROR: CSDevServerWindow - could not kill task")
 		Shutdown(alsoServer:)
 		}
 	}

@@ -15,9 +15,9 @@ class
 
 	checkArgs(args)
 		{
-		for field in #('access', 'plugin')
+		for field in #(access, plugin)
 			if not args.Member?(field)
-				throw 'missing argument'
+				throw "missing argument"
 		}
 
 	tabHasData?(access, plugin)
@@ -33,7 +33,7 @@ class
 	TabAlwaysExists?: true
 	init(access, plugin)
 		{
-		if false is (tabs = access.FindControl('Tabs'))
+		if false is (tabs = access.FindControl(#Tabs))
 			return
 		if tabs is plugin.GetDefault(#tabs, false)
 			return
@@ -62,16 +62,17 @@ class
 
 	images()
 		{
-		return Object(
-			Object(ImageResource(#document), CLR.BLACK),
-			Object(ImageResource(#document), CLR.red))
+		return [
+			[ImageResource(#document), CLR.BLACK],
+			[ImageResource(#document), CLR.red]]
 		}
 
 	imagesJs()
 		{
-		codeOb = IconFont().MapToCharCode(#document)
-		return Object(
+		codeOb = Object!(IconFont().MapToCharCode, #document,
+			assertReason: 'IconFont "document" should exist')
+		return [
 			Object(char: codeOb.char, font: codeOb.font, color: #black),
-			Object(char: codeOb.char, font: codeOb.font, color: #red))
+			Object(char: codeOb.char, font: codeOb.font, color: #red)]
 		}
 	}

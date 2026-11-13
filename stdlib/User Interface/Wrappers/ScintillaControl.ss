@@ -1,16 +1,16 @@
 // Copyright (C) 2015 Suneido Software Corp. All rights reserved worldwide.
 WndProc
 	{
-	Name:		"Editor"
-	Xmin: 		200
-	Ymin: 		100
-	Xstretch:	1
-	Ystretch:	1
+	Name:            #Editor
+	Xmin:            200
+	Ymin:            100
+	Xstretch:        1
+	Ystretch:        1
 	DefaultFontSize: 11
 	Unsortable: true
 	marker_find: 0
 
-	New(style = 0, .readonly = false, lexer = 'NULL', wrap = false, set = false,
+	New(style = 0, .readonly = false, lexer = #NULL, wrap = false, set = false,
 		margin = 12, exStyle = 0, height = false, .tabthrough = false)
 		{
 		if height is 1
@@ -19,10 +19,9 @@ WndProc
 			style |= WS.TABSTOP
 		if exStyle is 0
 			exStyle = WS_EX.CLIENTEDGE
-		.CreateWindow("Scintilla", NULL,
-			style | WS.VISIBLE | WS.VSCROLL | WS.HSCROLL |
-			WS.CLIPSIBLINGS | WS.CLIPCHILDREN /* fix disappearing calltips */,
-			:exStyle)
+		.CreateWindow(#Scintilla, NULL,
+			style | WS.VISIBLE | WS.VSCROLL | WS.HSCROLL | WS.CLIPSIBLINGS |
+				WS.CLIPCHILDREN, :exStyle)
 		.SubClass()
 		.SETCODEPAGE(CP.ACP)
 		.SetEolMode(SC.EOL_CRLF)
@@ -39,7 +38,7 @@ WndProc
 		.SetYCARETPOLICY(SC.CARET_SLOP | SC.CARET_EVEN, 2)
 		.SetMultiPaste(SC.MULTIPASTE_EACH)
 
-		.Send("Data")
+		.Send(#Data)
 
 		.setMap()
 		.SetMARGINWIDTHN(1, ScaleWithDpiFactor(margin))
@@ -53,24 +52,24 @@ WndProc
 
 		.SetScrollWidth(widths.scroll)
 		.SetScrollWidthTracking(true)
-		.findreplacedata = Record()
+		.findreplacedata = []
 		}
 
 	InitFont()
 		{
-		.SendMessageTextIn(SCI.STYLESETFONT, SC.STYLE_DEFAULT, 	StdFonts.Mono())
+		.SendMessageTextIn(SCI.STYLESETFONT, SC.STYLE_DEFAULT, StdFonts.Mono())
 		.StyleSetSize(SC.STYLE_DEFAULT, .DefaultFontSize)
 		}
 
 	setMap()
 		{
 		.Map = Object()
-		.Map[SCEN.KILLFOCUS] = 'SCEN_KILLFOCUS'
-		.Map[SCEN.SETFOCUS] = 'SCEN_SETFOCUS'
-		.Map[EN.CHANGE] = 'EN_CHANGE'
-		.Map[SCN.DOUBLECLICK] = 'SCN_DOUBLECLICK'
-		.Map[SCN.MODIFIED] = 'SCN_MODIFIED'
-		.Map[SCN.ZOOM] = 'SCN_ZOOM'
+		.Map[SCEN.KILLFOCUS] = #SCEN_KILLFOCUS
+		.Map[SCEN.SETFOCUS] = #SCEN_SETFOCUS
+		.Map[EN.CHANGE] = #EN_CHANGE
+		.Map[SCN.DOUBLECLICK] = #SCN_DOUBLECLICK
+		.Map[SCN.MODIFIED] = #SCN_MODIFIED
+		.Map[SCN.ZOOM] = #SCN_ZOOM
 		}
 
 	InitMarkers()
@@ -90,8 +89,8 @@ WndProc
 		return markers
 		}
 
-	DefineStyle(n, fore = false, back = false,
-		bold = false, underline = false, italic = false)
+	DefineStyle(n, fore = false, back = false, bold = false, underline = false,
+		italic = false)
 		{
 		if bold or italic
 			{
@@ -107,6 +106,7 @@ WndProc
 		if back isnt false
 			.StyleSetBack(n, back)
 		}
+
 	DefineMarker(n, type, fore = false, back = false)
 		{
 		.MarkerDefine(n, type)
@@ -115,6 +115,7 @@ WndProc
 		if back isnt false
 			.MarkerSetBack(n, back)
 		}
+
 	DefineXPMMarker(n, xpm, fore = false, back = false)
 		{
 		SendMessageTextIn(.Hwnd, SCI.MARKERDEFINEPIXMAP, n, xpm)
@@ -123,16 +124,19 @@ WndProc
 		if back isnt false
 			.MarkerSetBack(n, back)
 		}
+
 	DefineIndicator(n, style, fore = false)
 		{
 		.IndicSetStyle(n, style)
 		if fore isnt false
 			.IndicSetFore(n, fore)
 		}
+
 	SetWordChars(chars) // override
 		{
 		SendMessageTextIn(.Hwnd, SCI.SETWORDCHARS, 0, chars)
 		}
+
 	GetWordChars() // override
 		{
 		n = .GETWORDCHARS()
@@ -157,8 +161,7 @@ WndProc
 		}
 
 	Default(@args)
-		// this translates .Xyz(...) to .SendMessage(SCI.XYZ, ...)
-		{
+		{ // this translates .Xyz(...) to .SendMessage(SCI.XYZ, ...)
 		f = args[0].Upper()
 		if not SCI.Member?(f)
 			throw "method not found: " $ args[0]
@@ -168,27 +171,23 @@ WndProc
 
 	EN_CHANGE()
 		{
-		.Send("EN_CHANGE")
+		.Send(#EN_CHANGE)
 		return 0
 		}
 
-	logging_lastModify: false
-	logging_focusedModify?: false
 	SCN_MODIFIED(lParam)
 		{
 		modificationType = SCNotification(lParam).modificationType
-		.Send("Scintilla_Modified", type: modificationType)
+		.Send(#Scintilla_Modified, type: modificationType)
 
 		// The following condition is trying to trap the event where the user
 		// drags text into the control. This event does not set the focus in the control
 		// by default and therefore the control does not set its dirty state.
 		// This is manually setting the focus to this control to handle dirty
 		userModified = SC.STARTACTION | SC.PERFORMED_USER | SC.MOD_INSERTTEXT
-		.logging_lastModify = modificationType
-		.logging_focusedModify? = .HasFocus?()
 		if not .setMethodModifying? and .GetReadOnly() is false and not .HasFocus?() and
 			(modificationType & userModified) is userModified and .Dirty?()
-			.Send("NewValue", .Get())
+			.Send(#NewValue, .Get())
 
 		return 0
 		}
@@ -200,25 +199,27 @@ WndProc
 
 	SCN_ZOOM()
 		{
-		.Send("Scintilla_Zoom")
+		.Send(#Scintilla_Zoom)
 		return 0
 		}
+
 	SCN_DOUBLECLICK()
 		{
-		.Send('Scintilla_DoubleClick')
+		.Send(#Scintilla_DoubleClick)
 		return 0
 		}
+
 	SCEN_KILLFOCUS()
 		{
-		.Send('Scintilla_KillFocus')
-		if (.Dirty?())
-			.Send("NewValue", .Get())
+		.Send(#Scintilla_KillFocus)
+		if .Dirty?()
+			.Send(#NewValue, .Get())
 		return 0
 		}
 
 	SCEN_SETFOCUS()
 		{
-		.Send('Scintilla_SetFocus')
+		.Send(#Scintilla_SetFocus)
 		return 0
 		}
 
@@ -237,6 +238,7 @@ WndProc
 		.EnsureVisibleEnforcePolicy(line)
 		.GOTOLINE(line)
 		}
+
 	GetLine(line = false)
 		{
 		if line is false
@@ -246,12 +248,14 @@ WndProc
 			return ""
 		return SendMessageTextOut(.Hwnd, SCI.GETLINE, line, n).text
 		}
+
 	LineFromPosition(pos = false) // overload
 		{
 		if pos is false
 			pos = .GetSelectionStart()
 		return .LINEFROMPOSITION(pos)
 		}
+
 	GetRange(start, end) // gets from start to end - 1
 		{
 		start = .intoRange(start)
@@ -262,10 +266,12 @@ WndProc
 				i, Min(i + .chunkSize, end))
 		return s
 		}
+
 	intoRange(i)
 		{
 		return Max(0, Min(i, .GetTextLength()))
 		}
+
 	GetCurrentReference()
 		{
 		// e.g. ".foo", "Alert", "Stack.", "Stack.Push"
@@ -275,30 +281,36 @@ WndProc
 		line = x.text[.. x.result].RightTrim('(') // result is caret position
 		return line.Extract("[._[:alnum:]?!]+$")
 		}
+
 	SelSize()
 		{
 		return .GetSelectionEnd() - .GetSelectionStart()
 		}
+
 	GetSelText()
 		{
 		sel = .GetSelect()
 		return .GetRange(sel.cpMin, sel.cpMax)
 		}
+
 	GetSelect()
 		{
 		return Object(
 			cpMin: .GetSelectionStart(),
 			cpMax: .GetSelectionEnd())
 		}
+
 	SetSelect(i, n = 0)
 		{
 		.SetSel(i, i + n)
 		}
+
 	SetVisibleSelect(i, n)
 		{
 		.EnsureRangeVisible(i, i + n)
 		.SetSelect(i, n)
 		}
+
 	EnsureRangeVisible(from, to)
 		{
 		first = .LineFromPosition(from)
@@ -306,26 +318,31 @@ WndProc
 		for (line = first; line <= last; ++line)
 			.EnsureVisible(line)
 		}
+
 	SelectLine(line /* zero-based */)
 		{
 		first = .PositionFromLine(line)
 		last = .PositionFromLine(line + 1)
 		.SetSelect(first, last - first)
 		}
+
 	SetWrap(wrap = true)
 		{
 		.SetWrapMode(wrap ? SC.WRAP_WORD : SC.WRAP_NONE)
 		}
+
 	PointFromPosition(pos)
 		{
 		return Object(
-			x: .PointXFromPosition(0, pos)
+			x: .PointXFromPosition(0, pos),
 			y: .PointYFromPosition(0, pos))
 		}
+
 	StyleGetFont(style)
 		{
 		return SendMessageTextOut(.Hwnd, SCI.STYLEGETFONT, style).text
 		}
+
 	StyleSetFont(style, font)
 		{
 		.SendMessageTextIn(SCI.STYLESETFONT, style, font)
@@ -343,9 +360,9 @@ WndProc
 
 	DoFind(x)
 		{
-		if x is 'prev'
+		if x is #prev
 			return .On_Find_Previous()
-		else if x is 'next'
+		else if x is #next
 			return .On_Find_Next()
 		}
 
@@ -353,24 +370,27 @@ WndProc
 		{
 		return .findAndMatch()
 		}
+
 	On_Find_Previous()
 		{
 		return .findAndMatch(prev:)
 		}
+
 	findAndMatch(prev = false)
 		{
 		getSelect = prev is false ? .GetSelect().cpMax : .GetSelect().cpMin
-		if false is match =
-			Find.DoFind(.SearchText(), getSelect, .findreplace_options, :prev)
+		if false is
+			match = Find.DoFind(.SearchText(), getSelect, .findreplace_options, :prev)
 			{
-			.Send('UpdateOccurrence', num: 0, count: 0)
+			.Send(#UpdateOccurrence, num: 0, count: 0)
 			return false
 			}
 		findOb = .numOfMatch(match)
-		.Send('UpdateOccurrence', num: findOb.num, count: findOb.count)
+		.Send(#UpdateOccurrence, num: findOb.num, count: findOb.count)
 		.SetVisibleSelect(match[0], match[1])
 		return true
 		}
+
 	numOfMatch(match)
 		{
 		matches = Find.FindAll(.SearchText(), .findreplace_options)
@@ -392,23 +412,27 @@ WndProc
 		{
 		matches = Find.FindAll(.SearchText(), .findreplace_options)
 		matches.Each()
-			{ |m|
+			{|m|
 			.MarkerAdd(.LineFromPosition(m[0]), .marker_find)
 			}
 		return matches.Size()
 		}
+
 	ClearFindMarks()
 		{
 		.MarkerDeleteAll(.marker_find)
 		}
+
 	On_Find_Next_Selected()
 		{
 		.find_selected(.On_Find_Next)
 		}
+
 	On_Find_Prev_Selected()
 		{
 		.find_selected(.On_Find_Previous)
 		}
+
 	find_selected(nextprev)
 		{
 		sel = .GetSelect()
@@ -423,7 +447,7 @@ WndProc
 		.findreplacedata.case = true
 		.findreplacedata.regex = false
 		.findreplacedata.word = sel.cpMin is sel.cpMax
-		.Send("FindBar_OpenFindBar")
+		.Send(#FindBar_OpenFindBar)
 		nextprev()
 		}
 
@@ -433,13 +457,14 @@ WndProc
 		.findreplacedata.replaceIn = "Entire text"
 		if s > ""
 			if s.Has?('\n')
-				.findreplacedata.replaceIn = "Selection"
+				.findreplacedata.replaceIn = #Selection
 			else
 				.findreplacedata.find = s
 		x = ReplaceDialog(this, .findreplacedata)
-		if x is 'all'
+		if x is #all
 			.ReplaceAll()
 		}
+
 	ReplaceOne()
 		{
 		sel = .GetSelect()
@@ -448,7 +473,7 @@ WndProc
 			.findreplace_options)
 			return false
 		.ReplaceSel(s)
-		if .findreplacedata.replaceIn is "Selection"
+		if .findreplacedata.replaceIn is #Selection
 			{
 			size_after = .GetTextLength()
 			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
@@ -460,6 +485,7 @@ WndProc
 		{
 		.ReplaceSel(s)
 		}
+
 	ReplaceSel(s) // overload
 		{
 		s = EnsureCRLF(s)
@@ -468,64 +494,71 @@ WndProc
 			{
 			chunk = s[i :: .chunkSize]
 			SendMessageTextIn(.Hwnd, SCI.REPLACESEL, 0, chunk)
-			}
-			while ((i += .chunkSize) < s.Size())
+			} while ((i += .chunkSize) < s.Size())
 		}
+
 	PasteOverAll(s)
 		{
 		.SelectAll()
 		.Paste(s)
 		.SetSelect(0)
 		}
+
 	ReplaceAll()
 		{
 		sel = .GetSelect()
 		size = .GetTextLength()
 		line = .GetFirstVisibleLine()
-		if .findreplacedata.replaceIn isnt "Selection" // whole file
+		if .findreplacedata.replaceIn isnt #Selection // whole file
 			.SelectAll()
 		curSel = .GetSelect()
-		if false is	s = Find.DoReplace(.SearchText(), .GetSelText(),
+		if false is s = Find.DoReplace(.SearchText(), .GetSelText(),
 			curSel.cpMin, curSel.cpMax, .findreplace_options)
 			return
 		.ReplaceSel(s)
 		.SetFirstVisibleLine(line)
-		if (.findreplacedata.replaceIn is "Selection")
+		if .findreplacedata.replaceIn is #Selection
 			{
 			size_after = .GetTextLength()
 			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
 			}
 		}
+
 	GetFlags()
 		{
 		return .get_marker_lines(1 << 1)
 		}
+
 	GetMarkerLines()
 		{
-		return .get_marker_lines(0xffff)
+		return .get_marker_lines(0xffff /*= 65535 bits*/)
 		}
+
 	get_marker_lines(bits) // returns list of line numbers with flags
 		{
 		flags = Object()
 		line = -1
 		while 0 <= (line = .MarkerNext(line + 1, bits)) and
-			line isnt 4294967295 /*= 32 bit -1 or 0xffffffff, for 64 bit gSuneido */
+			line isnt 4_294_967_295 /*= 32 bit -1 or 0xffffffff, for 64 bit gSuneido */
 			flags.Add(line)
 		return flags
 		}
+
 	GetMarkers()
 		{
 		markers = []
 		line = -1
-		while (0 <= (line = .MarkerNext(line + 1, 0xffff)))
+		while 0 <= (line = .MarkerNext(line + 1, 0xffff /*= 65535 bits*/))
 			markers[line] = .MarkerGet(line)
 		return markers
 		}
+
 	SetIndicator(indic, pos, len)
 		{
 		.SetIndicatorCurrent(indic)
 		.IndicatorFillRange(pos, len)
 		}
+
 	ClearIndicator(indic, pos = 0, len = false)
 		{
 		if len is false
@@ -533,6 +566,7 @@ WndProc
 		.SetIndicatorCurrent(indic)
 		.IndicatorClearRange(pos, len)
 		}
+
 	HasIndicator?(pos, indic)
 		{
 		if pos >= .GetTextLength()
@@ -540,49 +574,45 @@ WndProc
 		indics = .IndicatorAllOnFor(pos)
 		return (indics & (1 << indic)) isnt 0
 		}
+
 	GetReadOnly()
 		{
 		return .readonly is true or .GETREADONLY() is 1
 		}
+
 	GetWindowRect()
 		{
 		return GetWindowRect(.Hwnd)
 		}
+
 	SetReadOnly(readonly = true)
 		{
 		if .readonly
 			return
 		if readonly and .Dirty?()
 			.SetReadOnlyLogging(.Name)
-
 		return .SETREADONLY(readonly ? 1 : 0)
 		}
 
-	SetReadOnlyLogging(name. limit = 21) // Extra logging for suggestion 25689, and 37312
+	SetReadOnlyLogging(name, limit = 21)
 		{
-		try
-			{
-			calls = GetCallStack(:limit)
-			RemoveAssertsFromCallStack(calls)
-			// Remove redundant / unnecessary broadcast/send loop
-			calls = FormatCallStack(calls, levels: limit).Lines().
-				RemoveIf(
-					{
-					it.Prefix?('stdlib:Container.Broadcast:') or
-					it.Prefix?('stdlib:Container.SetReadOnly:')
-					}).Join('\n')
-			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty', :calls,
-				params: Object(
-					:name,
-					dirty: .dirty,
-					modify: .GetModify(),
-					alreadyReadOnly: .GetReadOnly()
-					lastModify: .logging_lastModify,
-					modifyFocused?: .logging_focusedModify?))
-			}
-		catch (error)
-			SuneidoLog('ERROR: ScintillaControl.SetReadOnlyLogging encountered an error',
-				calls:, params: Object(:error, :name))
+		calls = GetCallStack(:limit)
+		RemoveAssertsFromCallStack(calls)
+		// Remove redundant / unnecessary broadcast/send loop
+		calls = FormatCallStack(calls, levels: limit).
+			Lines().
+			RemoveIf(
+				{
+				it.Prefix?("stdlib:Container.Broadcast:") or
+					it.Prefix?("stdlib:Container.SetReadOnly:")
+				}).
+			Join('\n')
+		SuneidoLog("ERROR: ScintillaControl SetReadonly(true) when dirty", :calls,
+			params: Object(
+				:name,
+				dirty: .dirty,
+				modify: .GetModify(),
+				alreadyReadOnly: .GetReadOnly()))
 		}
 
 	SetFirstVisibleLine(idx)
@@ -601,6 +631,7 @@ WndProc
 		{
 		return .GetRange(0, .GetTextLength())
 		}
+
 	setMethodModifying?: false // used in SCN_MODIFIED method, see comment there
 	Set(s)
 		{
@@ -615,6 +646,7 @@ WndProc
 		.Dirty?(false)
 		.setMethodModifying? = false
 		}
+
 	Trim() // remove whitespace from beginning and end
 		{
 		while .GetLength() > 0 and .GetAt(0).White?()
@@ -623,6 +655,7 @@ WndProc
 			.DeleteRange(i, 1)
 		return this // to allow chaining
 		}
+
 	AppendText(s)
 		{
 		.ignoring_readonly()
@@ -631,6 +664,7 @@ WndProc
 			}
 		.DocumentEnd()
 		}
+
 	chunkSize: 8192
 	append(s)
 		{
@@ -641,6 +675,7 @@ WndProc
 			SendMessageTextIn(.Hwnd, SCI.APPENDTEXT, chunk.Size(), chunk)
 			}
 		}
+
 	ignoring_readonly(block)
 		{
 		ro = .GETREADONLY()
@@ -666,37 +701,57 @@ WndProc
 			}
 		return (.dirty or (.GetModify() is 1))
 		}
+
 	UPDATEUI()
 		{
 		}
 
 	On_Cut()
-		{ .CUT() }
+		{
+		.CUT()
+		}
+
 	On_Copy()
 		{
 		.COPY()
 		s = ClipboardReadString()
 		if not String?(s) or s.Size() is 0
 			return
-		s = s.Tr('\r').Replace('\n', '\r\n')
+		s = s.Tr('\r').Replace('\n', "\r\n")
 		ClipboardWriteString(s)
 		}
+
 	On_Paste()
-		{ .PASTE() }
+		{
+		.PASTE()
+		}
+
 	On_Undo()
-		{ .UNDO() }
+		{
+		.UNDO()
+		}
+
 	On_Redo()
-		{ .REDO() }
+		{
+		.REDO()
+		}
+
 	On_Delete()
-		{ .CLEAR() }
+		{
+		.CLEAR()
+		}
+
 	On_Select_All()
-		{ .SelectAll() }
+		{
+		.SelectAll()
+		}
 
 	LBUTTONDOWN(lParam)
 		{
-		.Send('Scintilla_LButtonDown', lParam)
-		return 'callsuper'
+		.Send(#Scintilla_LButtonDown, lParam)
+		return #callsuper
 		}
+
 	RBUTTONDOWN(lParam)
 		{
 		select = .GetSelect()
@@ -706,10 +761,10 @@ WndProc
 		if pos < select.cpMin or select.cpMax < pos
 			.SetSelect(pos)
 		.SetFocus()
-		return 'callsuper'
+		return #callsuper
 		}
-	Context_Menu: (
-		"&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
+
+	Context_Menu: ("&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
 		"Cu&t\tCtrl+X", "&Copy\tCtrl+C", "&Paste\tCtrl+V", "&Delete", "",
 		"Select &All\tCtrl+A", "Find...\tCtrl+F")
 	ContextMenu(x, y)
@@ -718,22 +773,47 @@ WndProc
 			ContextMenu(.Context_Menu).ShowCall(this, x, y)
 		return 0
 		}
+
 	On_Context_Cut()
-		{ .On_Cut() }
+		{
+		.On_Cut()
+		}
+
 	On_Context_Copy()
-		{ .On_Copy() }
+		{
+		.On_Copy()
+		}
+
 	On_Context_Paste()
-		{ .On_Paste() }
+		{
+		.On_Paste()
+		}
+
 	On_Context_Undo()
-		{ .On_Undo() }
+		{
+		.On_Undo()
+		}
+
 	On_Context_Redo()
-		{ .On_Redo() }
+		{
+		.On_Redo()
+		}
+
 	On_Context_Delete()
-		{ .On_Delete() }
+		{
+		.On_Delete()
+		}
+
 	On_Context_Select_All()
-		{ .On_Select_All() }
+		{
+		.On_Select_All()
+		}
+
 	On_Context_Find()
-		{ .On_Find() }
+		{
+		.On_Find()
+		}
+
 	SelectCurrentWord()
 		{
 		// TODO handle cursor at start of word
@@ -743,12 +823,13 @@ WndProc
 		.WordRightExtend()
 		n = 0
 		maxWordLength = 100
-		while ((s = .GetSelText()) isnt '' and (s.Suffix?(' ') or s.Suffix?('\t')))
+		while ((s = .GetSelText()) isnt "" and (s.Suffix?(' ') or s.Suffix?('\t')))
 			{
 			Assert(++n < maxWordLength)
 			.CharLeftExtend()
 			}
 		}
+
 	GetAt(pos)
 		{
 		return pos < 0 or pos >= .GetTextLength() ? '\x00' : .GetRange(pos, pos + 1)
@@ -762,26 +843,26 @@ WndProc
 	GetState()
 		{
 		return Object(
-			selection: .GetSelect()
-			topline: .GetFirstVisibleLine()
-			markers: .GetMarkers()
-			linenums: .GetMarginWidthN(0)
-			foldmargin: .GetMarginWidthN(2)
-			)
+			selection: .GetSelect(),
+			topline: .GetFirstVisibleLine(),
+			markers: .GetMarkers(),
+			linenums: .GetMarginWidthN(0),
+			foldmargin: .GetMarginWidthN(2))
 		}
+
 	SetState(state)
 		{
-		if state.Member?('selection')
+		if state.Member?(#selection)
 			.SetSelect(state.selection.cpMin,
 				state.selection.cpMax - state.selection.cpMin)
-		if state.Member?('topline')
+		if state.Member?(#topline)
 			.SetFirstVisibleLine(state.topline)
-		if state.Member?('markers')
-			for (line in state.markers.Members())
+		if state.Member?(#markers)
+			for line in state.markers.Members()
 				.MarkerAddSet(line, state.markers[line])
-		if state.Member?('linenums')
+		if state.Member?(#linenums)
 			.SetMarginWidthN(0, state.linenums)
-		if state.Member?('foldmargin')
+		if state.Member?(#foldmargin)
 			.SetMarginWidthN(2, state.foldmargin)
 		.MarkersChanged()
 		}
@@ -795,6 +876,7 @@ WndProc
 		{
 		SendMessageTextIn(.Hwnd, SCI.MARGINSETTEXT, line, text)
 		}
+
 	SetMargins(margins)
 		{
 		SendMessage(.Hwnd, SCI.SETMARGINS, margins, 0)
@@ -808,9 +890,10 @@ WndProc
 		// prevent all the text from being selected when you tab into the editor
 		return .Callsuper(.Hwnd, WM.GETDLGCODE, wParam, lParam) & ~DLGC.HASSETSEL
 		}
+
 	Destroy()
 		{
-		.Send("NoData")
+		.Send(#NoData)
 		super.Destroy()
 		}
 	}

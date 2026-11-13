@@ -62,18 +62,34 @@ Addon
 		return QueryStripSort(query) $ " sort " $ sort
 		}
 
-	Go_To_QueryView(list, query, linkField, value, keyQueryFn)
+	Go_To_QueryView(list, query, linkField, value, keys)
 		{
 		sel = .GetSelection()
 		if linkField isnt false
 			query = QueryAddWhere(query, " where " $ linkField $ " = " $ Display(value))
+		rec = false
 		if sel.Size() > 0
 			{
-			rec = list.Get()[sel[0]]
-			if rec.listrow_deleted isnt true and rec.Browse_NewRecord isnt true
-				query = keyQueryFn(QueryStripSort(query), rec.Browse_OriginalRecord)
+			selected = list.Get()[sel[0]]
+			if selected.listrow_deleted isnt true and selected.Browse_NewRecord isnt true
+				rec = selected.Browse_OriginalRecord
 			}
-		GotoQueryView(query)
+		VirtualListDev.GoToQueryView(query, rec, keys)
+		}
+
+	Context_Inspect(ctrl)
+		{
+		Inspect.Window(ctrl)
+		}
+
+	Context_Copy_Field_Name(field)
+		{
+		VirtualListDev.CopyFieldName(field)
+		}
+
+	Context_Go_To_Field_Definition(field)
+		{
+		VirtualListDev.GoToFieldDefinition(field)
 		}
 
 	cut_record: false
@@ -240,8 +256,7 @@ Addon
 		return ButtonBar(#(Restore, "Delete/Undelete"))
 		}
 
-	contextMenu: ("Reason Protected", "", "Customize Columns...",
-		"Customize...", "Go To QueryView")
+	contextMenu: ("Reason Protected", "", "Customize Columns...", "Customize...")
 	readonlyMenu: ("Reason Protected", "", "Customize Columns...")
 	standaloneMenu: ("Print...", "Reporter...", "Reporter Forms...", "Summarize...",
 		"CrossTable...", "", "Save All", "Restore All", "", "Export...")
@@ -254,18 +269,19 @@ Addon
 			.menu.Add(@(readOnly ? .readonlyStandaloneMenu : .standaloneMenu))
 		if columnsSaveName is false
 			.menu = .menu.Difference(#("Customize Columns...", "Customize..."))
-		if Suneido.User isnt #default
-			.menu.Remove("Go To QueryView")
-
 		if .historyFields isnt false
 			.menu.Add("", #History)
 		}
 
-	SetMenu(.menu) { }
+	SetMenu(.menu)
+		{
+		}
 
+	ContextMenuField: false
 	HeaderMenu(ctrl, x, y)
 		{
 		menus = .menu.Copy().Add("", "Reset Columns", at: .menu.Size())
+		.addDevMenu(menus, x, y, ctrl)
 		formatMenu = .addFormatMenu(ctrl, x, y)
 		ContextMenu(menus.Append(formatMenu)).ShowCall(ctrl, x, y)
 		}
@@ -277,8 +293,18 @@ Addon
 		if readOnly is false
 			.addEditingMenu(editingMenu)
 		menus = customMenu.Append(editingMenu).Append(.menu.Copy())
+		.addDevMenu(menus, x, y, ctrl)
 		formatMenu = .addFormatMenu(ctrl, x, y)
 		ContextMenu(menus.Append(formatMenu)).ShowCall(ctrl, x, y)
+		}
+
+	addDevMenu(menus, x, y, ctrl)
+		{
+		if Suneido.User is #default
+			{
+			menus.Add(@VirtualListContextMenu.DevMenu)
+			.ContextMenuField = .getField(x, y, ctrl)
+			}
 		}
 
 	buildCustomizableListMenu(readOnly, ctrl)
@@ -328,10 +354,7 @@ Addon
 
 	addFormatMenu(ctrl, x, y)
 		{
-		pt = Object(:x, :y)
-		ScreenToClient(ctrl.GetList().Hwnd, pt)
-		col = Min(.GetColFromX(pt.x), .GetNumCols() - 1)
-		fld = .GetCol(col)
+		fld = .getField(x, y, ctrl)
 		fmt = Datadict(fld).Format[0]
 		if not fmt.Suffix?(#Format)
 			fmt $= #Format
@@ -341,5 +364,14 @@ Addon
 			if false isnt contextExtra = fmt.List_ExtraContext()
 				extra = ["", contextExtra]
 		return extra
+		}
+
+	getField(x, y, ctrl)
+		{
+		pt = Object(:x, :y)
+		ScreenToClient(ctrl.GetList().Hwnd, pt)
+		col = Min(.GetColFromX(pt.x), .GetNumCols() - 1)
+		fld = .GetCol(col)
+		return fld
 		}
 	}

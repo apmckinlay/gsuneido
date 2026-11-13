@@ -1,6 +1,32 @@
 // Copyright (C) 2022 Suneido Software Corp. All rights reserved worldwide.
 Test
 	{
+	Setup()
+		{
+		super.Setup()
+		tableName = .MakeTable("(col1, col2, col3, col4, col5, col6) key (col1)")
+		.MakeLibraryRecord([name: "Table_" $ tableName,
+			text: `TableModel
+				{
+				Table: '` $ tableName $ `'
+				Columns: '(col1, col2, col3)'
+				UserInterfaceExclude() { return #(col2) }
+				ReporterExcludes() { return #(col1, col2) }
+				}`])
+		contribName = .TestLibName() $ "_Table_" $ tableName
+		.MakeLibraryRecord([name: contribName,
+			text: `#(
+				Columns: '(col4, col5)'
+				UserInterfaceExclude: #(
+					"col6",
+					function () { return #(col4) }),
+				ReporterExcludes: #(
+					"col6",
+					function () { return #(col5) }
+				))`])
+		.model = Global("Table_" $ tableName)()
+		}
+
 	Test_GetDuplicateFieldInfo()
 		{
 		noDups = .TempName()
@@ -98,5 +124,29 @@ Test
 			}`], table: #stdlib)
 		.AddTeardown({ QueryDo("delete stdlib where name is " $ Display(name)) })
 		Assert(Global(name)().GetIndexes() is: #(test3))
+		}
+
+	Test_UserInterfaceColumns()
+		{
+		userInterfaceCols = .model.UserInterfaceColumns()
+		Assert(userInterfaceCols isnt: #())
+		Assert(userInterfaceCols isSize: 3)
+		Assert(userInterfaceCols equalsSet: #(col1, col3, col5))
+		}
+
+	Test_ReporterExcludeColumns()
+		{
+		reporterExcludes = .model.ReporterExcludeColumns()
+		Assert(reporterExcludes isnt: #())
+		Assert(reporterExcludes isSize: 4)
+		Assert(reporterExcludes equalsSet: #(col1, col2, col5, col6))
+		}
+
+	Test_UserInterfaceExcludeColumns()
+		{
+		userInterfaceExcludes = .model.UserInterfaceExcludeColumns()
+		Assert(userInterfaceExcludes isnt: #())
+		Assert(userInterfaceExcludes isSize: 3)
+		Assert(userInterfaceExcludes equalsSet: #(col2, col4, col6))
 		}
 	}

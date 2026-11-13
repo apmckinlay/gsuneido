@@ -1,21 +1,22 @@
 // Copyright (C) 2019 Axon Development Corporation All rights reserved worldwide.
 class
 	{
-	Xmin:		0
-	Xstretch:	false
-	Ymin:		0
-	Ystretch:	false
-	Name:		""
-	Title:		""
-	DefaultButton: "OK"
-	Custom: 	false
-	Top:		0		// Top and Left specify the "alignment" point
-	Left:		0
+	Xmin:          0
+	Xstretch:      false
+	Ymin:          0
+	Ystretch:      false
+	Name:          ""
+	Title:         ""
+	DefaultButton: #OK
+	Custom:        false
+	Top:           0 // Top and Left specify the "alignment" point
+	Left:          0
 
 	New()
 		{
 		.New2()
 		}
+
 	New2() /*internal*/
 		{
 		// this is separate from New so it can be overridden by WindowBase
@@ -23,15 +24,15 @@ class
 		.Controller = _parent.Base?(Controller) ? _parent : _parent.Controller
 		.Window = _parent.Window
 
-		if .Custom is false and _parent.Member?('Custom')
+		if .Custom is false and _parent.Member?(#Custom)
 			.Custom = _parent.Custom
-		if (_ctrlspec.Member?("name"))
+		if _ctrlspec.Member?(#name)
 			.Name = _ctrlspec.name
 
 		.buildExtraSpec(_ctrlspec)
 		}
 
-	extraSpec: #()
+	extraSpec: ()
 	buildExtraSpec(ctrlspec)
 		{
 		.extraSpec = Object()
@@ -46,6 +47,7 @@ class
 		.extraSpec.uniqueId = .UniqueId
 		.extraSpec.name = .Name
 		}
+
 	AddExtraSpec(member, value)
 		{
 		.extraSpec[member] = value
@@ -82,7 +84,7 @@ class
 
 	GetLayout()
 		{
-		layout = Object(.ComponentName)
+		layout = [.ComponentName]
 		layout.Append(.ComponentArgs)
 		layout.Append(.extraSpec)
 		return layout
@@ -98,7 +100,7 @@ class
 	convertCtrlToUniqueId(ctrls)
 		{
 		if Instance?(ctrls)
-			ctrls = Object(ctrls)
+			ctrls = [ctrls]
 		converted = Object()
 		for ctrl in ctrls
 			converted.Add(ctrl.UniqueId)
@@ -114,9 +116,11 @@ class
 		{
 		reservation = SuRenderBackend().ReserveAction()
 		args = false
-		Finally({
+		Finally(
+			{
 			args = block(:reservation)
-			}, {
+			},
+			{
 			if args is false
 				SuRenderBackend().CancelReserve(reservation.at)
 			})
@@ -146,7 +150,9 @@ class
 		SendMessage(.Hwnd, msg, wParam, lParam)
 		}
 
-	SubClass() { }
+	SubClass()
+		{
+		}
 
 	CallClass(@args)
 		{
@@ -159,16 +165,18 @@ class
 		{
 		if not .Member?(#Controller)
 			return 0 // destroyed
-		if not args.Member?('source')
+		if not args.Member?(#source)
 			args.source = this
 		return .Controller.Msg(args)
 		}
+
 	Msg(args) // ignore messages from Window when top control is not a Controller
 		{
-		if args[0] is 'On_Cancel' and .Window.Method?(#On_Cancel)
+		if args[0] is #On_Cancel and .Window.Method?(#On_Cancel)
 			.Window.On_Cancel()
 		return 0
 		}
+
 	On_Cancel()
 		{
 		if .Controller.Method?(#On_Cancel)
@@ -182,7 +190,7 @@ class
 		x = .build(x)
 		_parent = this
 		_ctrlspec = x
-		ctrl = Construct(x, "Control")
+		ctrl = Construct(x, #Control)
 		if String?(ctrl.Name) and ctrl.Name isnt ""
 			this[ctrl.Name] = ctrl
 		return ctrl
@@ -192,7 +200,7 @@ class
 		{
 		if x.Size() is 1 and x.Member?(0) and Object?(x[0])
 			x = x[0]
-		if x[0] is 'NoPrompt' and .isFieldString?(x[1])
+		if x[0] is #NoPrompt and .isFieldString?(x[1])
 			x = .handleNoPromptField(x)
 		else if .isFieldString?(x[0])
 			x = .handleField(x)
@@ -201,7 +209,7 @@ class
 
 	getDatadictControl(name, orig)
 		{
-		x = Datadict(name).Control.Copy().Add(name at: 'name')
+		x = Datadict(name).Control.Copy().Add(name at: #name)
 		for m in orig.Members()
 			if String?(m)
 				x[m] = orig[m]
@@ -230,18 +238,16 @@ class
 		if .Custom isnt false and .Custom.Member?(name)
 			{
 			x.Merge(.Custom[name])
-			hidden = .Custom[name].GetDefault('hidden', false)
+			hidden = .Custom[name].GetDefault(#hidden, false)
 			}
 		if "" isnt prompt = Prompt(name)
-			{
-			if x[0] is 'CheckBox'
+			if x[0] is #CheckBox
 				{ // prompt is part of checkbox
 				x.text = prompt
 				x.hidden = hidden
 				}
 			else
-				x = Object('Pair', Object('Static', prompt, :hidden), x)
-			}
+				x = [#Pair, [#Static, prompt, :hidden], x]
 		return x
 		}
 
@@ -249,43 +255,52 @@ class
 		{
 		return Object()
 		}
+
 	SetState(unused)
-		{ }
+		{
+		}
+
 	enabled: true
 	GetEnabled()
 		{
 		return .enabled
 		}
+
 	SetEnabled(enabled)
 		{
 		if .GetEnabled() isnt enabled
 			{
 			.enabled = enabled
-			.Act('SetEnabled', enabled)
+			.Act(#SetEnabled, enabled)
 			}
 		}
+
 	SetVisible(visible)
 		{
 		Assert(Boolean?(visible))
-		.Act('SetVisible', visible)
+		.Act(#SetVisible, visible)
 		}
+
 	readonly: false
 	GetReadOnly()
 		{
 		return .readonly
 		}
+
 	SetReadOnly(readonly)
 		{
 		if .GetReadOnly() isnt readonly
 			{
 			.readonly = readonly
-			.Act('SetReadOnly', readonly)
+			.Act(#SetReadOnly, readonly)
 			}
 		}
+
 	SetFocus()
 		{
 		SetFocus(.UniqueId)
 		}
+
 	ClearFocus()
 		{
 		SetFocus(NULL)
@@ -295,84 +310,103 @@ class
 		{
 		return Object()
 		}
+
 	FindControl(name, exclude = false)
 		{
 		for c in .GetChildren()
 			{
 			if exclude isnt false and c.Base?(exclude)
 				continue
-			if c.Name is name or
-				false isnt (c = c.FindControl(name, :exclude))
+			if c.Name is name or false isnt (c = c.FindControl(name, :exclude))
 				return c
 			}
 		return false
 		}
+
 	GetRect()
 		{
 		// returns a Rect containing the coordinates of
 		// the control (relative to parent Hwnd)
 		return Rect(0, 0, 0, 0)
 		}
+
 	GetClientRect()
 		{
 		// returns a Rect containing the coordinates of
 		// the control's client area
 		return Rect(0, 0, 0, 0)
 		}
+
 	Dirty?(unused = "")
 		{
 		return false
 		}
+
+	CheckPendingEdit?()
+		{
+		return false
+		}
+
 	Valid?()
 		{
 		return true
 		}
+
 	ValidData?(@unused)
 		{
 		return true
 		}
+
 	HandleTab()
 		{
 		return false
 		}
+
 	AlertHwnd()
 		{
 		// sometimes the Alert methods are used on classes that don't have
 		// a window associated with them.
-		return .Member?("Window") ? .Window.Hwnd : 0
+		return .Member?(#Window) ? .Window.Hwnd : 0
 		}
+
 	AlertError(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONERROR)
 		}
+
 	AlertWarn(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONWARNING)
 		}
+
 	AlertInfo(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONINFORMATION)
 		}
+
 	AlertQuestion(title, message)
 		{
 		Alert(message, title, .AlertHwnd(), MB.ICONQUESTION)
 		}
+
 	BottomUp(@args)
 		{
 		for c in .GetChildren()
 			c.BottomUp(@args)
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		return
 		}
+
 	TopDown(@args)
 		{
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		for c in .GetChildren()
 			c.TopDown(@args)
 		return
 		}
+
 	ForeachChild(ctrl, block)
 		{
 		for c in ctrl.GetChildren()
@@ -389,13 +423,13 @@ class
 
 		if custom isnt false
 			for field in custom.Members()
-				if custom[field].GetDefault('first_focus', false) is true and
+				if custom[field].GetDefault(#first_focus, false) is true and
 					false isnt ctrl = .FindControl(field)
 					{
 					ctrl.SetFocus()
 					return
 					}
-		.Act('FocusFirst', actUniqueId: parentHwnd)
+		.Act(#FocusFirst, actUniqueId: parentHwnd)
 		}
 
 	ZoomReadonly(value)
@@ -403,44 +437,56 @@ class
 		ZoomControl(0, value, readonly:)
 		}
 
-	timers: #()
+	timers: ()
+	unique: ()
 	Delay(delay, block, uniqueID = false)
 		{
 		return .delayed(Delay, block, delay, uniqueID)
 		}
+
 	Defer(block, uniqueID = false)
 		{
 		return .delayed(Defer, block, 0, uniqueID)
 		}
+
 	delayed(fn, block, delay, uniqueID)
 		{
 		if .destroying?
 			return false
 
+		// assign initial values in case control get destroyed
+		timers = .timers
+		unique = .unique
 		if .timers.Readonly?()
 			{
-			.timers = Object() // intentionally lazy, don't put in New
-			.unique = Object()
+			timers = .timers = Object() // intentionally lazy, don't put in New
+			unique = .unique = Object()
 			}
 
-		if uniqueID isnt false and .unique.Member?(uniqueID)
+		if uniqueID isnt false and unique.Member?(uniqueID)
 			{
-			.timers.Remove1(.unique[uniqueID])
-			.unique[uniqueID].Kill()
+			timers.Remove1(unique[uniqueID])
+			unique[uniqueID].Kill()
 			}
 
 		timer = false // needed so block can reference it
-		timer = fn(delayMs: delay) { .timers.Remove1(timer); block() }
-		.timers.Add(timer)
+		timer = fn(delayMs: delay)
+			{
+			timers.Remove1(timer)
+			block()
+			}
+		timers.Add(timer)
 		if uniqueID isnt false
-			.unique[uniqueID] = timer
-		return (.killwrap)(timer, .timers)
+			unique[uniqueID] = timer
+		return (.killwrap)(timer, timers)
 		}
+
 	killwrap: class
 		{
 		New(.killer, .timers)
 			{
 			}
+
 		Kill()
 			{
 			.killer.Kill()
@@ -454,7 +500,7 @@ class
 
 	ToolTip(tip)
 		{
-		.Act('AddToolTip', tip)
+		.Act(#AddToolTip, tip)
 		}
 
 	hidden: false
@@ -462,6 +508,7 @@ class
 		{
 		return .hidden
 		}
+
 	SuSetHidden(hidden)
 		{
 		.hidden = hidden
@@ -476,7 +523,8 @@ class
 
 	WindowHwnd()
 		{
-		try return .Window.Hwnd
+		try
+			return .Window.Hwnd
 		return 0
 		}
 
@@ -485,8 +533,8 @@ class
 		return .WindowHwnd() is GetActiveWindow()
 		}
 
-	SetFont(font = "", size = "", weight = "", text = "",
-		underline = false, italic = false, strikeout = false)
+	SetFont(font = "", size = "", weight = "", text = "", underline = false,
+		italic = false, strikeout = false)
 		{
 		.Act(#SetFont, :font, :size, :weight, :text, :underline, :italic, :strikeout)
 		.WindowRefresh()
@@ -496,20 +544,22 @@ class
 		{
 		if .Destroyed?()
 			return
-		this['On_' $ ToIdentifier(menu.BeforeFirst('\t'))]()
+		this["On_" $ ToIdentifier(menu.BeforeFirst('\t'))]()
 		}
-	DevMenu: ('', 'Copy Field Name')
+
+	DevMenu: ("", "Copy Field Name")
 	On_Copy_Field_Name()
 		{
 		fieldName = .getFieldName()
 		ClipboardWriteString(fieldName)
 		}
+
 	getFieldName()
 		{
-		name = .Send('GetFieldName')
+		name = .Send(#GetFieldName)
 		return String?(name)
 			? name
-			: .Name is 'Value' // for choose fields
+			: .Name is #Value // for choose fields
 				? .Parent.Name
 				: .Name
 		}
@@ -520,7 +570,7 @@ class
 
 	Destroyed?()
 		{
-		return not .Member?('Window')
+		return not .Member?(#Window)
 		}
 
 	destroying?: false
@@ -539,6 +589,11 @@ class
 		.Delete(all:) // to help garbage collection
 		}
 
-	Resize(x/*unused*/, y/*unused*/, w/*unused*/, h/*unused*/) { }
-	Repaint(@unused) { }
+	Resize(x/*unused*/, y/*unused*/, w/*unused*/, h/*unused*/)
+		{
+		}
+
+	Repaint(@unused)
+		{
+		}
 	}

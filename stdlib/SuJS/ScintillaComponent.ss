@@ -1,16 +1,16 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 Component
 	{
-	Name:		"Editor"
-	Xmin: 		200
-	Ymin: 		100
-	Xstretch:	1
-	Ystretch:	1
+	Name:            #Editor
+	Xmin:            200
+	Ymin:            100
+	Xstretch:        1
+	Ystretch:        1
 	DefaultFontSize: 11
 	Unsortable: true
 	PaddingTop: 4
 
-	styles: `
+	styles:     `
 		.su-code-wrapper {
 			position: relative;
 		}
@@ -56,42 +56,44 @@ Component
 		if height is 1
 			.tabthrough = true
 
-		LoadCssStyles('code-mirror.css', .styles)
-		.CreateElement('div', className: 'su-code-wrapper')
-		.textarea = CreateElement('textarea', .El)
+		LoadCssStyles("code-mirror.css", .styles)
+		.CreateElement(#div, className: "su-code-wrapper")
+		.textarea = CreateElement(#textarea, .El)
 
 		.CodeMirror = SuUI.GetCodeMirror()
 		.CM = .CodeMirror.FromTextArea(.textarea)
 		.CMEl = .CM.GetWrapperElement()
-		.CMEl.classList.Add('su-code-mirror')
+		.CMEl.classList.Add("su-code-mirror")
 		.changes = Object()
 
-		.CM.SetOption("mode", "null")
-		.CM.SetOption("readOnly", .readonly)
-		.CM.SetOption("lineSeparator", "\r\n")
-		.CM.SetOption("styleSelectedText", true)
+		.CM.SetOption(#mode, #null)
+		.CM.SetOption(#readOnly, .readonly)
+		.CM.SetOption(#lineSeparator, "\r\n")
+		.CM.SetOption(#styleSelectedText, true)
 		if readonly
-			.CM.SetOption("tabindex", "-1")
+			.CM.SetOption(#tabindex, "-1")
 
-		extraKeys = ['Shift-Tab': 'indentLess']
+		extraKeys = ["Shift-Tab": #indentLess]
 		if .tabthrough is true
-			extraKeys['Tab'] = false
-		.CM.SetOption("extraKeys", extraKeys)
+			extraKeys.Tab = false
+		.CM.SetOption(#extraKeys, extraKeys)
 
-		.SetStyles(Object('border': '1px solid black'), .CMEl)
+		.SetStyles(Object(border: "1px solid black"), .CMEl)
 
-		.AddEventListenerToCM('change', .OnChange)
+		.AddEventListenerToCM(#change, .OnChange)
 		.CodeMirror.OnBeforeChange(.CM, .eventFactory(.ensureCRLF))
-		.AddEventListenerToCM('beforeChange', .onBeforeChange)
-		.AddEventListenerToCM('focus', .OnFocus)
-		.AddEventListenerToCM('blur', .blur)
-		.AddEventListenerToCM('beforeSelectionChange', .onSelectionChange)
-		.AddEventListenerToCM('contextmenu', .onContextMenu)
-		.AddEventListenerToCM('scroll', .onScroll)
-		.AddEventListenerToCM('gutterClick', .onGutterClick)
-		.El.AddEventListener('mouseup', .onMouseUp)
-		.AddEventListenerToCM('keydown', .OnKeyDown)
-		.El.AddEventListener('dragend', .dragEnd)
+		.AddEventListenerToCM(#beforeChange, .onBeforeChange)
+		.AddEventListenerToCM(#focus, .OnFocus)
+		.AddEventListenerToCM(#blur, .blur)
+		.AddEventListenerToCM(#beforeSelectionChange, .onSelectionChange)
+		.AddEventListenerToCM(#contextmenu, .onContextMenu)
+		.AddEventListenerToCM(#scroll, .onScroll)
+		.AddEventListenerToCM(#gutterClick, .onGutterClick)
+		.El.AddEventListener(#mouseup, .onMouseUp)
+		.AddEventListenerToCM(#keydown, .OnKeyDown)
+		.El.AddEventListener(#dragend, .dragEnd)
+		.AddEventListenerToCM(#dragover, .onDragOver)
+		.AddEventListenerToCM(#drop, .onDrop)
 
 		.indicators = Object()
 		.markers = Object()
@@ -107,7 +109,7 @@ Component
 
 	eventFactory(fn)
 		{
-		return { |@args|
+		return {|@args|
 			if not .Destroyed?()
 				fn(@args)
 			}
@@ -116,7 +118,7 @@ Component
 	TabOver?()
 		{
 		// use switch to handle undefined
-		switch (.CM.GetOption("tabindex"))
+		switch .CM.GetOption(#tabindex)
 			{
 		case "-1", -1:
 			return true
@@ -130,7 +132,7 @@ Component
 		if .tabthrough is true
 			return
 		if useTabs is false
-			.CM.AddKeyMap(['Tab': function (cm) { cm.ReplaceSelection('    ') }])
+			.CM.AddKeyMap([Tab: function(cm) { cm.ReplaceSelection("    ") }])
 		}
 
 	onContextMenu(unused, event)
@@ -154,8 +156,8 @@ Component
 
 	less?(pos1, pos2)
 		{
-		ob1 = Object(pos1.line, pos1.ch)
-		ob2 = Object(pos2.line, pos2.ch)
+		ob1 = [pos1.line, pos1.ch]
+		ob2 = [pos2.line, pos2.ch]
 		return ob1 < ob2
 		}
 
@@ -174,6 +176,7 @@ Component
 		// into one to reduce layout reflow
 		.refreshTimer = SuDelayed(0, .doRefresh)
 		}
+
 	refreshTimer: false
 	doRefresh()
 		{
@@ -181,6 +184,7 @@ Component
 		if .Member?(#CM)
 			.CM.Refresh()
 		}
+
 	WindowResize()
 		{
 		// to fix the issue where CM is not draw when WindowComponent is resized
@@ -200,44 +204,44 @@ Component
 
 	SetReadOnly(readOnly)
 		{
-		if (.readonly)
+		if .readonly
 			return
-		.CM.SetOption("readOnly", readOnly is true)
+		.CM.SetOption(#readOnly, readOnly is true)
 		super.SetReadOnly(readOnly)
 		}
 
 	GetReadOnly()
 		{
-		return .CM.GetOption("readOnly")
+		return .CM.GetOption(#readOnly)
 		}
 
 	StyleSetBack(unused, back)
 		{
-		.CMEl.SetStyle('background-color', ToCssColor(back))
+		.CMEl.SetStyle("background-color", ToCssColor(back))
 		}
 
 	SetlineWrapping(wrap)
 		{
-		.CM.SetOption("lineWrapping", wrap)
+		.CM.SetOption(#lineWrapping, wrap)
 		}
 
 	SetTABWIDTH(width)
 		{
-		.CM.SetOption('tabSize', width)
-		.CM.SetOption('indentUnit', width)
-		.CM.SetOption('indentWithTabs', true)
+		.CM.SetOption(#tabSize, width)
+		.CM.SetOption(#indentUnit, width)
+		.CM.SetOption(#indentWithTabs, true)
 		}
 
-	wordchars: 'zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!'
+	wordchars: "zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!"
 	SetWordChars(.wordChars)
 		{
 		if not Suneido.Member?(#RegisteredWC)
 			Suneido.RegisteredWC = Object()
 		if false is name = Suneido.RegisteredWC.GetDefault(wordChars, false)
 			{
-			name = 'suneido_' $ Suneido.RegisteredWC.Size()
-			regex = SuUI.MakeWebObject('RegExp', '[' $ wordChars $ ']')
-			.CodeMirror.RegisterHelper('wordChars', name, regex)
+			name = "suneido_" $ Suneido.RegisteredWC.Size()
+			regex = SuUI.MakeWebObject(#RegExp, '[' $ wordChars $ ']')
+			.CodeMirror.RegisterHelper(#wordChars, name, regex)
 			Suneido.RegisteredWC[wordChars] = name
 			}
 		mode = .CodeMirror.GetMode(.CM)
@@ -287,20 +291,18 @@ Component
 	SetMarginTypeN(margin/*unused*/, type)
 		{
 		if type is SC.MARGIN_TEXT or type is SC.MARGIN_RTEXT
-			{
-			.ensureGutter('su-margin-gutter')
-			}
+			.ensureGutter("su-margin-gutter")
 		}
 
 	SetMarginWidthN(margin/*unused*/, width)
 		{
-		.CMEl.style.setProperty('--su-margin-gutter-width', width $ 'px')
+		.CMEl.style.setProperty("--su-margin-gutter-width", width $ "px")
 		.CM.Refresh()
 		}
 
 	SetMarginText(line, text)
 		{
-		container = .getLineGutter(line, 'su-margin-gutter')
+		container = .getLineGutter(line, "su-margin-gutter")
 		container.innerText = text
 		}
 
@@ -308,10 +310,10 @@ Component
 		{
 		info = .CM.LineInfo(line)
 		try
-			container = info['gutterMarkers'][type]
+			container = info.gutterMarkers[type]
 		catch
 			{
-			container = CreateElement('div', className: type $ '-container')
+			container = CreateElement(#div, className: type $ "-container")
 			.CM.SetGutterMarker(line, type, container)
 			}
 		return container
@@ -321,7 +323,7 @@ Component
 		{
 		if not .definedStyles.Member?(style)
 			return
-		container = .getLineGutter(line, 'su-margin-gutter')
+		container = .getLineGutter(line, "su-margin-gutter")
 		container.style.cssText = .definedStyles[style]
 		}
 
@@ -331,15 +333,13 @@ Component
 		.markers[n] = [:style, :fore, :back]
 		.markerCss = false
 		if .gutterMarker?(style)
-			.ensureGutter('su-marker-gutter')
+			.ensureGutter("su-marker-gutter")
 		}
 
 	gutterMarker?(style)
 		{
-		return style is SC.MARK_SHORTARROW or
-			style is SC.MARK_ROUNDRECT or
-			style is SC.MARK_VLINE or
-			style is #diffMarker
+		return style is SC.MARK_SHORTARROW or style is SC.MARK_ROUNDRECT or
+			style is SC.MARK_VLINE or style is #diffMarker
 		}
 
 	DefineXPMMarker(n, style, fore, back)
@@ -347,23 +347,21 @@ Component
 		.DefineMarker(n, style, fore, back)
 		}
 
-	MarkerName: 'default'
+	MarkerName: #default
 	ensureMarkerCss()
 		{
 		if .markerCss isnt false
 			return
 
-		css = ''
+		css = ""
 		for n in .markers.Members()
 			{
-			className = 'su-code-' $ .MarkerName $ '-' $ n
+			className = "su-code-" $ .MarkerName $ '-' $ n
 			marker = .markers[n]
 			if marker.style is SC.MARK_BACKGROUND
-				{
 				css $= '.' $ className $ '{
 						background-color: ' $ ToCssColor(marker.back) $ ';
 					}\r\n'
-				}
 			else if marker.style is SC.MARK_SHORTARROW
 				css $= .buildShortArrow(marker, className, n)
 			else if marker.style is #diffMarker
@@ -373,9 +371,9 @@ Component
 			else if marker.style is SC.MARK_VLINE
 				css $= .buildVlineMarker(marker, className, n)
 			else
-				Print('marker not handled: ', marker)
+				Print("marker not handled: ", marker)
 			}
-		LoadCssStyles('su-code-' $ .MarkerName $ '.css', .markerCss = css, override?:)
+		LoadCssStyles("su-code-" $ .MarkerName $ ".css", .markerCss = css, override?:)
 		}
 
 	ensureGutter(className)
@@ -399,7 +397,7 @@ Component
 				/>
 			</svg>'
 		return .buildMarker(marker, className, n, :shape,
-			extraCss: 'justify-content: center; align-items: center;')
+			extraCss: "justify-content: center; align-items: center;")
 		}
 
 	buildRoundRect(marker, className, n)
@@ -414,27 +412,27 @@ Component
 				/>
 			</svg>'
 		return .buildMarker(marker, className, n, :shape,
-			extraCss: 'justify-content: center; align-items: center;')
+			extraCss: "justify-content: center; align-items: center;")
 		}
 
 	buildDiffMarker(marker, className, n)
 		{
 		return .buildMarker(marker, className, n,
-			extraCss: 'width: 33%; right: 0px; background-color: ' $
+			extraCss: "width: 33%; right: 0px; background-color: " $
 				ToCssColor(marker.back) $ ';')
 		}
 
 	buildVlineMarker(marker, className, n)
 		{
 		.buildMarker(marker, className, n,
-			extraCss: 'border-right: 2px solid ' $ ToCssColor(marker.back) $ ';')
+			extraCss: "border-right: 2px solid " $ ToCssColor(marker.back) $ ';')
 		}
 
-	buildMarker(marker, className, n, shape = '', extraCss = '')
+	buildMarker(marker, className, n, shape = "", extraCss = "")
 		{
 		if not marker.Member?(#div)
 			{
-			div = CreateElement('div', className: className $ '-div')
+			div = CreateElement(#div, className: className $ "-div")
 			div.innerHTML = shape
 			marker.div = div
 			}
@@ -452,13 +450,13 @@ Component
 		if false is marker = .markers.GetDefault(n, false)
 			return
 		.ensureMarkerCss()
-		className = 'su-code-' $ .MarkerName $ '-' $ n
+		className = "su-code-" $ .MarkerName $ '-' $ n
 		if marker.style is SC.MARK_BACKGROUND
-			.CM.AddLineClass(row, "background", className)
+			.CM.AddLineClass(row, #background, className)
 		else if .gutterMarker?(marker.style)
 			{
-			container = .getLineGutter(row, 'su-marker-gutter')
-			if container.QuerySelectorAll('.' $ className $ '-div').length is 0
+			container = .getLineGutter(row, "su-marker-gutter")
+			if container.QuerySelectorAll('.' $ className $ "-div").length is 0
 				container.AppendChild(marker.div.CloneNode(true))
 			}
 		}
@@ -468,17 +466,18 @@ Component
 		if false is marker = .markers.GetDefault(n, false)
 			return
 
-		className = 'su-code-' $ .MarkerName $ '-' $ n
+		className = "su-code-" $ .MarkerName $ '-' $ n
 		if marker.style is SC.MARK_BACKGROUND
-			.CM.RemoveLineClass(row, 'background', className)
+			.CM.RemoveLineClass(row, #background, className)
 		else if .gutterMarker?(marker.style)
 			{
 			info = .CM.LineInfo(row)
 			container = false
-			try container = info['gutterMarkers']['su-marker-gutter']
+			try
+				container = info.gutterMarkers["su-marker-gutter"]
 			if container isnt false
 				{
-				list = container.QuerySelectorAll('.' $ className $ '-div')
+				list = container.QuerySelectorAll('.' $ className $ "-div")
 				for i in .. list.length
 					list.Item(i).Remove()
 				}
@@ -503,44 +502,39 @@ Component
 
 		curLine = .CM.GetCursor().line
 		for row in ...CM.LineCount()
-			{
 			if row is curLine
 				ovbars.Each({ it.AddMark(row, CLR.GRAY) })
 			else
 				.updateMarkersAtLine(row, markersInfo, ovbars)
-			}
 		}
 
 	updateMarkersAtLine(row, markersInfo, ovbars)
 		{
 		info = .CM.LineInfo(row)
 		container = false
-		try container = info['gutterMarkers']['su-marker-gutter']
+		try
+			container = info.gutterMarkers["su-marker-gutter"]
 		if container isnt false and container.childElementCount isnt 0
-			{
 			for type in markersInfo.Members()
-				{
 				for idx in markersInfo[type]
 					{
 					list = container.QuerySelectorAll(
-						'.su-code-' $ .MarkerName $ '-' $ idx $ '-div')
+						".su-code-" $ .MarkerName $ '-' $ idx $ "-div")
 					if list.length isnt 0
 						{
 						ovbars[type].AddMark(row, .markers[idx].back)
 						break
 						}
 					}
-				}
-			}
 		}
 
-	braceStyle: ''
-	braceMark1: false
-	braceMark2: false
-	braceBadStyle: ''
-	braceBadMark: false
-	DefineStyle(n, fore = false, back = false, bold = false,
-		underline/*unused*/ = false, italic/*unused*/ = false)
+	braceStyle:    ""
+	braceMark1:    false
+	braceMark2:    false
+	braceBadStyle: ""
+	braceBadMark:  false
+	DefineStyle(n, fore = false, back = false, bold = false, underline/*unused*/ = false,
+		italic/*unused*/ = false)
 		{
 		if n is SC.STYLE_BRACELIGHT
 			.braceStyle = .buildStyle(fore, back, bold)
@@ -552,13 +546,13 @@ Component
 
 	buildStyle(fore = false, back = false, bold = false)
 		{
-		css = ''
+		css = ""
 		if fore isnt false
-			css $= ' color: ' $ ToCssColor(fore) $ ';'
+			css $= " color: " $ ToCssColor(fore) $ ';'
 		if back isnt false
-			css $= ' background-color: ' $ ToCssColor(back) $ ';'
+			css $= " background-color: " $ ToCssColor(back) $ ';'
 		if bold isnt false
-			css $= ' font-weight: bold;'
+			css $= " font-weight: bold;"
 		return css
 		}
 
@@ -616,25 +610,27 @@ Component
 		.indicators[n].css = .buildCss(@.indicators[n].styles)
 		}
 
-	IndicSetHoverStyle(@unused) {}
-
-	buildCss(style, fore, alpha = '1A', outlineAlpha = '80')
+	IndicSetHoverStyle(@unused)
 		{
-		css = ''
-		color = fore is false ? 'black' : ToCssColor(fore)
+		}
+
+	buildCss(style, fore, alpha = "1A", outlineAlpha = "80")
+		{
+		css = ""
+		color = fore is false ? #black : ToCssColor(fore)
 		if style is INDIC.SQUIGGLE
-			css = 'text-decoration: underline wavy ' $ color $ ' 1px;'
+			css = "text-decoration: underline wavy " $ color $ " 1px;"
 		else if style is INDIC.TEXTFORE
-			css = 'color: ' $ color $ '; cursor: pointer;'
+			css = "color: " $ color $ "; cursor: pointer;"
 		else if style is INDIC.ROUNDBOX
-			css = 'border-radius: 2%; background-color: ' $ color $ alpha $ ';'
+			css = "border-radius: 2%; background-color: " $ color $ alpha $ ';'
 		else if style is INDIC.STRAIGHTBOX
-			css = 'background-color: ' $ color $ alpha $ '; ' $
-				'outline: 1px solid ' $ color $ outlineAlpha $ ';'
+			css = "background-color: " $ color $ alpha $ "; " $ "outline: 1px solid " $
+				color $ outlineAlpha $ ';'
 		else if style is INDIC.FULLBOX
-			css = 'background-color: ' $ color $ alpha $ '; '
+			css = "background-color: " $ color $ alpha $ "; "
 		else if style is INDIC.HIDDEN
-			css = ''
+			css = ""
 		return css
 		}
 
@@ -648,7 +644,10 @@ Component
 		}
 
 	curIndic: false
-	SetIndicatorCurrent(.curIndic) { }
+	SetIndicatorCurrent(.curIndic)
+		{
+		}
+
 	IndicatorFillRange(pos, len)
 		{
 		if .curIndic is false
@@ -672,7 +671,7 @@ Component
 				{
 				markFrom = .CM.IndexFromPos(markPos.from)
 				markTo = .CM.IndexFromPos(markPos.to)
-				if markFrom >= pos + len or markTo < pos
+				if markFrom >= pos+len or markTo < pos
 					continue
 				}
 			toClear.Add(i)
@@ -684,15 +683,13 @@ Component
 	HasIndicator?(pos, indic)
 		{
 		for mark in .indicators[indic].marks
-			{
 			if false isnt markPos = .getMarkPos(mark)
 				{
 				markFrom = .CM.IndexFromPos(markPos.from)
 				markTo = .CM.IndexFromPos(markPos.to)
-				if markFrom < pos + 1 and markTo >= pos
+				if markFrom < pos+1 and markTo >= pos
 					return true
 				}
-			}
 		return false
 		}
 
@@ -749,20 +746,22 @@ Component
 	DoOnChange(changeObj)
 		{
 		from = false
-		if false isnt i = .changes.FindIf({
-			it.line is changeObj.from.line and it.ch is changeObj.from.ch })
+		if false isnt i = .changes.FindIf(
+			{
+			it.line is changeObj.from.line and it.ch is changeObj.from.ch
+			})
 			{
 			from = .changes[i].fromIdx
 			.changes.Delete(i)
 			}
 		Assert(from isnt: false)
-		added = changeObj.text.Join('\r\n')
-		removed = changeObj.removed.Join('\r\n')
+		added = changeObj.text.Join("\r\n")
+		removed = changeObj.removed.Join("\r\n")
 		to = from + removed.Size()
 
 		if .IsSettingValue?() isnt true
 			{
-			.Event(#Scintilla_UpdateValue,  change: [:from, :to, text: added])
+			.Event(#Scintilla_UpdateValue, change: [:from, :to, text: added])
 			.Event(#EN_CHANGE)
 			}
 		else
@@ -770,21 +769,21 @@ Component
 			.Event(#Scintilla_SetValue)
 
 		toAfterChange = to + added.Size() - removed.Size()
-		.Event(#SCN_MODIFIED, [
-			modificationType: added is ''
-				? SC.MOD_DELETETEXT
-				: SC.MOD_INSERTTEXT,
-			position: from,
-			length: toAfterChange - from + 1,
-			setValue?: .setValue?
-			])
+		.Event(#SCN_MODIFIED,
+			[
+				modificationType: added is ""
+					? SC.MOD_DELETETEXT
+					: SC.MOD_INSERTTEXT,
+				position: from,
+				length: toAfterChange - from + 1,
+				setValue?: .setValue?])
 		}
 
 	ensureCRLF(unused, changeObj)
 		{
 		try
 			{
-			if not changeObj.text.Any?({ it.Has1of?('\r\n') })
+			if not changeObj.text.Any?({ it.Has1of?("\r\n") })
 				return
 			newText = Object()
 			for line in changeObj.text
@@ -792,11 +791,10 @@ Component
 			(changeObj.update)(changeObj.from, changeObj.to, newText)
 			}
 		catch (e)
-			{
-			SuRender().Event(false, 'SuneidoLog', Object(
-				'ERROR (CAUGHT): ScintillaComponent.ensureCRLF - ' $ e,
-				params: changeObj.text, caughtMsg: 'continue'))
-			}
+			SuRender().
+				Event(false, #SuneidoLog,
+					["ERROR (CAUGHT): ScintillaComponent.ensureCRLF - " $ e,
+						params: changeObj.text, caughtMsg: #continue])
 		}
 
 	onBeforeChange(unused, changeObj)
@@ -832,22 +830,63 @@ Component
 	onScroll(unused)
 		{
 		scrollInfo = .CM.GetScrollInfo()
-		line = .CM.LineAtHeight(scrollInfo.top, 'local')
+		line = .CM.LineAtHeight(scrollInfo.top, #local)
 		.Event(#SU_SYNCFIRSTVISIBLELINE, line)
 		}
 
 	onGutterClick(cm/*unused*/, line, gutter/*unused*/, event)
 		{
+		if event.button isnt 0
+			return
+
 		if event.GetDefault(#ctrlKey, false) is true
-			.SELECTALL()
-		else if event.GetDefault(#shiftKey, false) is true
 			{
-			anchor = .CM.GetCursor('anchor')
-			.CM.SetSelection(anchor, [line: line + 1, ch: 0])
+			.SELECTALL()
+			.CM.Focus()
+			return
 			}
-		else
-			.CM.SetSelection([:line, ch: 0], [line: line + 1, ch: 0])
+
+		.gutterDragLine = line
+		.gutterDragShift = event.GetDefault(#shiftKey, false) is true
+		.gutterDragAnchor = .gutterDragShift
+			? .CM.GetCursor(#anchor)
+			: [:line, ch: 0]
+
+		.CM.SetSelection(.gutterDragAnchor, .gutterLineEnd(line))
 		.CM.Focus()
+		event.PreventDefault()
+		.StartMouseTracking(.gutterMouseUp, .gutterMouseMove)
+		}
+
+	gutterMouseMove(event)
+		{
+		line = .CM.LineAtHeight(event.pageY, #page)
+		if line < .CM.FirstLine()
+			line = .CM.FirstLine()
+		if line > .CM.LastLine()
+			line = .CM.LastLine()
+
+		anchor = .gutterDragAnchor
+		if not .gutterDragShift and line < .gutterDragLine
+			anchor = .gutterLineEnd(.gutterDragLine)
+
+		head = line < anchor.line
+			? [:line, ch: 0]
+			: .gutterLineEnd(line)
+		.CM.SetSelection(anchor, head)
+		event.PreventDefault()
+		}
+
+	gutterLineEnd(line)
+		{
+		return line < .CM.LastLine()
+			? [line: line + 1, ch: 0]
+			: .getEndPos()
+		}
+
+	gutterMouseUp(event/*unused*/)
+		{
+		.StopMouseTracking()
 		}
 
 	SetFirstVisibleLine(line, centerInScreen? = false)
@@ -855,7 +894,7 @@ Component
 		offset = 0
 		if centerInScreen? is true
 			offset = .CM.GetScrollInfo().clientHeight / 2
-		top = .CM.HeightAtLine(line, 'local')
+		top = .CM.HeightAtLine(line, #local)
 		.CM.ScrollTo(0, top - offset)
 		}
 
@@ -895,7 +934,7 @@ Component
 			anchor = selections[0].anchor
 			head = selections[0].head
 			if head.ch > 0
-				head.ch--
+				head.ch -= 1
 			.CM.SetSelection(anchor, head)
 			}
 		}
@@ -909,60 +948,65 @@ Component
 
 	CUT()
 		{
-		if '' isnt str = .CM.GetSelection()
-			{
-			SuClipboardWriteString(str, 'Cut').Then(
-				{|res|
-				if false isnt res and not .GetReadOnly()
-					.CM.ReplaceSelection('')
-				})
-			}
+		if "" isnt str = .CM.GetSelection()
+			SuClipboardWriteString(str, #Cut).
+				Then(
+					{|res|
+					if false isnt res and not .GetReadOnly()
+						.CM.ReplaceSelection("")
+					})
 		}
+
 	COPY()
 		{
-		if .CM.GetSelection() is ''
-			.CM.ExecCommand('selectAll')
-		if '' isnt str = .CM.GetSelection()
-			SuClipboardWriteString(str, 'Copy')
+		if .CM.GetSelection() is ""
+			.CM.ExecCommand(#selectAll)
+		if "" isnt str = .CM.GetSelection()
+			SuClipboardWriteString(str, #Copy)
 		}
+
 	PASTE()
 		{
 		SuClipboardPasteString(this, .Paste)
 		}
+
 	UNDO()
 		{
 		if .GetReadOnly()
 			return
-		.CM.ExecCommand('undo')
+		.CM.ExecCommand(#undo)
 		}
+
 	REDO()
 		{
 		if .GetReadOnly()
 			return
-		.CM.ExecCommand('redo')
+		.CM.ExecCommand(#redo)
 		}
+
 	DELETE()
 		{
 		if .GetReadOnly()
 			return
-		if .CM.GetSelection() isnt ''
+		if .CM.GetSelection() isnt ""
 			{
-			.CM.ReplaceSelection('')
+			.CM.ReplaceSelection("")
 			return
 			}
-		from = .CM.GetCursor('from')
+		from = .CM.GetCursor(#from)
 		to = Object(ch: from.ch + 1, line: from.line)
 		.CM.SetSelection(from, to)
-		if .CM.GetSelection() is ''
+		if .CM.GetSelection() is ""
 			{
 			to = Object(line: from.line + 1, ch: 1)
 			.CM.SetSelection(from, to)
 			}
-		.CM.ReplaceSelection('')
+		.CM.ReplaceSelection("")
 		}
+
 	SELECTALL()
 		{
-		.CM.ExecCommand('selectAll')
+		.CM.ExecCommand(#selectAll)
 		}
 
 	ReplaceSel(s)
@@ -994,19 +1038,19 @@ Component
 		if event.button isnt 0
 			return
 
-		.Event('LBUTTONUP', .CM.IndexFromPos(.CM.GetCursor()))
+		.Event(#LBUTTONUP, .CM.IndexFromPos(.CM.GetCursor()))
 		if event.detail isnt 0 and event.detail % 2 is 0
 			.Event(#SCN_DOUBLECLICK)
 		}
 
 	SetCaretLineVisible(enable)
 		{
-		.CM.SetOption("styleActiveLine", enable)
+		.CM.SetOption(#styleActiveLine, enable)
 		}
 
 	SetCaretLineBack(color)
 		{
-		.SetStyleProperty('--active-line-bg-color', ToCssColor(color))
+		.SetStyleProperty("--active-line-bg-color", ToCssColor(color))
 		}
 
 	SetStyleProperty(name, value)
@@ -1028,7 +1072,10 @@ Component
 		}
 
 	autocOpen?: false
-	SyncAutocStatus(.autocOpen?) {}
+	SyncAutocStatus(.autocOpen?)
+		{
+		}
+
 	OnKeyDown(unused, event)
 		{
 		if event.GetDefault(#key, false) is false
@@ -1042,9 +1089,38 @@ Component
 			}
 		}
 
-	dragEnd(event /*unused*/)
+	dragEnd(event/*unused*/)
 		{
 		.EventWithFreeze(#SCEN_KILLFOCUS)
+		}
+
+	onDragOver(unused, event)
+		{
+		if false isnt dt = event.GetDefault(#dataTransfer, false)
+			{
+			types = dt.GetDefault(#types, #())
+			if types.Has?(#Files)
+				{
+				dt.dropEffect = #none
+				event.PreventDefault()
+				event.StopPropagation()
+				}
+			}
+		}
+
+	onDrop(unused, event)
+		{
+		if false isnt dt = event.GetDefault(#dataTransfer, false)
+			{
+			types = dt.GetDefault(#types, #())
+			filesLength = dt.GetDefault(#files, []).length
+			if types.Has?(#Files) or (filesLength isnt "" and filesLength > 0)
+				{
+				event.PreventDefault()
+				event.StopPropagation()
+				return
+				}
+			}
 		}
 
 	MoveSelectedLinesUp()
@@ -1060,14 +1136,14 @@ Component
 	// dir: -1 for up, 1 for down
 	moveSelectedLines(dir)
 		{
-		from = .CM.GetCursor('from')
-		to = .CM.GetCursor('to')
+		from = .CM.GetCursor(#from)
+		to = .CM.GetCursor(#to)
 
 		startLine = from.line
 		endLine = to.line
 
 		if endLine > startLine and to.ch is 0
-			endLine--
+			endLine -= 1
 
 		if not .canMove?(startLine, endLine, dir)
 			return
@@ -1080,14 +1156,14 @@ Component
 		if dir < 0
 			{
 			// Moving up: block + boundary line
-			text = blockLines[1..].Join('\r\n') $ '\r\n' $ blockLines[0]
+			text = blockLines[1..].Join("\r\n") $ "\r\n" $ blockLines[0]
 			replaceStart = [line: startLine - 1, ch: 0]
 			replaceEnd = [line: endLine, ch: blockLines.Last().Size()]
 			}
 		else
 			{
 			// Moving down: boundary line + block
-			text = blockLines.Last() $ '\r\n' $ blockLines[..-1].Join('\r\n')
+			text = blockLines.Last() $ "\r\n" $ blockLines[..-1].Join("\r\n")
 			replaceStart = [line: startLine, ch: 0]
 			replaceEnd = [line: endLine + 1, ch: blockLines.Last().Size()]
 			}
@@ -1113,9 +1189,9 @@ Component
 	getLines(startLine, endLine, dir)
 		{
 		if dir < 0
-			startLine--
+			startLine -= 1
 		else
-			endLine++
+			endLine += 1
 
 		lines = Object()
 		for i in startLine .. endLine + 1
@@ -1134,7 +1210,7 @@ Component
 
 	Getter_(unused)
 		{
-		return { |@unused| }
+		return {|@unused| }
 		}
 
 	Destroy()

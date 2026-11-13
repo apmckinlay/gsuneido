@@ -24,14 +24,15 @@ Test
 		stateProv = #AA
 		Assert(func(stateProv, timezone) is: _defaultTime)
 
-		// BC normal case with DST (but no switch)
+		// BC
+		timezone = #PCT
 		stateProv = #BC
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
 		timezone = #MST
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
-		// AB with DST (but no switch)
+		// AB
 		stateProv = #AB
-		timezone = #MST
+		timezone = #ABT
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 		// AZ with DST (but no switch)
 		stateProv = #AZ
@@ -50,9 +51,13 @@ Test
 		timezone = #MST
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
 		// YT with DST (but no switch)
-		stateProv = #SON
-		timezone = #MST
+		stateProv = #YT
+		timezone = #YST
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
+		// NT
+		stateProv = #NT
+		timezone = #MST
+		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 
 		// AK with DST
 		stateProv = #AK
@@ -130,12 +135,13 @@ Test
 		stateProv = #AA
 		Assert(func(stateProv, timezone) is: _defaultTime)
 
-		// BC normal case without DST (but no switch)
+		// BC
+		timezone = #PCT
 		stateProv = #BC
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		// AB without DST (but no switch)
+		// AB
 		stateProv = #AB
-		timezone = #MST
+		timezone = #ABT
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 		// AZ without DST (but no switch)
 		stateProv = #AZ
@@ -154,9 +160,13 @@ Test
 		timezone = #MST
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
 		// YT without DST (but no switch)
-		stateProv = #SON
-		timezone = #MST
+		stateProv = #YT
+		timezone = #YST
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
+		// NT
+		stateProv = #NT
+		timezone = #MST
+		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 
 		// AK without DST
 		stateProv = #AK
@@ -184,7 +194,7 @@ Test
 		// NT without DST
 		stateProv = #NT
 		timezone = #MST
-		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
+		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 		// ID without DST
 		stateProv = #ID
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
@@ -222,40 +232,34 @@ Test
 
 		stateProv = #BC
 		timezone = #MST
-		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
+		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 
 		// more exception cases; no DST
 		stateProv = #BC
 		timezone = #MST
-		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: []]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: [nodaylightAdjustment?:]]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: [nodaylightAdjustment?:, offSetOverride: -6]]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
 
 		// back to DST
 		_gmtTime = _time
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: []]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: [nodaylightAdjustment?:, offSetOverride: -7]]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		_timeZoneRec.BC = [zone: #PST, nodaylightAdjustment?:, offSetOverride: -7,
+		_timeZoneRec.BC = [zone: #PCT, nodaylightAdjustment?:, offSetOverride: -7,
 			exceptions: [MST: [offSetOverride: -7]]]
 		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -6))
-
-		// test invalid timezone input
-		timezone = #invalid
-		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -7))
-		stateProv = #MB
-		Assert(func(stateProv, timezone) is: _gmtTime.Plus(hours: -5))
 		}
 
 	Test_DaylightSavings?()

@@ -2,7 +2,7 @@
 class
 	{
 	linkedSelectFields: false
-	subTableMgrs: false
+	subTableMgrs:       false
 	// csf - Current Select fields
 	// 		- The Select Fields based on the columns as they appear on the CURRENT record
 	// casf - Current Available Select Fields
@@ -21,9 +21,7 @@ class
 		{
 		// Don't recreate if it already exists
 		if .subTableMgrs.Member?(saveName)
-			{
 			selectMgr = .subTableMgrs[saveName]
-			}
 		else
 			{
 			selectMgr = .initSelectMgr(saveName, fields)
@@ -34,12 +32,10 @@ class
 		// current dynamic type does NOT exist until the first time we open select
 		// for it specifically
 		if .dynamic? is true
-			{
 			// be aware, the other places calling .handleDynamic, the conditions
 			// are NOT the conditions from the selectMgr, which is why these are two
 			// different parameters
 			.handleDynamic(selectMgr.Select_vals(), saveName, .updateChecked, selectMgr)
-			}
 
 		return selectMgr
 		}
@@ -55,7 +51,7 @@ class
 	// the current saveName
 	forEachSavedCondition(saveName, block)
 		{
-		filter = { |x|  x.AfterFirst('|') is saveName.AfterFirst('|') }
+		filter = {|x| x.AfterFirst('|') is saveName.AfterFirst('|') }
 		for table in .subTableMgrs.MembersIf(filter)
 			{
 			// ignore the Current Filter
@@ -68,9 +64,7 @@ class
 			savedConditions = .subTableMgrs[table].Select_vals()
 
 			for sCondition in savedConditions
-				{
 				block(sCondition, ssf, asf)
-				}
 			}
 		}
 
@@ -89,7 +83,7 @@ class
 		csf = result.sf
 		casf = result.asf
 		.forEachSavedCondition(saveName)
-			{ |sCondition, ssf, sasf|
+			{|sCondition, ssf, sasf|
 			updateFn(sCondition, currentConditions, csf, casf, ssf, sasf, selectMgr)
 			}
 		}
@@ -98,7 +92,6 @@ class
 	// and re-opened the select. Want to make sure that our "select" gets added
 	// sCondition: condition read from the "saved" conditions (will have the "checked")
 	// currentConditions: condition for the record we are currently on (will NOT have the checked)
-
 	// this should NOT modify sCondition, only currentConditions and/or selectMgr
 	updateChecked(sCondition, currentConditions, csf, casf, ssf, sasf, selectMgr)
 		{
@@ -113,7 +106,6 @@ class
 		// Once we have a matching field, Step 3: check the Current Conditions to
 		// see if it already exists, if it does, ensure it is marked checked
 		// if it is not, Then insert it
-
 		if sCondition.check isnt true
 			return
 
@@ -122,14 +114,12 @@ class
 		rCondition = .renamedCondition(sCondition, ssf, sasf, csf, casf)
 
 		for cCondition in currentConditions
-			{
 			// if we have a matching current condition, ensure it is checked
 			if .conditionsMatch(rCondition, cCondition)
 				{
 				cCondition.check = true
 				return // Next Saved Condition
 				}
-			}
 
 		// we have a saved condition without a matching current condition
 		// need to add the checked one in
@@ -143,29 +133,31 @@ class
 	// First we try based on the prompt, we look for a field in csf/casf that has
 	// the same prompt, and use it.
 	// if a matching prompt is NOT found, we need to add the field to csf ourselves
-	renamedCondition(sCondition, ssf, sasf /*unused*/, csf, casf)
+	renamedCondition(sCondition, ssf, sasf/*unused*/, csf, casf)
 		{
-		newCondition = Record()
+		newCondition = []
 		sPrompt = ssf.FieldToPrompt(sCondition.condition_field)
 
 		// Handle if the select HAS found a dynamic record that does NOT
 		// contain condition_field in the sub table (i.e. "is empty" filter)
 		// temporarily add the condition to the Current Select Fields so
 		// it will show up on the select.
-
 		if false is cField = csf.PromptToField(sPrompt)
-			{
 			if false is cField = casf.PromptToField(sPrompt)
-				{
 				// At this point it's fair to assume that the field from
 				// sCondition has been renamed in a way that we do not have it in casf
 				// need to manually add it
 				if ssf.NameAbbrev?(sCondition.condition_field)
 					{
-					type = sCondition.condition_field.Has?('_name') ? '_name' : '_abbrev'
+					// one thing to watch is that it is POSSIBLE that we have a
+					// miss-match between Prompt and SelectPrompt due to a rename
+					// in that case we might not be able to find the correct field
+					// to match on in that case the only real fix is to change
+					// the rename on the screen so that the select Prompts match
+					type = sCondition.condition_field.Has?("_name") ? "_name" : "_abbrev"
 					suffix = sCondition.condition_field.AfterFirst(type)
 					prefix = sCondition.condition_field.BeforeFirst(type)
-					csf.AddNumField(prefix $ '_num', casf.FieldToPrompt(prefix $ '_num'))
+					csf.AddNumField(prefix $ "_num", casf.FieldToPrompt(prefix $ "_num"))
 					cField = prefix $ type
 					}
 				else
@@ -174,25 +166,20 @@ class
 					csf.AddField(sCondition.condition_field, sPrompt)
 					cField = sCondition.condition_field
 					}
-				}
 			else //cField came from casf, not csf, need to add it to csf
+			if ssf.NameAbbrev?(sCondition.condition_field)
 				{
-				if ssf.NameAbbrev?(cField)
-					{
-					type = cField.Has?('_name') ? '_name' : '_abbrev'
-					suffix = cField.AfterFirst(type)
-					prefix = cField.BeforeFirst(type)
-					csf.AddNumField(prefix $ '_num' $ suffix,
-						casf.FieldToPrompt(prefix $ '_num' $ suffix))
-					}
-				else
-					{
-					csf.AddField(cField, sPrompt)
-					}
+				type = cField.Has?("_name") ? "_name" : "_abbrev"
+				suffix = cField.AfterFirst(type)
+				prefix = cField.BeforeFirst(type)
+				csf.AddNumField(prefix $ "_num" $ suffix,
+					casf.FieldToPrompt(prefix $ "_num" $ suffix))
 				}
-			} // else cField came from csf, just add it.
+			else
+				csf.AddField(cField, sPrompt)
+		// else
+		// cField came from csf, just add it.
 		newCondition.condition_field = cField
-
 		newCondition[newCondition.condition_field] =
 			sCondition[sCondition.condition_field]
 		newCondition.check = sCondition.check
@@ -201,11 +188,10 @@ class
 
 	// this should NOT modify currentConditions, only sCondition
 	updateUnchecked(sCondition, currentConditions, csf, casf, ssf, sasf,
-		selectMgr /*unused*/ = false)
+		selectMgr/*unused*/ = false)
 		{
 		// Need to check saved conditions for checked values that have been
 		// unselected or removed on currentConditions
-
 		// only care about saved conditions that ARE checked
 		if sCondition.check is false
 			return
@@ -247,7 +233,6 @@ class
 			.handleDynamic(conditions, saveName, .updateUnchecked)
 		// we CANNOT handle adding the check here as not all selectMgrs needed
 		// will be constructed
-
 		selectMgr.SetSelectVals(conditions, sf)
 		}
 
@@ -280,19 +265,20 @@ class
 			return .linkedSelectFields[saveName].sf
 		return false
 		}
+
 	Clear()
 		{
+		if .subTableMgrs is false
+			return
 		for selectMgr in .subTableMgrs
-			{
 			selectMgr.Select_vals().Each({ it.check = false })
-			}
 		}
 
 	Select_vals()
 		{
 		x = Object()
 		for name in .subTableMgrs.Members()
-			x[name] = Record(conditions: .subTableMgrs[name].Select_vals())
+			x[name] = [conditions: .subTableMgrs[name].Select_vals()]
 		return x
 		}
 
@@ -306,7 +292,7 @@ class
 		{
 		linkedBrowses = access.GetLinkedBrowseTabs()
 
-		lineItemWhere = ''
+		lineItemWhere = ""
 		dynamicIgnoreHeader = ""
 		for idx in linkedBrowses.Members().Sort!()
 			{
@@ -324,88 +310,101 @@ class
 			// ignoreLinked adds an extra where clause to ignore those types
 			// (e.g. 'where apchk_type isnt "CC"' in the above example)
 			// need to make sure this ONLY gets added if there sub table selects
-			if false isnt (dynamicIgnore =
-				access.IgnoreLinkedBrowseType(linkedBrowse.Name))
+			if false isnt
+				(dynamicIgnore = access.IgnoreLinkedBrowseType(linkedBrowse.Name))
 				dynamicIgnoreHeader $= ' ' $ dynamicIgnore
 
-			// if linkedBrowse is actualy a virtual list we CANNOT use .GetQuery
-			// here, as that has an aditional where on it that limits records
-			// to the current record. (BrowseControl.GetQuery does NOT have that issue)
-			// need to use .GetLinkedQuery as it returns the query without the
-			// additional where. BrowseControl does NOT have .GetLinkedQuery()
-			q = linkedBrowse.Base?(BrowseControl)
-				? linkedBrowse.GetQuery()
-				: linkedBrowse.GetLinkedQuery()
-
-			q = QueryHelper.StripSort(q)
-
-			overrides = Object()
-			subTablesConfig = access.SubTablesConfig()
-			if Object?(subTablesConfig)
-				if subTablesConfig.Member?(linkedBrowse.Name)
-					overrides = subTablesConfig[linkedBrowse.Name]
-
-			// see comments in .layoutSubtables
-			// this is to make sure the correct rename gets used in the
-			// semijoin when we have to override the base queries rename
-			selectCols = linkedBrowse.GetColumns().Copy()
-			extraRename = ""
-			overrideRenames = overrides.GetDefault('renames', #())
-			for field in overrideRenames.Members()
-				{
-				if not selectCols.Has?(field)
-					continue
-				extraRename $= field $ " to " $ overrideRenames[field] $ ' '
-				}
-			if extraRename isnt ""
-				q $= ' rename ' $ extraRename
-
+			q = .subtableQuery(linkedBrowse, access)
 
 			saveName = .subTableFilterName(linkedBrowse)
 
-			// Select Repeat Control
-			if selectControls is false
-				{
-				// THIS is for when we are toggling MultiView Control
-				if not .linkedSelectFields.Member?(saveName)
-					continue
-				lineItemSf = .linkedSelectFields[saveName].sf
-				// BEWARE: Select_vals on the AccessSelectMgr is NOT a Getter_
-				conditions = .subTableMgrs[saveName].Select_vals()
-				where = SelectRepeatControl.BuildWhere(lineItemSf, conditions)
-				}
-			else
-				{
-				// This is for when we are just on access control
-				subTableSelectCtrl = selectControls[saveName]
-				lineItemSf = subTableSelectCtrl.FieldPrompt_GetSelectFields()
-				// this NEEDS to be asf, not sf
-				asf = .linkedSelectFields[saveName].asf
-				conditions = subTableSelectCtrl.Get().conditions
-				if false is where = SelectRepeatControl.BuildWhere(asf, conditions)
-					continue
-				}
+			if false is result = .subtableWhere(selectControls, saveName)
+				continue
+			lineItemSf = result.lineItemSf
+			conditions = result.conditions
+			where = result.where
 
 			// NEED to ensure we call SetSubTableSelectVals on the AccessSubtables
 			// on the access itself, as we could be in an un-instaciated class
 			access.SetSubTableSelectVals(saveName, conditions)
 
-			if where.where isnt ''
-				{
-
+			if where.where isnt ""
 				lineItemWhere $= .semiJoinWhere(linkedBrowse,
 					lineItemSf.Joins(where.joinflds) $ where.where, access, q)
-				}
 			}
 
 		if lineItemWhere is ""
-			return ''
-		return dynamicIgnoreHeader $ '\r\n' $ lineItemWhere
+			return ""
+		return dynamicIgnoreHeader $ "\r\n" $ lineItemWhere
 		}
+
+	subtableQuery(linkedBrowse, access)
+		{
+		// if linkedBrowse is actualy a virtual list we CANNOT use .GetQuery
+		// here, as that has an aditional where on it that limits records
+		// to the current record. (BrowseControl.GetQuery does NOT have that issue)
+		// need to use .GetLinkedQuery as it returns the query without the
+		// additional where. BrowseControl does NOT have .GetLinkedQuery()
+		q = linkedBrowse.Base?(BrowseControl)
+			? linkedBrowse.GetQuery()
+			: linkedBrowse.GetLinkedQuery()
+
+		q = QueryHelper.StripSort(q)
+
+		overrides = Object()
+		subTablesConfig = access.SubTablesConfig()
+		if Object?(subTablesConfig)
+			if subTablesConfig.Member?(linkedBrowse.Name)
+				overrides = subTablesConfig[linkedBrowse.Name]
+
+		// see comments in .layoutSubtables
+		// this is to make sure the correct rename gets used in the
+		// semijoin when we have to override the base queries rename
+		selectCols = linkedBrowse.GetColumns().Copy()
+		extraRename = ""
+		overrideRenames = overrides.GetDefault(#renames, #())
+		for field in overrideRenames.Members()
+			{
+			if not selectCols.Has?(field)
+				continue
+			extraRename $= field $ " to " $ overrideRenames[field] $ ' '
+			}
+		if extraRename isnt ""
+			q $= " rename " $ extraRename
+		return q
+		}
+
 	// this name is the saved name in userselects
 	subTableFilterName(linkedBrowse)
 		{
-		return linkedBrowse.GetColumnsSaveName() $ ' Filter'
+		return linkedBrowse.GetColumnsSaveName() $ " Filter"
+		}
+
+	subtableWhere(selectControls, saveName)
+		{
+		// Select Repeat Control
+		if selectControls is false or selectControls[saveName].Destroyed?()
+			{
+			// THIS is for when we are toggling MultiView Control
+			if not .linkedSelectFields.Member?(saveName)
+				return false
+			lineItemSf = .linkedSelectFields[saveName].sf
+			// BEWARE: Select_vals on the AccessSelectMgr is NOT a Getter_
+			conditions = .subTableMgrs[saveName].Select_vals()
+			where = SelectRepeatControl.BuildWhere(lineItemSf, conditions)
+			}
+		else
+			{
+			// This is for when we are just on access control
+			subTableSelectCtrl = selectControls[saveName]
+			lineItemSf = subTableSelectCtrl.FieldPrompt_GetSelectFields()
+			// this NEEDS to be asf, not sf
+			asf = .linkedSelectFields[saveName].asf
+			conditions = subTableSelectCtrl.Get().conditions
+			if false is where = SelectRepeatControl.BuildWhere(asf, conditions)
+				return false
+			}
+		return Object(:lineItemSf, :conditions, :where)
 		}
 
 	semiJoinWhere(linkedBrowse, where, access, subTableQuery)
@@ -420,15 +419,13 @@ class
 			linkedField = linkedField[1]
 			}
 		else if false is joinField = .findJoinField(hdrQuery, subTableQuery, access)
-			{
-			throw 'No Join Field provided. Please ensure .GetlinkField provides both ' $
-				'sides of the rename for the linked field'
-			}
+			throw "No Join Field provided. Please ensure .GetlinkField provides both " $
+				"sides of the rename for the linked field"
 		// joinField should be the name from the SubTable that we are joining on
-		semiJoin = ' semijoin by (' $ joinField $ ')'
+		semiJoin = " semijoin by (" $ joinField $ ')'
 		extraRenames = .extraRenames(joinField, linkedField)
 		q = QueryHelper.StripSort(subTableQuery) $ extraRenames
-		return semiJoin $ ' (' $ QueryHelper.AddWhere(q, where) $ ')'
+		return semiJoin $ " (" $ QueryHelper.AddWhere(q, where) $ ')'
 		}
 
 	// this does NOT handle when the subTable is a view, or if the linked field
@@ -438,22 +435,19 @@ class
 		hdrKeys = access.GetKeys()
 		hdrTable = QueryGetTable(hdrQuery)
 		subTable = QueryGetTable(subQuery)
-		for fKey in QueryList("indexes where table is " $
-			Display(subTable) $ " and fktable is " $ Display(hdrTable), "fkcolumns")
-			{
+		for fKey in QueryList(
+			"indexes where table is " $ Display(subTable) $ " and fktable is " $
+				Display(hdrTable), #fkcolumns)
 			if false isnt hdrKeyMem = hdrKeys.FindIf({ it.Prefix?(fKey) })
-				{
 				return hdrKeys[hdrKeyMem]
-				}
-			}
 		return false
 		}
 
 	extraRenames(joinField, linkField)
 		{
-		extraRenames = ''
+		extraRenames = ""
 		if linkField isnt joinField
-			extraRenames $= ' rename ' $ linkField $ ' to ' $ joinField
+			extraRenames $= " rename " $ linkField $ " to " $ joinField
 		return extraRenames
 		}
 
@@ -480,14 +474,16 @@ class
 				subTablesConfig)
 			columns = selectCols.Intersect(availableCols)
 
+			// Currently NOT in an instance of AccessSubtables, need to run this
+			// on the instance of AccessSubtables saved on the access
 			sf = access.SetSubtableSelectFields(columns, availableCols, saveName)
 			// we cannot build these ahead of time as the tabs need to be constructed
 			selectMgr = access.SetSubtableSelectMgr(sf.Fields, saveName)
 			selectVals = selectMgr.Select_vals()
 
-			control = Object('Expand', linked.name $ ' Filters',
-				Object('SelectRepeat', sf, selectVals, linked.name),
-					saveExpandName: saveName $ ' Filters')
+			control = [#Expand, linked.name $ " Filters",
+				[#SelectRepeat, sf, selectVals, linked.name],
+				saveExpandName: saveName $ " Filters"]
 			block(control, linked.name, saveName)
 			}
 		}
@@ -508,7 +504,7 @@ class
 				overrides = subTablesConfig[linkedBrowse.Name]
 
 		extraRename = ""
-		if overrides.Member?('renames')
+		if overrides.Member?(#renames)
 			{
 			renames = overrides.renames
 			for field in renames.Members()
@@ -525,13 +521,11 @@ class
 		// to run SelectFields on this query, so we need to exclude the duplicate field
 		// make sure to exclude one that DOES NOT show on the screen
 		extraRemoves = ""
-		if overrides.Member?('removes')
-			{
-			extraRemoves = " remove " $ overrides.removes.Join(', ')
-			}
-		colQuery =  QueryHelper.StripSort(colQuery)
+		if overrides.Member?(#removes)
+			extraRemoves = " remove " $ overrides.removes.Join(", ")
+		colQuery = QueryHelper.StripSort(colQuery)
 		if extraRename isnt ""
-			colQuery =  colQuery $ ' rename ' $ extraRename
+			colQuery = colQuery $ " rename " $ extraRename
 		colQuery $= extraRemoves
 
 		// this will NOT have an effect on the fields that the user can select
@@ -540,5 +534,4 @@ class
 		// this is JUST for the where on the semijoin
 		return QueryColumns(colQuery)
 		}
-
 	}

@@ -1,11 +1,8 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 function(@args)
 	{
-	if args.Size(list:) is 1 and not Function?(args[0])
-		x = args[0]
-	else
-		x = (args[0])(@+1args)
+	x = Function?(args.GetDefault(0, false)) ? (args[0])(@+1args) : args[0]
 	if not Date?(x)
-		throw "expected date got " $ Type(x) $ " from: " $ Display(args)
+		throw "expected a date but it was " $ Type(x)
 	return x
 	}

@@ -270,7 +270,9 @@ PassthruController
 		}
 
 	base_query: false
-	SetBaseQuery(.base_query) { }
+	SetBaseQuery(.base_query)
+		{
+		}
 
 	MaxRecordsLoaded?: false
 	buildListData(query, t, max_records, max_records_msg)
@@ -1453,7 +1455,22 @@ PassthruController
 
 	On_Context_Go_To_QueryView()
 		{
-		.addon.Go_To_QueryView(.list, .query, .linkField, .value, .keyQuery)
+		.addon.Go_To_QueryView(.list, .query, .linkField, .value, .key)
+		}
+
+	On_Context_Inspect()
+		{
+		.addon.Context_Inspect(this)
+		}
+
+	On_Context_Copy_Field_Name()
+		{
+		.addon.Context_Copy_Field_Name(.addon.ContextMenuField)
+		}
+
+	On_Context_Go_To_Field_Definition()
+		{
+		.addon.Context_Go_To_Field_Definition(.addon.ContextMenuField)
 		}
 
 	On_Context_Cut_Record()

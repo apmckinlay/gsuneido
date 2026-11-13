@@ -265,7 +265,8 @@ class
 	dragDropHandler(event)
 		{
 		event.PreventDefault()
-		event.dataTransfer.dropEffect = #none
+		if false isnt dt = event.GetDefault(#dataTransfer, false)
+			dt.dropEffect = #none
 		}
 
 	RegisterIframe(el)
@@ -618,11 +619,6 @@ class
 		return true
 		}
 
-	ErrorLog(s)
-		{
-		.Event(false, #ErrorLog, [s $ " (from browser)"])
-		}
-
 	message(event)
 		{
 		if not .initialized
@@ -721,41 +717,9 @@ class
 					Print("id (" $ id $ ") is not found - ", action)
 					continue
 					}
-				method = false
-				try
-					method = .components[id][action.action]
-				if method is false
-					.debug36105(action, id, action.uniqueId)
-				else
-					method(@action.args)
+				(.components[id][action.action])(@action.args)
 				}
 			}
-		}
-
-	debug36105(action, id, uniqueId)
-		{
-		nearbys = Object()
-		for (i = -5; i <= 5/*=upper*/; i += 1)
-			if .components.Member?(Display(uniqueId + i))
-				nearbys.Add(
-					Display(.components[Display(uniqueId + i)]) $ " - " $ (uniqueId + i))
-
-		all = Object()
-		for m in .components.Members()
-			all[Number(m)] = Display(.components[m])
-
-		try
-			componentMax = .components.Members().MaxWith(Number)
-		catch (e)
-			componentMax = e
-		params = [
-			component: Display(.components[id]),
-			componentId: .components[id].UniqueId,
-			componentSize: .components.Size(),
-			:componentMax,
-			componentNearbys: nearbys]
-
-		.Event(false, #Debug36105, [action, params, all])
 		}
 
 	canvas: false
@@ -837,35 +801,34 @@ class
 		}
 
 	ignores: ("ResizeObserver loop limit exceeded",
-		"ResizeObserver loop completed with undelivered notifications.",
-		// from stands AdBlocker
-		"Cannot redefine property: googletag")
+		"ResizeObserver loop completed with undelivered notifications.")
+
 	onError(event)
 		{
-		if .socketStatus is SuSocketStatus.terminated
-			return false
-
 		if .ignores.Any?({ event.message =~ it })
 			return false
 
-		if .isThirdPartyError?(event)
-			{
-			SuneidoLog("ERROR (CAUGHT) - BrowserError: " $ event.message,
-				calls: event.error.stack,
-				caughtMsg: "Possibly external; Ignored")
-			return false
-			}
-
-		.Event(false, #SuBrowserError,
-			[message: event.message, stack: event.error.stack])
-		return true
+		.sendError(event.message, event.error.stack)
 		}
 
-	isThirdPartyError?(event)
+	sendError(message, stack, async? = false)
+		{
+		if .socketStatus is SuSocketStatus.terminated
+			return
+
+		if .isThirdPartyError?(stack)
+			SuneidoLog(
+				"Third Party " $ (async? ? " Promise Rejection: " : "Error: ") $ message,
+				calls: stack)
+		else
+			.Event(false, #SuBrowserError, [:message, :stack, :async?])
+		}
+
+	isThirdPartyError?(stack)
 		{
 		try
 			{
-			lines = event.error.stack.Lines()
+			lines = stack.Lines()
 
 			// no call stack
 			if lines.Size() <= 1
@@ -877,7 +840,7 @@ class
 			// WebKit/Safari: $f@source:line:column
 			for line in lines
 				if line =~ `\<\$f\>` or line.Has?("su_bundle.min.js") or
-					line.Has?("su_code_bundle.js")
+					line.Has?("su_code_bundle.js") or line.Has?("codemirror_bundle.js")
 					return false
 			return true
 			}
@@ -886,12 +849,8 @@ class
 
 	onPromiseError(event)
 		{
-		if .socketStatus is SuSocketStatus.terminated
-			return false
-		.Event(false, #SuBrowserError,
-			[message: event.reason.message,
-				stack: event.reason.GetDefault(#stack, #UNKNOWN)])
-		return true
+		.sendError(event.reason.message, event.reason.GetDefault(#stack, #UNKNOWN),
+			async?:)
 		}
 
 	ActivateWindow(id)

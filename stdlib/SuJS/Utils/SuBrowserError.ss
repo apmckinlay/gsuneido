@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Axon Development Corporation All rights reserved worldwide.
-function(message, stack)
+function(message, stack, async? = false)
 	{
 	if String?(stack)
 		stack = stack.Lines()[1..]
@@ -13,7 +13,7 @@ function(message, stack)
 				:calls)
 		}
 	SuRenderBackend().InErrorHandler = true
-	SuRenderBackend().DumpStatus(message)
+	SuRenderBackend().DumpStatus((async? ? " Promise Rejection: " : "Error: ") $ message)
 	Handler(message, 0, calls)
 	SuRenderBackend().InErrorHandler = false
 	}

@@ -28,7 +28,7 @@ class
 		fields.RemoveIf(
 			{
 			dd = Datadict(it, #(ExcludeSelect))
-			not includeInternal and	dd.Member?(#ExcludeSelect) and
+			not includeInternal and dd.Member?(#ExcludeSelect) and
 				dd.ExcludeSelect is true
 			})
 		}
@@ -36,13 +36,14 @@ class
 	add_abbrev_and_name_for_num_fields(fields, joins, includeMasterNum,
 		convertCustomNumFields)
 		{
-		if joins isnt true or .headerSelectPrompt is 'no_prompts'
+		if joins isnt true or .headerSelectPrompt is #no_prompts
 			return
 
 		// add _abbrev, _name for num fields
 		for fld in fields.Copy() // need copy because of removes
 			.addSingleAbbrevName(fld, fields, includeMasterNum, convertCustomNumFields)
 		}
+
 	addSingleAbbrevName(fld, fields, includeMasterNum, convertCustomNumFields)
 		{
 		if false isnt .HandleSpecialJoinFields(fld, fields, .other,
@@ -54,9 +55,9 @@ class
 			return
 
 		// get num field suffix if applicable
-		suffix = Opt('_', fld.AfterLast('_num_'))
+		suffix = Opt('_', fld.AfterLast("_num_"))
 		// strip off everything after and including '_num'
-		f = fld.BeforeFirst('_num')
+		f = fld.BeforeFirst("_num")
 		if .nameAndAbbrevExist(fields, f, fld)
 			return
 		.addForeignTableFields(f, fld, fields, suffix, includeMasterNum)
@@ -77,8 +78,8 @@ class
 			return true
 			}
 
-		if fld.Has?('_num_') and fields.Has?(fld.Replace('_num_', '_abbrev_')) and
-			fields.Has?(fld.Replace('_num_', '_name_'))
+		if fld.Has?("_num_") and fields.Has?(fld.Replace("_num_", "_abbrev_")) and
+			fields.Has?(fld.Replace("_num_", "_name_"))
 			{
 			fields.Remove(fld)
 			return true
@@ -92,8 +93,8 @@ class
 		if false is tablename = .foreign_key_table(f)
 			return
 		prompt = .GetFieldPrompt(fld, .field_ob.Members())
-		fields.Add(Object(f $ "_name" $ suffix, prompt $ " Name"))
-		fields.Add(Object(f $ "_abbrev" $ suffix, prompt $ " Abbrev"))
+		fields.Add([f $ "_name" $ suffix, prompt $ " Name"])
+		fields.Add([f $ "_abbrev" $ suffix, prompt $ " Abbrev"])
 		.other[f $ "_name" $ suffix] = tablename
 		.other[f $ "_abbrev" $ suffix] = tablename
 		.field_suffixes[f $ "_name" $ suffix] = suffix
@@ -101,7 +102,7 @@ class
 		if false is includeMasterNum
 			fields.Remove(fld)
 		.table_fieldprefix[tablename] = f
-		.table_fieldnum[tablename $ "," $ suffix] = fld
+		.table_fieldnum[tablename $ ',' $ suffix] = fld
 		}
 
 	GetJoinNumField(field)
@@ -111,7 +112,7 @@ class
 		if false is tablename = .other.GetDefault(field, false)
 			return false
 		suffix = .field_suffixes[field]
-		return .table_fieldnum[tablename $ "," $ suffix]
+		return .table_fieldnum[tablename $ ',' $ suffix]
 		}
 
 	handlePrompts(fields, excludeFields, includeInternal)
@@ -124,7 +125,7 @@ class
 				prompt = f[1].Trim()
 				f = f[0]
 				}
-			else if .headerSelectPrompt is 'no_prompts'
+			else if .headerSelectPrompt is #no_prompts
 				prompt = f
 			else
 				prompt = .GetFieldPrompt(f, .field_ob.Members()).Trim()
@@ -142,7 +143,7 @@ class
 	// The purpose of GetFieldPrompt is to handle duplicate custom field prompts.
 	GetFieldPrompt(field, promptList = #())
 		{
-		if field.Prefix?('custom_')
+		if field.Prefix?(#custom_)
 			{
 			prompt = Prompt(field)
 			if not promptList.Has?(prompt)
@@ -153,15 +154,15 @@ class
 
 	warnIfNoPrompt(prompt, f, includeInternal)
 		{
-		if ((prompt is '' or prompt is f) and
-			.headerSelectPrompt isnt 'no_prompts' and includeInternal isnt true)
-			ProgrammerError('no prompt for: ' $ f)
+		if ((prompt is "" or prompt is f) and .headerSelectPrompt isnt #no_prompts and
+			includeInternal isnt true)
+			ProgrammerError("no prompt for: " $ f)
 		}
 
 	logError(s)
 		{
-		if not TestRunner.RunningTests?() and not s.Has?('custom_') and
-			not s.Has?('_reference') and not s.Has?('calc')
+		if not TestRunner.RunningTests?() and not s.Has?(#custom_) and
+			not s.Has?("_reference") and not s.Has?(#calc)
 			ProgrammerError(s)
 		}
 
@@ -169,31 +170,30 @@ class
 	foreign_key_table(field)
 		{
 		cache = Suneido.GetInit(#ForeignKeyTables,
-			{ LruCache(.foreign_key_table_getter, .cacheSize) })
+		{ LruCache(.foreign_key_table_getter, .cacheSize) })
 		return cache.Get(field)
 		}
 
 	foreign_key_table_getter(field)
 		{
-		QueryApply("indexes", key: true, columns: field $ "_num")
-			{ |x|
+		QueryApply(#indexes, key:, columns: field $ "_num")
+			{|x|
 			cols = TableModelGetColumns(x.table)
 			if cols isnt false
 				{
 				if cols.Has?(field $ "_name") and cols.Has?(field $ "_abbrev")
 					return x.table
 				}
-			else
-				if not QueryEmpty?("columns", table: x.table, column: field $ "_name") and
-					not QueryEmpty?("columns", table: x.table, column: field $ "_abbrev")
-					return x.table
+			else if not QueryEmpty?(#columns, table: x.table, column: field $ "_name") and
+				not QueryEmpty?(#columns, table: x.table, column: field $ "_abbrev")
+				return x.table
 			}
 		return false
 		}
 
 	HandleSpecialJoinFields(@args)
 		{
-		for fn in GetContributions('SelectFieldsHandleSpecialJoinFields')
+		for fn in GetContributions(#SelectFieldsHandleSpecialJoinFields)
 			if fn(@args) is true
 				return true
 		return false
@@ -208,10 +208,9 @@ class
 		// _name can't be excluded from datasource or it won't be in the list at all
 		if .field_ob.Member?(prompt) and field isnt .field_ob[prompt]
 			{
-			.logError('duplicate select prompt: ' $ field $ ' & ' $
-				.field_ob[prompt])
+			.logError("duplicate select prompt: " $ field $ " & " $ .field_ob[prompt])
 
-			if field.Prefix?('custom_') and .field_ob[prompt].Prefix?('custom_')
+			if field.Prefix?(#custom_) and .field_ob[prompt].Prefix?(#custom_)
 				{
 				// get the original custopm field mapped to this prompt
 				origField = .field_ob[prompt]
@@ -238,7 +237,7 @@ class
 	AddNumField(field, prompt)
 		{
 		.AddField(field, prompt)
-		if not field.Has?('_num')
+		if not field.Has?("_num")
 			return //* please just use .AddField
 
 		fields = Object()
@@ -310,8 +309,9 @@ class
 			fields = fields.Split(',')
 
 		joins = .buildJoinsOb(fields)
-		return joins.Join('')
+		return joins.Join("")
 		}
+
 	// add joins so select can be done using name and abbrev fields from
 	// master tables
 	// keep track of tables joined to prevent joining to same master table twice
@@ -323,18 +323,17 @@ class
 		join_tables = Object()
 		for item in join.Members()
 			{
-			str = ''
+			str = ""
 			field = join[item]
-			table = item[.. item.Find(",")]
+			table = item[.. item.Find(',')]
 			suffix = .field_suffixes[field]
 			if join_tables.Has?(table $ suffix)
 				continue
 			join_tables.Add(table $ suffix)
 			prefix = .table_fieldprefix[table]
-			numField = .table_fieldnum[table $ "," $ suffix]
-			str $= " leftjoin by(" $ numField $ ") (" $
-				table $ " project " $ prefix $ "_num, " $
-				prefix $ "_name, " $ prefix $ "_abbrev"
+			numField = .table_fieldnum[table $ ',' $ suffix]
+			str $= " leftjoin by(" $ numField $ ") (" $ table $ " project " $ prefix $
+				"_num, " $ prefix $ "_name, " $ prefix $ "_abbrev"
 			if prefix $ "_num" isnt numField
 				str $= " rename " $ prefix $ "_num to " $ numField
 			if suffix isnt ""
@@ -346,7 +345,7 @@ class
 			if withDetails?
 				{
 				fields = Object()
-				if suffix is ''
+				if suffix is ""
 					fields.Add(prefix $ "_name").Add(prefix $ "_abbrev")
 				else
 					fields.Add(prefix $ "_name" $ suffix).Add(prefix $ "_abbrev" $ suffix)
@@ -357,6 +356,7 @@ class
 			}
 		return joins
 		}
+
 	JoinsOb(fields, withDetails? = false)
 		{
 		if String?(fields)
@@ -373,7 +373,7 @@ class
 			if .field_ob.Member?(fld)
 				fld = .field_ob[fld] // convert to field name
 			if .other.Member?(fld)
-				join[.other[fld] $ "," $ fld] = fld
+				join[.other[fld] $ ',' $ fld] = fld
 			}
 		return join
 		}
@@ -381,16 +381,14 @@ class
 	FormulaFields(src)
 		{
 		fields = Object()
-		.ScanFormula(src, { |f| fields.Add(f) })
+		.ScanFormula(src, {|f| fields.Add(f) })
 		return fields
 		}
 
 	FormulaPromptsToFields(src, fields)
 		{
 		dst = ""
-		.ScanFormula(src,
-			{ |f| dst $= f; fields.AddUnique(f) },
-			{ |s| dst $= s })
+		.ScanFormula(src, {|f| dst $= f; fields.AddUnique(f) }, {|s| dst $= s })
 		return dst
 		}
 
@@ -409,16 +407,14 @@ class
 				continue
 				}
 			matched = false
-			for match in Object(.best_match, .text_match, .number_match, .reserved_match)
-				{
-				if '' isnt text = match(first, src[pos..], :reserved)
+			for match in [.best_match, .text_match, .number_match, .reserved_match]
+				if "" isnt text = match(first, src[pos..], :reserved)
 					{
 					ob.Add(Object(:pos, end: pos + text.Size()))
 					pos += text.Size()
 					matched = true
 					break
 					}
-				}
 			if not matched
 				pos += first.Size()
 			}
@@ -427,21 +423,21 @@ class
 
 	whitespace(s)
 		{
-		return String?(whitespace = s.Extract('^(\s*?)\S'))
+		return String?(whitespace = s.Extract("^(\s*?)\S"))
 			? whitespace
-			: ''
+			: ""
 		}
 
 	reserved_match(unused, src, reserved)
 		{
 		if reserved is false
-			return ''
+			return ""
 
 		for item in reserved
 			if src.Prefix?(item)
 				return item
 
-		return ''
+		return ""
 		}
 
 	text_match(first, src)
@@ -449,7 +445,7 @@ class
 		if first is '`'
 			{
 			pos = src.Find('`', 1)
-			return pos is src.Size() ? '' : src[..pos+1]
+			return pos is src.Size() ? "" : src[.. pos+1]
 			}
 		else if first in ('"', "'")
 			{
@@ -458,38 +454,38 @@ class
 				{
 				pos = Min(src.Find(`\`, pos), src.Find(first, pos))
 				if src[pos] is first
-					return src[..pos+1]
+					return src[.. pos+1]
 				if pos is src.Size()
-					return ''
+					return ""
 				pos += 2
 				}
 			}
-		return ''
+		return ""
 		}
 
-	number_match(first /*unused*/, src)
+	number_match(first/*unused*/, src)
 		{
-		if false is numberText = src.Extract('^(\.[0-9]+|[0-9]+\.[0-9]+|[0-9]+)')
-			return ''
-		return src[..numberText.Size()]
+		if false is numberText = src.Extract("^(\.[0-9]+|[0-9]+\.[0-9]+|[0-9]+)")
+			return ""
+		return src[.. numberText.Size()]
 		}
 
-	ScanFormula(src, field_block, other_block = function (unused) { })
+	ScanFormula(src, field_block, other_block = function(unused) { })
 		{
 		src = src.Trim()
-		while src isnt ''
+		while src isnt ""
 			{
 			other_block(whitespace = .whitespace(src))
 			src = src[whitespace.Size() ..]
 			next = .first(src)
-			if '' isnt best = .best_match(next, src)
+			if "" isnt best = .best_match(next, src)
 				field_block(.PromptToField(best))
-			else if '' isnt best = .text_match(next, src)
+			else if "" isnt best = .text_match(next, src)
 				other_block(best)
 			else
 				other_block(next)
 
-			if best isnt ''
+			if best isnt ""
 				next = best
 			src = src[next.Size() ..]
 			}
@@ -500,7 +496,7 @@ class
 		if src[next.Size()] is '('
 			return ""
 		possible = .lookup[next]
-		best = ''
+		best = ""
 		for p in possible
 			if src.Prefix?(p) and p.Size() > best.Size()
 				best = p
@@ -515,7 +511,7 @@ class
 		return .lookup = tbl // once only
 		}
 
-	notWordChars: '^_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	notWordChars: "^_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	first(s) // string should not start with space charcters
 		{
 		start = s.Find1of(.notWordChars)
@@ -527,5 +523,38 @@ class
 	NameAbbrev?(field)
 		{
 		return .field_suffixes.Member?(field)
+		}
+
+	Serialize()
+		{
+		return Pack(Object(
+			orig_fields: .orig_fields,
+			headerSelectPrompt: .headerSelectPrompt,
+			field_ob: .field_ob,
+			table_fieldprefix: .table_fieldprefix,
+			table_fieldnum: .table_fieldnum,
+			field_suffixes: .field_suffixes,
+			other: .other,
+			converted: .converted))
+		}
+
+	Deserialize(data)
+		{
+		state = Unpack(data)
+		sf = SelectFields()
+		sf.Load(state)
+		return sf
+		}
+
+	Load(state)
+		{
+		.orig_fields = state.orig_fields
+		.headerSelectPrompt = state.headerSelectPrompt
+		.field_ob = state.field_ob
+		.table_fieldprefix = state.table_fieldprefix
+		.table_fieldnum = state.table_fieldnum
+		.field_suffixes = state.field_suffixes
+		.other = state.other
+		.converted = state.converted
 		}
 	}

@@ -5,15 +5,13 @@ class
 		{
 		res = Object()
 		for infoValue in infoValues
-			{
 			if type is infoValue.BeforeFirst(':')
 				res.Add(infoValue.AfterFirst(':').Trim())
-			}
-		return res.Join(', ')
+		return res.Join(", ")
 		}
 
-	Prefix: 'reporter_info_'
-	AddFields(sf)
+	Prefix: #reporter_info_
+	AddFields(sf, restApi? = false)
 		{
 		infoFields = Object()
 		prefixList = Object()
@@ -28,7 +26,7 @@ class
 				if false is prompt = .PrefixPrompt(prefix)
 					continue
 
-				prefixList[prefix] = Object(:prompt, deps: Object(fld))
+				prefixList[prefix] = Object(:prompt, deps: [fld])
 				}
 			else
 				prefixList[prefix].deps.AddUnique(fld)
@@ -36,8 +34,10 @@ class
 		for prefix, ob in prefixList
 			for infotype in InfoTypes
 				{
-				type = infotype[.. -1]
-				field = .Prefix $ prefix $ '_' $ type
+				type = infotype[..-1]
+				field = restApi?
+					? prefix $ "_info_" $ type.Lower()
+					: .Prefix $ prefix $ '_' $ type
 				displayPrompt = Opt(ob.prompt, ' ') $ type
 				sf.AddField(field, displayPrompt)
 				infoFields.Add(Object(:field, :prefix, :type,
@@ -48,11 +48,11 @@ class
 
 	PrefixPrompt(prefix)
 		{
-		if prefix $ '_num' is prompt = SelectPrompt(prefix $ '_num')
-			prompt = SelectPrompt(prefix $ '_name')
+		if prefix $ "_num" is prompt = SelectPrompt(prefix $ "_num")
+			prompt = SelectPrompt(prefix $ "_name")
 
 		// if still can't find a datadict at this point - skip
-		if prefix $ '_name' is prompt
+		if prefix $ "_name" is prompt
 			return false
 
 		return .infoPrompt(prompt)
@@ -60,11 +60,11 @@ class
 
 	infoPrompt(prompt)
 		{
-		if prompt is "Name"
+		if prompt is #Name
 			return ""
 
-		if prompt.Has?('Date/Time')
-			return prompt.BeforeFirst('Date/Time').Trim()
+		if prompt.Has?("Date/Time")
+			return prompt.BeforeFirst("Date/Time").Trim()
 
 		return prompt
 		}
@@ -73,8 +73,11 @@ class
 		{
 		extends = infoFields.
 			Filter({ fields.Has?(it.field) }).
-			Map({ it.field $ ' = Reporter_extend_info(' $ Display(it.type) $
-				', Object(' $ it.deps.Sort!().Join(', ') $ '))' })
-		return Opt('\nextend ', extends.Join(',\n'))
+			Map(
+				{
+				it.field $ " = Reporter_extend_info(" $ Display(it.type) $ ", Object(" $
+					it.deps.Sort!().Join(", ") $ "))"
+				})
+		return Opt("\nextend ", extends.Join(",\n"))
 		}
 	}

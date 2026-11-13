@@ -51,7 +51,9 @@ class
 	Map2Iterator: class
 		{
 		i: 0
-		New(.ob, .mems, .block) { }
+		New(.ob, .mems, .block)
+			{
+			}
 
 		Next()
 			{
@@ -571,25 +573,13 @@ class
 		return this
 		}
 
-	sig_Each2: "(block) :object"
-	Each2(block) // passes member and value to block
-		{
-		for m in .SafeMembers()
-			try
-				block(m, this[m])
-			catch (e, "block:")
-				if e is "block:break"
-					break
-		// else block:continue ... so continue
-		return this
-		}
-
 	sig_SortWith!: "(block) :object"
 	SortWith!(block)
 		{
 		return .Sort!({|x, y| block(x) < block(y) })
 		}
 
+	// TODO remove after BuiltDate 20261001 (builtin)
 	sig_Extract: "(member, x = #extract_no_default) :unknown"
 	Extract(member, x = #extract_no_default) //TODO rename to Extract!
 		{
@@ -599,7 +589,7 @@ class
 			.Delete(member)
 			}
 		else if x is #extract_no_default
-			throw "missing: " $ member
+			throw "member not found: " $ Display(member)
 		return x
 		}
 

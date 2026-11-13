@@ -3,46 +3,45 @@
 // REFACTOR: always initiate .ExpandModel to avoid false checking
 class
 	{
-	ColModel:			false
-	CheckBoxColModel:	false
-	EditModel:			false
-	ExpandModel:		false
-	NextNum: 			false
-	Created:			false
+	ColModel:         false
+	CheckBoxColModel: false
+	EditModel:        false
+	ExpandModel:      false
+	NextNum:          false
+	Created:          false
 
-	Offset:			0
-	VisibleRows: 	0
+	Offset:           0
+	VisibleRows:      0
 
-	baseQuery: 		false
-	query:			false
-	limit:			1000
-	segment:		200
+	baseQuery:        false
+	query:            false
+	limit:            1000
+	segment:          200
 
 	New(query, startLast = false, columns = #(), columnsSaveName = false,
 		headerSelectPrompt = false, where = false, hideCustomColumns? = false,
 		mandatoryFields = #(), .checkBoxColumn = false, checkBoxAmountField = false,
-		lockFields = #(),
-		sortSaveName = false, .protectField = false, disableCheckSortLimit? = false,
-		.extraSetupRecord = false, .observerList = false,
-		validField = false, nextNum = false, excludeSelectFields = #(),
-		.loadAll? = false, .extraFmts = false, customKey = false, .keyField = false,
-		stickyFields = false, enableUserDefaultSelect = false, disableSelectFilter =false,
+		lockFields = #(), sortSaveName = false, .protectField = false,
+		disableCheckSortLimit? = false, .extraSetupRecord = false, .observerList = false,
+		validField = false, nextNum = false, excludeSelectFields = #(), .loadAll? = false,
+		.extraFmts = false, customKey = false, .keyField = false, stickyFields = false,
+		enableUserDefaultSelect = false, disableSelectFilter = false,
 		stretchColumn = false, .enableMultiSelect = false, .saveQuery = false,
 		hideColumnsNotSaved? = false, .linked? = false, useExpandModel? = false,
-		option = false, defaultColumns = false, .asof = false, .useQuery = 'auto',
+		option = false, defaultColumns = false, .asof = false, .useQuery = #auto,
 		warningField = false, sortOb = false)
 		{
 		.Created = Timestamp()
 		.baseQuery = .query = query
 
-		sf = VirtualListColModel.BuildSelectFields(
-			columns, excludeSelectFields, headerSelectPrompt)
+		sf = VirtualListColModel.BuildSelectFields(columns, excludeSelectFields,
+			headerSelectPrompt)
 		.sortModel = VirtualListSortModel(query, sf, sortSaveName, .loadAll?,
 			disableCheckSortLimit?, sortOb)
 		.InitSelection()
 
 		if where is false
-			where = ''
+			where = ""
 		.query = .sortModel.BuildQuery(.query, where)
 
 		if .checkBoxColumn isnt false
@@ -53,8 +52,8 @@ class
 			}
 
 		// expecting all keys
-		.EditModel = VirtualListEditModel(
-			lockFields, protectField, validField, warningField, .queryKeys(.baseQuery))
+		.EditModel = VirtualListEditModel(lockFields, protectField, validField,
+			warningField, .queryKeys(.baseQuery))
 		.stickyFields = StickyFields(stickyFields)
 
 		.initStartLast = startLast
@@ -78,7 +77,10 @@ class
 
 		.attachmentsManager = .EditModel.Editable?()
 			? AttachmentsManager(.baseQuery, .keys(.baseQuery))
-			: class { Default(@unused) { return false } }
+			: class
+				{
+				Default(@unused) { return false }
+				}
 		}
 
 	UpdateStickyField(record, member)
@@ -91,7 +93,7 @@ class
 		.stickyFields.ClearStickyFieldValues()
 		}
 
-	curTop: false
+	curTop:    false
 	curBottom: false
 	init()
 		{
@@ -119,17 +121,13 @@ class
 	setupRecord(rec)
 		{
 		if .CheckBoxColModel isnt false
-			{
 			if rec.Member?(.CheckBoxColModel.CheckBoxColumn)
-				{
 				if rec[.CheckBoxColModel.CheckBoxColumn]
 					.CheckBoxColModel.SelectItem(rec)
 				else
 					.CheckBoxColModel.UnselectItem(rec)
-				}
 			else
 				rec[.CheckBoxColModel.CheckBoxColumn] = .CheckBoxColModel.IsSelected(rec)
-			}
 
 		if .ColModel.HasCustomFormula?
 			CustomizeField.SetFormulas(.ColModel.GetCustomKey(), rec, .protectField)
@@ -202,9 +200,10 @@ class
 		{
 		Assert(.AllRead?)
 		top = Object()
-		.data.RemoveIf({
+		.data.RemoveIf(
+			{
 			if true is inlist? = values.Has?(it[field])
-				top.Add(it)  // to keep the order
+				top.Add(it) // to keep the order
 			inlist?
 			})
 		if top.Empty?()
@@ -218,7 +217,7 @@ class
 		{
 		whereSpecs = .ColModel.GetWhereSpecs(queryState.conditions, .AllAvailableColumns)
 		query = .sortModel.BuildQuery(.baseQuery, whereSpecs.where, queryState.sortCol)
-		if whereSpecs.where is '' and .sortModel.UsingDefaultSort?(query)
+		if whereSpecs.where is "" and .sortModel.UsingDefaultSort?(query)
 			return true
 		allCols = .ColModel.GetAvailableColumns(query)
 		return SlowQuery.Validate(query, allCols, after, queryState)
@@ -314,8 +313,7 @@ class
 			count += lines * (.startLast is false ? 1 : -1)
 			if maxLoad isnt false and count > maxLoad
 				return false
-			}
-		while lines isnt 0
+			} while lines isnt 0
 		.closeCursors()
 		return true
 		}
@@ -324,22 +322,20 @@ class
 		fromRefresh? = false)
 		{
 		if slowQueryLog is false
-			_slowQueryLog = Object(logged: false, from: 'UpdateOffset')
+			_slowQueryLog = Object(logged: false, from: #UpdateOffset)
 		if .Begin?() and .End?()
 			return 0
 
-		if offset > 0 											// scrolls down
+		if offset > 0 // scrolls down
 			{
 			lines = offset + .endOffset() - .curBottom.Pos
 			.curBottom.ReadDown(lines)
 			// plus 1 for blank row at end
 			offset = Max(0, Min(offset, .curBottom.Pos - .Offset - .VisibleRows + 1))
 			}
-		else													// scrolls up
+		else // scrolls up
 			{
-			lines = fromRefresh?
-				? .curTop.Pos - offset
-				: .curTop.Pos - offset - .Offset
+			lines = fromRefresh? ? .curTop.Pos - offset : .curTop.Pos - offset - .Offset
 			.curTop.ReadUp(lines)
 			// .Offset should not exceed top cursor position
 			offset = Max(offset, .curTop.Pos - .Offset)
@@ -365,14 +361,11 @@ class
 				.curTop.ReleaseDown(recToRelease)
 				}
 			}
-		else
+		else if .curBottom.Pos - .segment > .endOffset()
 			{
-			if .curBottom.Pos - .segment > .endOffset()
-				{
-				if false is recToRelease = .collapseBeforeReleaseBottom(saveAndCollapse)
-					return
-				.curBottom.ReleaseUp(recToRelease)
-				}
+			if false is recToRelease = .collapseBeforeReleaseBottom(saveAndCollapse)
+				return
+			.curBottom.ReleaseUp(recToRelease)
 			}
 		}
 
@@ -386,7 +379,7 @@ class
 			pos = .curTop.Pos + recToRelease
 			recylingRec = rec = .data[pos]
 
-			if rec.vl_expanded_rows isnt ''
+			if rec.vl_expanded_rows isnt ""
 				{
 				if pos + rec.vl_expanded_rows >= .Offset
 					break
@@ -394,7 +387,7 @@ class
 				}
 			if false is saveAndCollapse(recylingRec, pos - .Offset, model: this)
 				return false
-			releaseCount++
+			releaseCount += 1
 			recToRelease++
 			}
 		return recToRelease
@@ -413,18 +406,16 @@ class
 			if rec.vl_expand? is true
 				{
 				if pos - rec.vl_rows <= .endOffset()
-					{
 					break
-					}
 				releaseCount += rec.vl_rows
 				recylingRec = .data[pos - rec.vl_rows]
 				Assert(recylingRec.vl_expanded_rows is: rec.vl_rows)
 				}
-			if false is saveAndCollapse(
-				recylingRec, pos - rec.vl_rows - .Offset, model: this)
+			if false is
+				saveAndCollapse(recylingRec, pos - rec.vl_rows - .Offset, model: this)
 				return false
 
-			releaseCount++
+			releaseCount += 1
 			recToRelease++
 			}
 		return recToRelease
@@ -445,7 +436,7 @@ class
 	UpdateVisibleRows(visibleRows, _slowQueryLog = false)
 		{
 		if slowQueryLog is false
-			_slowQueryLog = Object(logged: false, from: 'UpdateVisibleRows')
+			_slowQueryLog = Object(logged: false, from: #UpdateVisibleRows)
 		if not .updateVisibleRows?(visibleRows)
 			return
 
@@ -460,10 +451,8 @@ class
 
 		.VisibleRows = visibleRows
 		if .startLast and pre_rows is 0 // for startLast first time
-			{
 			// plus 1 for blank row at end
 			.UpdateOffset(-visibleRows + 1)
-			}
 
 		.fillEmpty(ensureAtBottom, visibleRows)
 		}
@@ -528,17 +517,17 @@ class
 		if stopLoadAll
 			return false
 		queryNoSort = QueryStripSort(.query)
-		sort = QueryGetSort(.query)
+		sort = Query.GetSort(.query)
 		if .loadAll?
 			{
 			.loadAll(queryNoSort, sort, visibleRows)
 			return true
 			}
 
-		if not .query.Has?('sort')
+		if not .query.Has?(#sort)
 			return false
 
-		blacklist = Suneido.GetInit('VirtualList_NotLoadAll', Object())
+		blacklist = Suneido.GetInit(#VirtualList_NotLoadAll, Object())
 		if blacklist.GetDefault(queryNoSort, false)
 			return false
 
@@ -568,19 +557,18 @@ class
 
 		VirtualListSortModel.SortInMemory(.data, sort)
 		if prevStartLast isnt .startLast
-			.UpdateOffset(.data.Size() - visibleRows +1)
+			.UpdateOffset(.data.Size() - visibleRows + 1)
 
 		return true
 		}
+
 	SetFirstSelection()
 		{
 		if .Selection.NotEmpty?()
 			return false
 		if .data.Size() is 0
 			return false
-		focusedRow = .initStartLast
-			? .startLast ? -1 : .data.Size() - 1
-			: 0
+		focusedRow = .initStartLast ? .startLast ? -1 : .data.Size() - 1 : 0
 		.Selection.SelectRows(false, false, focusedRow)
 		return focusedRow
 		}
@@ -645,7 +633,7 @@ class
 		.curTop.Seek(field, prefix, .data)
 		.curBottom.Seek(field, prefix, .data)
 
-		.curBottom.ReadDown( .VisibleRows )
+		.curBottom.ReadDown(.VisibleRows)
 
 		if .data.Size() < .VisibleRows
 			.UpdateOffset(.data.Size() - .VisibleRows)
@@ -683,7 +671,7 @@ class
 				start = cur
 			else
 				end = cur
-			} while end - start > 1 // Search cannot get any closer
+			} while end-start > 1 // Search cannot get any closer
 		return indexes[end]
 		}
 
@@ -712,11 +700,7 @@ class
 
 	GetPosition()
 		{
-		return .Begin?()
-			? 'top'
-			: .End?()
-				? 'bottom'
-				: 'middle'
+		return .Begin?() ? #top : .End?() ? #bottom : #middle
 		}
 
 	GetRecordRowNum(record)
@@ -729,19 +713,21 @@ class
 				keyRec = .GetRecordByKeyPair(record[keys[0]], keys[0])
 			keyRecPos = false
 			if keyRec isnt false
-				keyRecPos = .data.FindIf({
-					Object?(it.vl_origin) and it.vl_origin[keys[0]] is record[keys[0]] })
+				keyRecPos = .data.FindIf(
+					{
+					Object?(it.vl_origin) and it.vl_origin[keys[0]] is record[keys[0]]
+					})
 
-			keyRecInSelection? = ''
-			recInSelection? = ''
+			keyRecInSelection? = ""
+			recInSelection? = ""
 			if .Selection isnt false
 				{
 				keyRecInSelection? = .Selection.HasSelectedRow?(keyRec)
 				recInSelection? = .Selection.HasSelectedRow?(record)
 				}
 
-			keyRecInExpand? = ''
-			recInExpand? = ''
+			keyRecInExpand? = ""
+			recInExpand? = ""
 			if .ExpandModel isnt false
 				{
 				expanded = .ExpandModel.GetExpanded()
@@ -749,8 +735,8 @@ class
 				recInExpand? = expanded.Has?(record)
 				}
 
-			keyRecInChangedRec? = ''
-			recInChangedRec? = ''
+			keyRecInChangedRec? = ""
+			recInChangedRec? = ""
 			if .EditModel isnt false
 				{
 				changedRecs = .EditModel.GetOutstandingChanges(all?:)
@@ -758,13 +744,13 @@ class
 				recInChangedRec? = changedRecs.Has?(record)
 				}
 
-			SuneidoLog('ERROR: (CAUGHT) VirtualList cannot find record', calls:,
+			SuneidoLog("ERROR: (CAUGHT) VirtualList cannot find record", calls:,
 				params: [:record, :keyRec, datasize: .data.Size(), :keyRecPos,
 					:keyRecInSelection?, :recInSelection?,
 					:keyRecInExpand?, :recInExpand?,
 					:keyRecInChangedRec?, :recInChangedRec?],
-				caughtMsg: 'additional logging to track down errors')
-			SujsAdapter.CallOnRenderBackend(#DumpStatus, 'VirtualList cannot find record')
+				caughtMsg: "additional logging to track down errors")
+			SujsAdapter.CallOnRenderBackend(#DumpStatus, "VirtualList cannot find record")
 			index = 0
 			}
 		return index - .Offset
@@ -777,7 +763,8 @@ class
 
 	GetRecordByKeyPair(val, field, str? = false)
 		{
-		return .data.FindOne({
+		return .data.FindOne(
+			{
 			Object?(it.vl_origin) and
 				(str? ? String(it.vl_origin[field]) : it.vl_origin[field]) is val
 			})
@@ -796,13 +783,9 @@ class
 		if .cannotReload(rec, force)
 			return rec
 
-		query = .GetKeyQuery(not force
-			? rec.vl_origin
-			: newRec isnt false
-				? newRec
-				: rec)
+		query = .GetKeyQuery(not force ? rec.vl_origin : newRec isnt false ? newRec : rec)
 		if false is freshRec = Query1(query)
-			return 'The current record has been deleted.'
+			return "The current record has been deleted."
 
 		// need to ensure that fields not actually shown on the screen
 		// (i.e. scrolled off the end of the page) have their associated rules kicked in
@@ -826,7 +809,7 @@ class
 
 	cannotReload(rec, force)
 		{
-		return (not (.AutoSave? and rec.Member?('vl_origin')) and not force) or
+		return (not (.AutoSave? and rec.Member?(#vl_origin)) and not force) or
 			.EditModel.RecordLocked?(rec)
 		}
 
@@ -839,24 +822,24 @@ class
 			{
 			keyPairs = rec.Project(.keys(.baseQuery))
 			if false is pos = .data.FindIf({ .matchesKeyPairs?(keyPairs, it) })
-				.logDebugging(reason: 'Record no longer exists in .data', :keyPairs)
+				.logDebugging(reason: "Record no longer exists in .data", :keyPairs)
 			else
 				{
 				diffs = Object()
 				dataRec = .data[pos]
 				rec.Members().MergeUnion(dataRec.Members()).Each()
 					{
-					dataVal = dataRec.GetDefault(it, '')
-					recVal = rec.GetDefault(it, '')
+					dataVal = dataRec.GetDefault(it, "")
+					recVal = rec.GetDefault(it, "")
 					if dataVal isnt recVal
-						diffs[it] = 'dataVal: ' $ Display(dataVal) $
-							', recVal: ' $ Display(recVal)
+						diffs[it] = "dataVal: " $ Display(dataVal) $ ", recVal: " $
+							Display(recVal)
 					}
-				.logDebugging(reason: 'Record out of sync', :diffs)
+				.logDebugging(reason: "Record out of sync", :diffs)
 				}
 			}
 		catch (error)
-			.logDebugging(reason: 'Error caught', :error)
+			.logDebugging(reason: "Error caught", :error)
 		return false
 		}
 
@@ -870,16 +853,17 @@ class
 
 	logDebugging(@params)
 		{
-		SuneidoLog('WARNING: extra debugging, please include with suggestion/notes',
+		SuneidoLog("WARNING: extra debugging, please include with suggestion/notes",
 			:params)
 		}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	GetKeyQuery(rec, save? = false)
 		{
 		query = QueryHelper.StripSort(save? is true ? .GetSaveQuery() : .baseQuery)
-		return query $ Opt(" where ",
-			.keys(query).Map({ it $ ' is ' $ Display(rec[it]) }).Join(' and '))
+		return query $
+			Opt(" where ",
+				.keys(query).Map({ it $ " is " $ Display(rec[it]) }).Join(" and "))
 		}
 
 	GetSaveQuery()
@@ -901,7 +885,7 @@ class
 		{
 		newRec = .buildNewRec(record)
 		if not force and false is AllowInsertRecord?(newRec.Copy(), .protectField)
-			return false	// disallow adding a protected record
+			return false // disallow adding a protected record
 		if not .startLast
 			{
 			if row_num is false and .VisibleRows isnt 0 and
@@ -911,8 +895,8 @@ class
 				.data.Add(newRec, at: .curBottom.Pos)
 			else
 				{
-				for (i = .curBottom.Pos; i > row_num + .Offset; i--)
-					.data[i] = .data[i - 1]
+				for (i = .curBottom.Pos; i > row_num + .Offset; i -= 1)
+					.data[i] = .data[i-1]
 				.data[row_num + .Offset] = newRec
 				}
 			.curBottom.Pos += 1
@@ -921,7 +905,7 @@ class
 			{
 			if row_num is false
 				row_num = Min(-.Offset, .VisibleRows)
-			for (i = .curTop.Pos; i <= row_num + .Offset - 1; i++)
+			for (i = .curTop.Pos; i <= row_num + .Offset - 1; i += 1)
 				.data[i-1] = .data[i]
 			.data[row_num + .Offset - 1] = newRec
 			.curTop.Pos -= 1
@@ -933,12 +917,12 @@ class
 
 	buildNewRec(record = false)
 		{
-		newRec = record is false ? Record() : record
+		newRec = record is false ? [] : record
 		for key in .keys(.baseQuery)
 			newRec[key] // trigger rules on key fields
 		.NextNum.ReserveNextNum(newRec, .baseQuery)
-		ListCustomize.HandleCustomizableFields(
-			.ColModel.GetCustomKey(), newRec, .protectField)
+		ListCustomize.HandleCustomizableFields(.ColModel.GetCustomKey(), newRec,
+			.protectField)
 		.extraSetup(newRec)
 		newRec.vl_list = .observerList
 		newRec.Observer(VirtualListObserverOnChange)
@@ -953,7 +937,7 @@ class
 		{
 		newRec = .buildNewRec()
 		.data.Replace(rec, newRec)
-		if .ExpandModel isnt false and rec.vl_expanded_rows isnt ''
+		if .ExpandModel isnt false and rec.vl_expanded_rows isnt ""
 			{
 			// Re-associate the expanded rows with the new record.
 			// Otherwise, the expanded controls will be inoperable post restore
@@ -1019,8 +1003,8 @@ class
 		if col isnt .checkBoxColumn and forceCheck isnt true
 			return
 		if false is rec = .data.FindOne({ key is it[.keyField] })
-			if false is rec = Query1(QueryStripSort(.baseQuery) $
-				' where ' $ .keyField $ ' is ' $ Display(key))
+			if false is rec = Query1(QueryStripSort(.baseQuery) $ " where " $ .keyField $
+				" is " $ Display(key))
 				return
 		.CheckBoxColModel.CheckRecord(rec)
 		}
@@ -1085,29 +1069,29 @@ class
 		return .limit - .segment
 		}
 
-	GoToQueryView()
+	GoToQueryView(rec = false)
 		{
-		GotoQueryView(.query)
+		VirtualListDev.GoToQueryView(.query, rec, .keys(.query))
 		}
 
 	SetRecordExpanded(row_num, rows)
 		{
 		rec = .GetRecord(row_num)
-		if rec.vl_expanded_rows isnt ''
+		if rec.vl_expanded_rows isnt ""
 			return
 		rec.vl_expanded_rows = rows
 
 		if not .startLast
 			{
-			for(i = .curBottom.Pos-1; i >= row_num + .Offset; --i)
+			for (i = .curBottom.Pos - 1; i >= row_num + .Offset; --i)
 				.data[i+rows] = .data[i]
-			for(i = 1; i <= rows; ++i)
-				.data[row_num + .Offset + i] = .expandRec(rows, i -1)
+			for (i = 1; i <= rows; ++i)
+				.data[row_num + .Offset + i] = .expandRec(rows, i - 1)
 			.curBottom.Pos += rows
 			}
 		else
 			{
-			for(i = .curTop.Pos; i <= row_num + .Offset; ++i)
+			for (i = .curTop.Pos; i <= row_num + .Offset; ++i)
 				.data[i-rows] = .data[i]
 			for i in ..rows
 				.data[row_num + .Offset - i] = .expandRec(rows, i)
@@ -1118,28 +1102,28 @@ class
 
 	expandRec(rows, index)
 		{
-		return [vl_expand?: true, vl_rows: rows, vl_expand_index: index]
+		return [vl_expand?:, vl_rows: rows, vl_expand_index: index]
 		}
 
 	SetRecordCollapsed(row_num, keepPosition? = false)
 		{
 		rec = .GetRecord(row_num)
-		if '' is rows = rec.vl_expanded_rows
+		if "" is rows = rec.vl_expanded_rows
 			return
 
-		rec.Delete('vl_expanded_rows')
+		rec.Delete(#vl_expanded_rows)
 		if not .startLast
 			{
 			i = row_num + .Offset + 1
-			for(; i < .curBottom.Pos-rows; ++i)
+			for (; i < .curBottom.Pos - rows; ++i)
 				.data[i] = .data[i+rows]
-			for (j = .curBottom.Pos -1 ; j >= i; --j)
+			for (j = .curBottom.Pos - 1; j >= i; --j)
 				.data.Delete(j)
 			.curBottom.Pos -= rows
 			}
 		else
 			{
-			for(i = row_num + .Offset; i >= .curTop.Pos; --i)
+			for (i = row_num + .Offset; i >= .curTop.Pos; --i)
 				.data[i+rows] = .data[i]
 			for i in ..rows
 				.data.Delete(.curTop.Pos + i)
@@ -1157,7 +1141,7 @@ class
 			}
 		if not .startLast and row_num < 0
 			.Offset = Max(.Offset - Min(rows, -row_num), 0)
-		if .startLast and row_num + rows >= 0
+		if .startLast and row_num+rows >= 0
 			.Offset = Min(.Offset + Min(rows, row_num + rows), -1)
 		}
 
@@ -1203,7 +1187,7 @@ class
 		{
 		if .invalidFocus?(row)
 			{
-			SuneidoLog('INFO: found invalid focused row number', calls:,
+			SuneidoLog("INFO: found invalid focused row number", calls:,
 				params: [:row, size: .data.Size()])
 			return true
 			}
@@ -1212,8 +1196,8 @@ class
 
 	invalidFocus?(row)
 		{
-		return row isnt false and row < 0 and .AllRead? and
-			not .GetStartLast() and .curTop isnt false and not .curTop.Seeking
+		return row isnt false and row < 0 and .AllRead? and not .GetStartLast() and
+			.curTop isnt false and not .curTop.Seeking
 		}
 
 	GetPrimarySort()
@@ -1240,8 +1224,8 @@ class
 
 	QueueDeleteAttachmentFile(newFile, oldFile, rec, fieldName, action)
 		{
-		return .attachmentsManager.QueueDeleteFile(
-			newFile, oldFile, rec, fieldName, action)
+		return .attachmentsManager.QueueDeleteFile(newFile, oldFile, rec, fieldName,
+			action)
 		}
 
 	DeleteRecordAttachments(rec)
@@ -1267,10 +1251,12 @@ class
 		{
 		return .sortModel.CheckAboveSortLimit?()
 		}
+
 	SetOverSortLimit(overSortLimit?)
 		{
 		.sortModel.SetOverSortLimit(overSortLimit?)
 		}
+
 	SortLimitChecked?()
 		{
 		return .sortModel.SortLimitChecked?()
@@ -1284,8 +1270,10 @@ class
 		sf = .ColModel.GetSelectFields()
 		indexes = .SelectableIndexes()
 		indexedConditions = conditions.Filter(
-			{ indexes.Has?(it.condition_field) or
-				indexes.Has?(sf.GetJoinNumField(it.condition_field)) })
+			{
+			indexes.Has?(it.condition_field) or
+				indexes.Has?(sf.GetJoinNumField(it.condition_field))
+			})
 
 		whereSpecs = .ColModel.GetWhereSpecs(indexedConditions, .AllAvailableColumns)
 		return .sortModel.QueryAboveSortLimit?(.baseQuery, whereSpecs.where)

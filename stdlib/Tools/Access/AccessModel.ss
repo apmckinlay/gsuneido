@@ -7,7 +7,10 @@ class
 			.innerModel = Construct(args[0])
 		else // old style
 			{
-			.innerModel = new class { Before_Delete(unused) { } }
+			.innerModel = new class
+				{
+				Before_Delete(unused) { }
+				}()
 			.innerModel.Query = args[0]
 			}
 		.base_query = .innerModel.Query
@@ -16,15 +19,15 @@ class
 		.keys = .c.Keys()
 		.shortest_key = ShortestKey(.keys)
 
-		locateArg = args.GetDefault('locate', #())
-		locateKeyArgs = locateArg.GetDefault("keys", .keys)
+		locateArg = args.GetDefault(#locate, #())
+		locateKeyArgs = locateArg.GetDefault(#keys, .keys)
 		.locateKeys = .buildLocateKeys(locateKeyArgs)
-		.mainLocatekey = locateArg.GetDefault("mainkey", false)
-		.excludeSelectFields = args.GetDefault('excludeSelectFields', #())
-		.option = .args.GetDefault('option', 'Access')
+		.mainLocatekey = locateArg.GetDefault(#mainkey, false)
+		.excludeSelectFields = args.GetDefault(#excludeSelectFields, #())
+		.option = .args.GetDefault(#option, #Access)
 		.observers = Object()
 		headerSelectPrompt = args.Size(list:) is 1 and dynamicTypes is false
-			? 'no_prompts'
+			? #no_prompts
 			: false
 		.sf = SelectFields(.GetFields(), .GetExcludeSelectFields(), :headerSelectPrompt,
 			includeMasterNum:)
@@ -41,7 +44,7 @@ class
 		for k in locateKeyArgs
 			{
 			// composite keys do not work in locate
-			if k.Has?(",") or k.Suffix?('_num')
+			if k.Has?(',') or k.Suffix?("_num")
 				continue
 			if k is "" or locateKeys.Member?(prompt = SelectPrompt(k))
 				locateKeys[k] = k
@@ -98,15 +101,14 @@ class
 	GetKeyField()
 		{
 		// keep the order if we can
-		if false is (field = .c.Order()) and
-			false is (field = .queryKeyOrder())
+		if false is (field = .c.Order()) and false is (field = .queryKeyOrder())
 			field = .shortest_key
 		return field
 		}
 
 	queryKeyOrder()
 		{
-		sort = QueryGetSort(.query).RemovePrefix("reverse ")
+		sort = Query.GetSort(.query).RemovePrefix("reverse ")
 		return .GetKeys().Has?(sort) ? sort : false
 		}
 
@@ -130,7 +132,7 @@ class
 		{
 		if record is false
 			throw "unable to generate key where clause"
-		.keyquery = QueryStripSort(.base_query) $ "\n" $ .getKeyWhere(record)
+		.keyquery = Query.StripSort(.base_query) $ '\n' $ .getKeyWhere(record)
 		}
 
 	getKeyWhere(record)
@@ -150,7 +152,7 @@ class
 	AddMoreToQuery(where)
 		{
 		query = QueryAddMore(.base_query, where)
-		if where.Has?('leftjoin by') and not .base_query.Has?('/* tableHint: ')
+		if where.Has?("leftjoin by") and not .base_query.Has?("/* tableHint: ")
 			query = `/* tableHint: ` $ QueryGetTable(.base_query) $ ` */ ` $ query
 		.SetQuery(query)
 		return true
@@ -168,19 +170,18 @@ class
 
 	GetLocateLayout()
 		{
-		locateArg = .args.GetDefault('locate', #())
-		locatequery = locateArg.GetDefault("query", .query)
-		columns = locateArg.GetDefault('columns', false)
-		sortFields = locateArg.GetDefault('sortFields', #())
-		optionalRestrictions = locateArg.GetDefault('optionalRestrictions', #())
-		startLast = locateArg.
-			GetDefault('startLast', .args.GetDefault('startLast', false))
-		customizeQueryCols = locateArg.GetDefault('customizeQueryCols', false)
+		locateArg = .args.GetDefault(#locate, #())
+		locatequery = locateArg.GetDefault(#query, .query)
+		columns = locateArg.GetDefault(#columns, false)
+		sortFields = locateArg.GetDefault(#sortFields, #())
+		optionalRestrictions = locateArg.GetDefault(#optionalRestrictions, #())
+		startLast = locateArg.GetDefault(#startLast, .args.GetDefault(#startLast, false))
+		customizeQueryCols = locateArg.GetDefault(#customizeQueryCols, false)
 
-		option = .option is 'Access' or .option is '' ? false : .option
-		return Object('Locate', locatequery, .locateKeys, :columns, :sortFields,
+		option = .option is #Access or .option is "" ? false : .option
+		return [#Locate, locatequery, .locateKeys, :columns, :sortFields,
 			:option, excludeSelect: .excludeSelectFields, :optionalRestrictions,
-			:customizeQueryCols, :startLast)
+			:customizeQueryCols, :startLast]
 		}
 
 	FindGotoField(field)
@@ -199,8 +200,9 @@ class
 
 	GetExcludeSelectFields()
 		{
-		return .excludeSelectFields.Copy().MergeUnion(
-			Customizable.GetNonPermissableFields(.query))
+		return .excludeSelectFields.
+			Copy().
+			MergeUnion(Customizable.GetNonPermissableFields(.query))
 		}
 
 	plugins: false
@@ -211,7 +213,7 @@ class
 
 	Plugins_Execute(@args)
 		{
-		if .plugins is false or not args.Member?('pluginType')
+		if .plugins is false or not args.Member?(#pluginType)
 			return
 
 		// pluginType = 'AccessObservers', 'Observers', 'AfterField'
@@ -243,9 +245,10 @@ class
 	TableNotEmpty?()
 		{
 		table = QueryGetTable(.query, nothrow:)
-		return .keyquery isnt false and table isnt "" and
-			not QueryEmpty?(table) and QueryEmpty?(.query)
+		return .keyquery isnt false and table isnt "" and not QueryEmpty?(table) and
+			QueryEmpty?(.query)
 		}
+
 	TableEmpty?()
 		{
 		table = QueryGetTable(.query, nothrow:)
