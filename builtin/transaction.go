@@ -170,7 +170,7 @@ func tran_TableInfo(th *Thread, this Value, args []Value) Value {
 	tran := this.(*SuTran)
 	table := ToStr(args[0])
 	nrows, size := tran.TableInfo(table)
-		th.ReturnMulti = append(th.ReturnMulti[:0],
-			IntVal(nrows), IntVal(size))
+	th.ReturnMulti = append(th.ReturnMulti[:0],
+		IntVal(nrows), IntVal(size))
 	return nil
 }
