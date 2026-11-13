@@ -38,7 +38,7 @@ func TestTableGetFilter(t *testing.T) {
 	db.act("insert {a: 2} into filtertest")
 	tran := db.NewReadTran(core.AllPerms)
 	defer tran.Complete()
-	tbl := NewTable(tran, "filtertest").(*Table)
+	tbl := NewTable(tran, "filtertest")
 	tbl.SetIndex([]string{"a"}, ReadMode)
 	test := func(dir core.Dir) {
 		t.Helper()

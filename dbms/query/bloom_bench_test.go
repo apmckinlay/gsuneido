@@ -76,7 +76,7 @@ func benchmarkBloomCost(b *testing.B, db *db19.Database) {
 		defer tran.Complete()
 		for _, col := range []string{"k", "a"} {
 			b.Run(fmt.Sprintf("%s/table_%s", bt.name, col), func(b *testing.B) {
-				tbl := NewTable(tran, bt.name).(*Table)
+				tbl := NewTable(tran, bt.name)
 				index := tbl.indexes[slices.IndexFunc(tbl.indexes,
 					func(index []string) bool { return index[0] == col })]
 				tbl.SetIndex(index, ReadMode)
@@ -97,7 +97,7 @@ func benchmarkBloomCost(b *testing.B, db *db19.Database) {
 				b.ReportMetric(float64(cost)/float64(bt.rows), "units/entry")
 			})
 		}
-		tbl := NewTable(tran, bt.name).(*Table)
+		tbl := NewTable(tran, bt.name)
 		probes := collectOffsets(tbl, benchSelection(b, tbl, "a", bt.rows, 1))
 		for _, frac := range []float64{1, .1, .01, .002} {
 			offs := collectOffsets(tbl, benchSelection(b, tbl, "b", bt.rows, frac))
@@ -292,7 +292,7 @@ func collectOffsets(tbl *Table, sel *idxSel) []uint64 {
 func benchmarkBitmapFactors(b *testing.B, db *db19.Database) {
 	for _, bt := range bloomBenchTables {
 		tran := db.NewReadTran(AllPerms)
-		tbl := NewTable(tran, bt.name).(*Table)
+		tbl := NewTable(tran, bt.name)
 		for _, frac := range []float64{1, .5, .1, .01, .002} {
 			sel := benchSelection(b, tbl, "a", bt.rows, frac)
 			n := len(collectOffsets(tbl, sel))

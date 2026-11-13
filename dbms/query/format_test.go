@@ -19,70 +19,70 @@ func TestFormat(t *testing.T) {
 		actual := Format(tran, query)
 		assert.T(t).This(actual).Is(strings.Trim(expected, "\r\n"))
 	}
-	test("tables", `
-tables`)
+	test("table", `
+table`)
 	test("myview", `
 myview /*view*/`)
-	test("tables extend b = 123, r", `
-tables
-extend b = 123, r`)
-	test("tables project table, nrows", `
-tables
-project table, nrows`)
-	test("tables project nrows", `
-tables
-project /*NOT UNIQUE*/ nrows`)
-	test("tables remove nrows, totalsize", `
-tables
-remove nrows, totalsize`)
-	test("columns rename column to col", `
-columns
-rename column to col`)
-	test("tables sort table", `
-tables
-sort table`)
-	test("columns summarize table, count", `
-columns
-summarize table, count`)
-	test("tables where nrows > 5", `
-tables
-where nrows > 5`)
-	test("(tables extend x = 1) union columns", `
-    (tables
-    extend x = 1)
+	test("table extend d = 123, e", `
+table
+extend d = 123, e`)
+	test("table project a, b", `
+table
+project a, b`)
+	test("table project b", `
+table
+project /*NOT UNIQUE*/ b`)
+	test("table remove b, c", `
+table
+remove b, c`)
+	test("table rename b to d", `
+table
+rename b to d`)
+	test("table sort a", `
+table
+sort a`)
+	test("table summarize a, count", `
+table
+summarize a, count`)
+	test("table where b > 5", `
+table
+where b > 5`)
+	test("(table extend d = 1) union customer", `
+    (table
+    extend d = 1)
 union
-    columns`)
-	test("tables union (columns extend x = 1)", `
-    tables
+    customer`)
+	test("table union (customer extend x = 1)", `
+    table
 union
-    (columns
+    (customer
     extend x = 1)`)
-	test("tables union columns", `
-    tables
+	test("table union customer", `
+    table
 union /*NOT DISJOINT*/
-    columns`)
-	test("tables intersect tables", `
-    tables
+    customer`)
+	test("table intersect table2", `
+    table
 intersect
-    tables`)
-	test("tables minus tables", `
-    tables
+    table2`)
+	test("table minus table2", `
+    table
 minus
-    tables`)
-	test("tables times history", `
-    tables
+    table2`)
+	test("table times task", `
+    table
 times
-    history`)
-	test("tables join columns", `
-    tables
-join by(table)
-    columns`)
-	test("tables leftjoin columns", `
-    tables
-leftjoin by(table)
-    columns`)
-	test("tables semijoin columns", `
-    tables
-semijoin by(table)
-    columns`)
+    task`)
+	test("cus join task", `
+    cus
+join by(cnum)
+    task`)
+	test("cus leftjoin task", `
+    cus
+leftjoin by(cnum)
+    task`)
+	test("cus semijoin task", `
+    cus
+semijoin by(cnum)
+    task`)
 }

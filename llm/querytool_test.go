@@ -19,19 +19,27 @@ import (
 func TestQueryTool(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
-	dbms := dbms.NewDbmsLocal(db)
+	db19.StartConcur(db, 50*time.Millisecond)
+	dbmsLocal := dbms.NewDbmsLocal(db)
+	dbmsLocal.AdminTest("create querytool (k, a) key(k)")
 
-	result, err := queryTool(testToolContext(dbms), "tables sort table")
+	th := core.NewThread(dbmsLocal, nil)
+	defer th.Close()
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
+	for i, a := range []string{"one", "two"} {
+		n := tran.Action(th, fmt.Sprintf("insert { k: %d, a: %q } into querytool", i, a))
+		assert.This(n).Is(1)
+	}
+	tran.Complete()
+
+	result, err := queryTool(testToolContext(dbmsLocal), "querytool sort k")
 	assert.That(err == nil)
 	assert.This(result.Results).Is("[\n" +
-		"[\"table\", \"nrows\", \"totalsize\"]\n" +
-		"[\"columns\", 20, 0]\n" +
-		"[\"dbstats\", 0, 0]\n" +
-		"[\"history\", 1000, 0]\n" +
-		"[\"indexes\", 0, 0]\n" +
-		"[\"tables\", 6, 0]\n" +
-		"[\"views\", 0, 0]\n" +
+		"[\"k\", \"a\"]\n" +
+		"[0, \"one\"]\n" +
+		"[1, \"two\"]\n" +
 		"]\n")
+	assert.That(!result.HasMore)
 }
 
 func TestQueryToolSizeLimit(t *testing.T) {

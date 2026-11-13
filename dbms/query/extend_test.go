@@ -18,7 +18,7 @@ func TestExtendInit(t *testing.T) {
 		ParseQuery(query, testTran{}, nil)
 	}
 	test("hist extend price = cost")
-	test("columns extend a = 1, b = 2, c = a + b")
+	test("customer extend a = 1, b = 2, c = a + b")
 
 	xtest := func(query, expected string) {
 		t.Helper()
@@ -29,7 +29,7 @@ func TestExtendInit(t *testing.T) {
 		"extend: column(s) already exist")
 	xtest("inven extend price = cost",
 		"extend: invalid column(s) in expressions: cost")
-	xtest("columns extend c = a + b, a = 1, b = 2",
+	xtest("customer extend c = a + b, a = 1, b = 2",
 		"extend: invalid column(s) in expressions: a, b")
 }
 

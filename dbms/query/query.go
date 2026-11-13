@@ -7,12 +7,6 @@
 		Table
 		Nothing
 		ProjectNone
-		schemaTable
-			Tables
-			TablesLookup
-			Columns
-			Indexes
-			History
 		Query1
 			Extend
 			Project / Remove

@@ -115,9 +115,10 @@ func TestQueryGet(t *testing.T) {
 	// t.SkipNow()
 
 	test("indexes project table, columns, key",
-		"indexes project-copy table, columns, key",
+		"indexes^(table,columns) project-copy table, columns, key",
 		`columns	key	table
 		'abbrev'	true	'cus'
+		'asof'	true	'history'
 		'city'	false	'supplier'
 		'cnum'	true	'cus'
 		'date'	false	'hist'
@@ -131,10 +132,15 @@ func TestQueryGet(t *testing.T) {
 		'item'	false	'trans'
 		'item'	true	'inven'
 		'supplier'	true	'supplier'
+		'table'	true	'tables'
+		'table,column'	true	'columns'
+		'table,column'	true	'dbstats'
+		'table,columns'	true	'indexes'
 		'tnum'	true	'co'
-		'tnum'	true	'task'`)
+		'tnum'	true	'task'
+		'view_name'	true	'views'`)
 	test("columns",
-		"columns",
+		"columns^(table,column)",
 		`column	field	table
 		'abbrev'	1	'cus'
 		'asof'	0	'history'
@@ -172,7 +178,6 @@ func TestQueryGet(t *testing.T) {
 		'name'	1	'supplier'
 		'name'	2	'cus'
 		'name2'	1	'alias'
-		'nrows'	1	'tables'
 		'qty'	1	'inven'
 		'quantiles'	3	'dbstats'
 		'signed'	1	'co'
@@ -183,31 +188,28 @@ func TestQueryGet(t *testing.T) {
 		'table'	0	'tables'
 		'tnum'	0	'co'
 		'tnum'	0	'task'
-		'totalsize'	2	'tables'
 		'view_definition'	1	'views'
 		'view_name'	0	'views'`)
 	test("tables",
-		"tables",
-		// nrows/totalsize are sizeTran's overridden values (testDb is too
-		// small to test optimization); real metadata is covered elsewhere
-		`nrows	table	totalsize
-		0	'dbstats'	0
-		0	'views'	0
-		16	'indexes'	0
-		17	'tables'	0
-		50	'columns'	0
-		1000	'alias'	100000
-		1000	'co'	100000
-		1000	'cus'	100000
-		1000	'customer'	100000
-		1000	'dates'	100000
-		1000	'history'	0
-		1000	'inven'	100000
-		1000	'supplier'	100000
-		1000	'task'	100000
-		10000	'hist'	1000000
-		10000	'hist2'	1000000
-		10000	'trans'	1000000`)
+		"tables^(table)",
+		`table
+		'alias'
+		'co'
+		'columns'
+		'cus'
+		'customer'
+		'dates'
+		'dbstats'
+		'hist'
+		'hist2'
+		'history'
+		'indexes'
+		'inven'
+		'supplier'
+		'tables'
+		'task'
+		'trans'
+		'views'`)
 	test("customer",
 		"customer^(id)",
 		`city	id	name
@@ -758,11 +760,11 @@ func TestQueryGet(t *testing.T) {
 
 	// tempindex
 	test("tables intersect columns",
-		"tables intersect columns",
+		"tables^(table) intersect columns^(table,column)",
 		`table`)
 	test("tables minus tables",
-		"tables minus tables",
-		`nrows	table	totalsize`)
+		"tables^(table) minus tables^(table)",
+		`table`)
 
 	test("(customer project id) union (customer project id)",
 		"customer^(id) project-copy id union-merge (customer^(id) project-copy id)",

@@ -24,31 +24,31 @@ func TestSchemaTableInfo(t *testing.T) {
 			a.This(info.Nrows).Is(nrows)
 			a.This(info.Size).Is(nrows * 32)
 		}
-		check("tables_", ntables)
-		check("columns_", ncolumns)
-		check("indexes_", nindexes)
-		check("views_", nviews)
+		check("tables", ntables)
+		check("columns", ncolumns)
+		check("indexes", nindexes)
+		check("views", nviews)
 	}
 	empty := db.NewReadTran(AllPerms)
-	test(empty, 0, 0, 0, 0)
+	test(empty, 6, 18, 6, 0)
 	db.adm("create zz (a, b, c) key(a) index(c)")
 	db.adm("alter zz create (G)")
 	db.adm("alter zz drop (b)")
 	db.adm("view foo = zz")
 	db.adm("view bar = zz")
 	rt := db.NewReadTran(AllPerms)
-	test(rt, 1, 3, 2, 2)
+	test(rt, 7, 21, 8, 2)
 	ut := db.NewUpdateTran(AllPerms)
 	defer ut.Abort()
-	test(ut, 1, 3, 2, 2)
+	test(ut, 7, 21, 8, 2)
 	DoAction(nil, ut, "insert {a: 1, c: 2} into zz")
-	test(ut, 1, 3, 2, 2)
+	test(ut, 7, 21, 8, 2)
 	ut.Abort()
 	db.adm("drop zz")
 	db.adm("drop foo")
-	test(db.NewReadTran(AllPerms), 0, 0, 0, 1)
-	test(rt, 1, 3, 2, 2)
-	test(empty, 0, 0, 0, 0)
+	test(db.NewReadTran(AllPerms), 6, 18, 6, 1)
+	test(rt, 7, 21, 8, 2)
+	test(empty, 6, 18, 6, 0)
 }
 
 func TestSchemaTablesLookup(t *testing.T) {
@@ -59,24 +59,31 @@ func TestSchemaTablesLookup(t *testing.T) {
 	db.act("insert {a: 1} into zz")
 	test := func(tran QueryTran) {
 		t.Helper()
-		tbl := NewTable(tran, "tables_").(*Table)
+		tbl := NewTable(tran, "tables")
 		a.This(tbl.Header().Columns).Is([]string{"table"})
 		tbl.SetIndex([]string{"table"}, ReadMode)
 		row := tbl.Lookup(nil, Sels{NewSel("table", Pack(SuStr("zz")))})
 		a.This(row.GetVal(tbl.Header(), "table", nil, nil)).Is(SuStr("zz"))
+		row = tbl.Lookup(nil, Sels{NewSel("table", Pack(SuStr("tables")))})
+		a.This(row.GetVal(tbl.Header(), "table", nil, nil)).Is(SuStr("tables"))
 		a.True(tbl.Lookup(nil, Sels{NewSel("table", Pack(SuStr("missing")))}).Eof())
 		a.True(tbl.Lookup(nil, Sels{NewSel("table", Pack(One))}).Eof())
 
-		// iteration over real tables ordered by name
+		// iteration over tables ordered by name
+		all := []string{"columns", "dbstats", "history", "indexes", "tables", "views", "zz"}
 		tbl.Rewind()
-		iterRow := tbl.Get(nil, Next)
-		a.This(ToStr(iterRow.GetVal(tbl.Header(), "table", nil, nil))).Is("zz")
+		for _, name := range all {
+			iterRow := tbl.Get(nil, Next)
+			a.This(ToStr(iterRow.GetVal(tbl.Header(), "table", nil, nil))).Is(name)
+		}
 		a.True(tbl.Get(nil, Next).Eof())
 		tbl.Rewind()
-		a.This(ToStr(tbl.Get(nil, Prev).GetVal(tbl.Header(), "table", nil, nil))).Is("zz")
+		for i := len(all) - 1; i >= 0; i-- {
+			a.This(ToStr(tbl.Get(nil, Prev).GetVal(tbl.Header(), "table", nil, nil))).Is(all[i])
+		}
 		a.True(tbl.Get(nil, Prev).Eof())
 
-		q := ParseQuery("tables_ where table = 'zz'", tran, nil)
+		q := ParseQuery("tables where table = 'zz'", tran, nil)
 		q, _, _ = Setup(q, ReadMode, tran)
 		w := q.(*Where)
 		a.True(w.tbl != nil && w.idxSelBase != nil)
@@ -90,12 +97,13 @@ func TestSchemaTablesLookup(t *testing.T) {
 	DoAction(nil, ut, "insert {a: 2} into zz")
 	test(ut)
 	test(rt)
-	a.This(queryAll(db.Database, "tables_ where table = 'missing'")).Is("")
-	a.This(queryAll(db.Database, "tables_ where table = 123")).Is("")
-	a.This(queryAll(db.Database, "tables_ project table")).Is("table=zz")
-	a.This(queryAll(db.Database, "tables_ where table >= 'zz' project table")).Is("table=zz")
-	a.This(queryAll(db.Database, "tables_ where table > 'zz' project table")).Is("")
-	a.This(queryAll(db.Database, "tables where table = 'tables_'")).Is("")
+	a.This(queryAll(db.Database, "tables where table = 'missing'")).Is("")
+	a.This(queryAll(db.Database, "tables where table = 123")).Is("")
+	a.This(queryAll(db.Database, "tables project table")).
+		Is("table=columns | table=dbstats | table=history | table=indexes | table=tables | table=views | table=zz")
+	a.This(queryAll(db.Database, "tables where table >= 'zz' project table")).Is("table=zz")
+	a.This(queryAll(db.Database, "tables where table > 'zz' project table")).Is("")
+	a.This(queryAll(db.Database, "tables where table = 'tables'")).Is("table=tables")
 }
 
 // TestSchemaTablesCursor verifies that schema tables cannot be used in a
@@ -106,12 +114,12 @@ func TestSchemaTablesCursor(t *testing.T) {
 	db.adm("create zz (a) key(a)")
 	tran := db.NewReadTran(AllPerms)
 	queries := []string{
-		"tables_",
-		"tables_ where table is 'zz'",
-		"tables_ where table = 'zz'",
-		"columns_ where table is 'zz'",
-		"indexes_ where table is 'zz'",
-		"views_ where view_name is 'zz'",
+		"tables",
+		"tables where table is 'zz'",
+		"tables where table = 'zz'",
+		"columns where table is 'zz'",
+		"indexes where table is 'zz'",
+		"views where view_name is 'zz'",
 	}
 	for _, query := range queries {
 		t.Run(query, func(t *testing.T) {
@@ -131,24 +139,28 @@ func TestSchemaTablesIterRecords(t *testing.T) {
 	db.act("insert {a: 1} into zz")
 	test := func(tran QueryTran) {
 		t.Helper()
-		tbl := NewTable(tran, "tables_").(*Table)
+		tbl := NewTable(tran, "tables")
 		tbl.SetIndex([]string{"table"}, ReadMode)
 		check := func(row Row, name string) {
 			t.Helper()
 			a.This(ToStr(row.GetVal(tbl.Header(), "table", nil, nil))).Is(name)
 			a.This(row.Get(0).Count()).Is(1)
 		}
-		check(tbl.Get(nil, Next), "aa")
-		check(tbl.Get(nil, Next), "zz")
+		all := []string{"aa", "columns", "dbstats", "history", "indexes", "tables", "views", "zz"}
+		for _, name := range all {
+			check(tbl.Get(nil, Next), name)
+		}
 		a.True(tbl.Get(nil, Next).Eof())
 		tbl.Rewind()
-		check(tbl.Get(nil, Prev), "zz")
-		check(tbl.Get(nil, Prev), "aa")
+		for i := len(all) - 1; i >= 0; i-- {
+			check(tbl.Get(nil, Prev), all[i])
+		}
 		a.True(tbl.Get(nil, Prev).Eof())
 		rows := tbl.Simple(nil)
-		a.This(len(rows)).Is(2)
-		check(rows[0], "aa")
-		check(rows[1], "zz")
+		a.This(len(rows)).Is(len(all))
+		for i, name := range all {
+			check(rows[i], name)
+		}
 		tbl.Select(Sels{NewSel("table", Pack(SuStr("zz")))})
 		check(tbl.Get(nil, Next), "zz")
 		a.True(tbl.Get(nil, Next).Eof())
@@ -165,11 +177,11 @@ func TestSchemaTablesIterRecords(t *testing.T) {
 			}
 			a.True(tbl.Get(nil, Prev).Eof())
 		}
-		testRange("", "\xff", "aa", "zz")
-		testRange(Pack(SuStr("aa")), Pack(SuStr("zz")), "aa")
-		testRange(Pack(SuStr("aa"))+"\x00", "\xff", "zz")
+		testRange("", "\xff", all...)
+		testRange(Pack(SuStr("aa")), Pack(SuStr("zz")), all[:len(all)-1]...)
+		testRange(Pack(SuStr("aa"))+"\x00", "\xff", all[1:]...)
 		testRange(Pack(SuStr("zz"))+"\x00", "\xff")
-		testRange(Pack(One), "\xff", "aa", "zz")
+		testRange(Pack(One), "\xff", all...)
 		testRange("", Pack(One))
 		testRange("\xff", "\xff")
 	}
@@ -189,7 +201,7 @@ func TestSchemaColumnsLookup(t *testing.T) {
 	db.act("insert {a: 1, b: 2} into zz")
 	test := func(tran QueryTran) {
 		t.Helper()
-		tbl := NewTable(tran, "columns_").(*Table)
+		tbl := NewTable(tran, "columns")
 		tbl.SetIndex([]string{"table", "column"}, ReadMode)
 		lookup := func(table, col string) Row {
 			return tbl.Lookup(nil, Sels{
@@ -207,13 +219,15 @@ func TestSchemaColumnsLookup(t *testing.T) {
 		testCol("zz", "b", 1)
 		// derived columns are reported uncapitalized with field -1
 		testCol("zz", "g", -1)
+		testCol("columns", "column", 1)
+		testCol("tables", "table", 0)
 		a.True(lookup("zz", "missing").Eof())
 		a.True(lookup("missing", "a").Eof())
 		a.True(tbl.Lookup(nil, Sels{
 			NewSel("table", Pack(SuStr("zz"))),
 			NewSel("column", Pack(One))}).Eof())
-		// iteration over columns ordered by {table, column}
-		tbl.Rewind()
+		// iteration over columns for zz ordered by {table, column}
+		tbl.Select(Sels{NewSel("table", Pack(SuStr("zz")))})
 		iterCol := func(dir Dir, col string, field int) {
 			t.Helper()
 			row := tbl.Get(nil, dir)
@@ -231,7 +245,7 @@ func TestSchemaColumnsLookup(t *testing.T) {
 		iterCol(Prev, "a", 0)
 		a.True(tbl.Get(nil, Prev).Eof())
 
-		q := ParseQuery("columns_ where table = 'zz' and column = 'a'", tran, nil)
+		q := ParseQuery("columns where table = 'zz' and column = 'a'", tran, nil)
 		q, _, _ = Setup(q, ReadMode, tran)
 		w := q.(*Where)
 		a.True(w.tbl != nil && w.idxSelBase != nil)
@@ -245,10 +259,10 @@ func TestSchemaColumnsLookup(t *testing.T) {
 	DoAction(nil, ut, "insert {a: 2, b: 3} into zz")
 	test(ut)
 	test(rt)
-	a.This(queryAll(db.Database, "columns_ where table = 'zz' and column = 'b'")).
+	a.This(queryAll(db.Database, "columns where table = 'zz' and column = 'b'")).
 		Is("column=b field=1 table=zz")
-	a.This(queryAll(db.Database, "columns_ where table = 'missing' and column = 'x'")).Is("")
-	a.This(queryAll(db.Database, "columns_ where table = 123 and column = 'a'")).Is("")
+	a.This(queryAll(db.Database, "columns where table = 'missing' and column = 'x'")).Is("")
+	a.This(queryAll(db.Database, "columns where table = 123 and column = 'a'")).Is("")
 }
 
 func TestSchemaIndexesLookup(t *testing.T) {
@@ -260,7 +274,7 @@ func TestSchemaIndexesLookup(t *testing.T) {
 	db.adm("create kk (a) key()")
 	test := func(tran QueryTran) {
 		t.Helper()
-		tbl := NewTable(tran, "indexes_").(*Table)
+		tbl := NewTable(tran, "indexes")
 		tbl.SetIndex([]string{"table", "columns"}, ReadMode)
 		hdr := tbl.Header()
 		lookup := func(table, cols string) Row {
@@ -283,6 +297,8 @@ func TestSchemaIndexesLookup(t *testing.T) {
 		a.This(ToInt(val(row, "fkmode"))).Is(0)
 		// unique index
 		a.This(val(lookup("zz", "c"), "key")).Is(SuStr("u"))
+		// schema table index
+		a.This(val(lookup("indexes", "table,columns"), "key")).Is(True)
 		// missing
 		a.True(lookup("zz", "nosuch").Eof())
 		a.True(lookup("missing", "a").Eof())
@@ -299,6 +315,19 @@ func TestSchemaIndexesLookup(t *testing.T) {
 			NewSel("table", Pack(SuStr("kk"))),
 			NewSel("columns", Pack(One))}).Eof())
 		// iteration over indexes ordered by {table, columns}
+		allIdx := [][2]string{
+			{"columns", "table,column"},
+			{"dbstats", "table,column"},
+			{"hdr", "a"},
+			{"history", "asof"},
+			{"indexes", "table,columns"},
+			{"kk", ""},
+			{"tables", "table"},
+			{"views", "view_name"},
+			{"zz", "a"},
+			{"zz", "b"},
+			{"zz", "c"},
+		}
 		tbl.Rewind()
 		iterIdx := func(dir Dir, table, cols string) {
 			t.Helper()
@@ -306,21 +335,17 @@ func TestSchemaIndexesLookup(t *testing.T) {
 			a.This(ToStr(row.GetVal(tbl.Header(), "table", nil, nil))).Is(table)
 			a.This(ToStr(row.GetVal(tbl.Header(), "columns", nil, nil))).Is(cols)
 		}
-		iterIdx(Next, "hdr", "a")
-		iterIdx(Next, "kk", "")
-		iterIdx(Next, "zz", "a")
-		iterIdx(Next, "zz", "b")
-		iterIdx(Next, "zz", "c")
+		for _, ix := range allIdx {
+			iterIdx(Next, ix[0], ix[1])
+		}
 		a.True(tbl.Get(nil, Next).Eof())
 		tbl.Rewind()
-		iterIdx(Prev, "zz", "c")
-		iterIdx(Prev, "zz", "b")
-		iterIdx(Prev, "zz", "a")
-		iterIdx(Prev, "kk", "")
-		iterIdx(Prev, "hdr", "a")
+		for i := len(allIdx) - 1; i >= 0; i-- {
+			iterIdx(Prev, allIdx[i][0], allIdx[i][1])
+		}
 		a.True(tbl.Get(nil, Prev).Eof())
 
-		q := ParseQuery("indexes_ where table = 'zz' and columns = 'b'", tran, nil)
+		q := ParseQuery("indexes where table = 'zz' and columns = 'b'", tran, nil)
 		q, _, _ = Setup(q, ReadMode, tran)
 		w := q.(*Where)
 		a.True(w.tbl != nil && w.idxSelBase != nil)
@@ -333,13 +358,13 @@ func TestSchemaIndexesLookup(t *testing.T) {
 	defer ut.Abort()
 	test(ut)
 	test(rt)
-	a.This(queryAll(db.Database, "indexes_ where table = 'zz' and columns = 'c'")).
+	a.This(queryAll(db.Database, "indexes where table = 'zz' and columns = 'c'")).
 		Is("columns=c key=u table=zz")
-	a.This(queryAll(db.Database, "indexes_ where table = 'kk' and columns = ''")).
+	a.This(queryAll(db.Database, "indexes where table = 'kk' and columns = ''")).
 		Is("key=true table=kk")
-	a.This(queryAll(db.Database, "indexes_ where table = 'kk' and columns = 123")).Is("")
-	a.This(queryAll(db.Database, "indexes_ where table = 'missing' and columns = 'x'")).Is("")
-	a.This(queryAll(db.Database, "indexes_ where table = 123 and columns = 'a'")).Is("")
+	a.This(queryAll(db.Database, "indexes where table = 'kk' and columns = 123")).Is("")
+	a.This(queryAll(db.Database, "indexes where table = 'missing' and columns = 'x'")).Is("")
+	a.This(queryAll(db.Database, "indexes where table = 123 and columns = 'a'")).Is("")
 }
 
 func TestSchemaViewsLookup(t *testing.T) {
@@ -349,7 +374,7 @@ func TestSchemaViewsLookup(t *testing.T) {
 	db.adm("view foo = bar baz")
 	test := func(tran QueryTran) {
 		t.Helper()
-		tbl := NewTable(tran, "views_").(*Table)
+		tbl := NewTable(tran, "views")
 		tbl.SetIndex([]string{"view_name"}, ReadMode)
 		hdr := tbl.Header()
 		lookup := func(name string) Row {
@@ -374,7 +399,7 @@ func TestSchemaViewsLookup(t *testing.T) {
 		iterView(Prev)
 		a.True(tbl.Get(nil, Prev).Eof())
 
-		q := ParseQuery("views_ where view_name = 'foo'", tran, nil)
+		q := ParseQuery("views where view_name = 'foo'", tran, nil)
 		q, _, _ = Setup(q, ReadMode, tran)
 		w := q.(*Where)
 		a.True(w.tbl != nil && w.idxSelBase != nil)
@@ -387,14 +412,14 @@ func TestSchemaViewsLookup(t *testing.T) {
 	defer ut.Abort()
 	test(ut)
 	test(rt)
-	a.This(queryAll(db.Database, "views_ where view_name = 'foo'")).
+	a.This(queryAll(db.Database, "views where view_name = 'foo'")).
 		Is("view_definition=bar baz view_name=foo")
-	a.This(queryAll(db.Database, "views_ where view_name = 'missing'")).Is("")
-	a.This(queryAll(db.Database, "views_ where view_name = 123")).Is("")
+	a.This(queryAll(db.Database, "views where view_name = 'missing'")).Is("")
+	a.This(queryAll(db.Database, "views where view_name = 123")).Is("")
 }
 
-// TestSchemaTablesNotUpdateable verifies that the "_" schema tables, which are
-// virtualized by the transaction, reject output, update, and delete.
+// TestSchemaTablesNotUpdateable verifies that the schema tables
+// reject output, update, and delete.
 func TestSchemaTablesNotUpdateable(t *testing.T) {
 	a := assert.T(t)
 	db := heapDb()
@@ -402,9 +427,9 @@ func TestSchemaTablesNotUpdateable(t *testing.T) {
 	db.adm("create zz (a) key(a)")
 	ut := db.NewUpdateTran(AllPerms)
 	defer ut.Abort()
-	for _, name := range []string{
-		"tables_", "columns_", "indexes_", "views_", "history_", "dbstats_",
-	} {
+	schemaTables :=
+		[]string{"tables", "columns", "indexes", "views", "history", "dbstats"}
+	for _, name := range schemaTables {
 		t.Run(name, func(t *testing.T) {
 			a := assert.T(t)
 			q := NewTable(ut, name)
@@ -413,44 +438,18 @@ func TestSchemaTablesNotUpdateable(t *testing.T) {
 				Panics("can't output to schema table")
 		})
 	}
-	a.This(func() { DoAction(nil, ut, "update tables_ set nrows = 0") }).
+	a.This(func() { DoAction(nil, ut, "update tables set table = 0") }).
 		Panics("update: query not updateable")
-	a.This(func() { DoAction(nil, ut, "delete tables_") }).
+	a.This(func() { DoAction(nil, ut, "delete tables") }).
 		Panics("delete: query not updateable")
 }
 
-// TestSchemaLookupPerms verifies that the "_" schema tables reuse the
-// "tables"/"columns"/"indexes"/"views" permission (so they work under a
-// restricted REPL-like transaction) and still deny tables with no rights.
-func TestSchemaLookupPerms(t *testing.T) {
-	a := assert.T(t)
-	db := heapDb()
-	defer db.Close()
-	db.adm("create zz (a) key(a)")
-
-	perms := &Perms{}
-	perms.AddTable("tables", "read")
-	perms.AddTable("columns", "read")
-	perms.AddTable("indexes", "read")
-	perms.AddTable("views", "read")
-	tran := db.NewReadTran(perms)
-	NewTable(tran, "tables_")  // must not panic
-	NewTable(tran, "tables")   // must not panic
-	NewTable(tran, "columns_") // must not panic
-	NewTable(tran, "columns")  // must not panic
-	NewTable(tran, "indexes_") // must not panic
-	NewTable(tran, "indexes")  // must not panic
-	NewTable(tran, "views_")   // must not panic
-	NewTable(tran, "views")    // must not panic
-	a.This(func() { NewTable(tran, "zz") }).Panics("not authorized: zz")
-}
-
 func TestSchemaColumnsSkipScan(t *testing.T) {
-	testSchemaSkipScan(t, "columns_", "column")
+	testSchemaSkipScan(t, "columns", "column")
 }
 
 func TestSchemaIndexesSkipScan(t *testing.T) {
-	testSchemaSkipScan(t, "indexes_", "columns")
+	testSchemaSkipScan(t, "indexes", "columns")
 }
 
 func testSchemaSkipScan(t *testing.T, table, suffix string) {
@@ -489,8 +488,12 @@ func testSchemaSkipScan(t *testing.T, table, suffix string) {
 		a.True(q.Get(nil, Prev).Eof())
 	}
 	test(suffix+" = 'b'", "aa/b", "ba/b", "ca/b")
-	test(suffix+" >= 'b' and "+suffix+" < 'd'",
-		"aa/b", "ab/c", "ba/b", "ba/c", "ca/b")
+	rangeExpected := []string{"aa/b", "ab/c", "ba/b", "ba/c", "ca/b"}
+	if table == "columns" {
+		rangeExpected = append(rangeExpected,
+			"columns/column", "dbstats/column", "dbstats/common", "indexes/columns")
+	}
+	test(suffix+" >= 'b' and "+suffix+" < 'd'", rangeExpected...)
 	test("table >= 'ab' and table < 'ca' and "+suffix+" = 'b'", "ba/b")
 	test("table >= 'ab' and table < 'ca' and "+suffix+" >= 'b' and "+suffix+" < 'd'",
 		"ab/c", "ba/b", "ba/c")
@@ -511,26 +514,26 @@ func TestSchemaRangeFrac(t *testing.T) {
 	frac := func(table, org, end string) float64 {
 		return rt.RangeFrac(table, 0, org, end)
 	}
-	for _, table := range []string{"tables_", "columns_", "indexes_", "views_"} {
+	for _, table := range []string{"tables", "columns", "indexes", "views"} {
 		a.This(frac(table, ixkey.Min, ixkey.Max)).Is(1)
 	}
 	aa, bb := Pack(SuStr("aa")), Pack(SuStr("bb"))
-	a.This(frac("tables_", aa, bb)).Is(.5)
-	a.This(frac("tables_", aa, aa+"\x00")).Is(.5)
-	a.This(frac("tables_", aa, aa)).Is(0)
-	a.This(frac("tables_", bb, ixkey.Max)).Is(.5)
-	a.This(frac("tables_", "\xff", ixkey.Max)).Is(0)
+	a.This(frac("tables", aa, bb)).Is(1.0 / 8)
+	a.This(frac("tables", aa, aa+"\x00")).Is(1.0 / 8)
+	a.This(frac("tables", aa, aa)).Is(0)
+	a.This(frac("tables", bb, ixkey.Max)).Is(7.0 / 8)
+	a.This(frac("tables", "\xff", ixkey.Max)).Is(0)
 	// composite index keys are encoded and directly comparable
 	caa, cbb := ixkey.CompKey(aa), ixkey.CompKey(bb)
-	a.This(frac("columns_", caa, cbb)).Is(2.0 / 3)
-	a.This(frac("indexes_", caa, cbb)).Is(2.0 / 3)
+	a.This(frac("columns", caa, cbb)).Is(2.0 / 21)
+	a.This(frac("indexes", caa, cbb)).Is(2.0 / 9)
 	caaColA := ixkey.CompKey(aa, Pack(SuStr("a")))
 	caaColB := ixkey.CompKey(aa, Pack(SuStr("b")))
-	a.This(frac("columns_", caaColA, caaColB)).Is(1.0 / 3)
-	a.This(frac("columns_", caaColB, ixkey.Max)).Is(2.0 / 3)
+	a.This(frac("columns", caaColA, caaColB)).Is(1.0 / 21)
+	a.This(frac("columns", caaColB, ixkey.Max)).Is(20.0 / 21)
 	// views has a single row
-	a.This(frac("views_", Pack(SuStr("foo")), Pack(SuStr("foo")))).Is(0)
-	// history_ is only an estimate, dbstats_ is empty
-	a.This(frac("history_", ixkey.Min, ixkey.Max)).Is(.5)
-	a.This(frac("dbstats_", ixkey.Min, ixkey.Max)).Is(0)
+	a.This(frac("views", Pack(SuStr("foo")), Pack(SuStr("foo")))).Is(0)
+	// history is only an estimate, dbstats is empty
+	a.This(frac("history", ixkey.Min, ixkey.Max)).Is(.5)
+	a.This(frac("dbstats", ixkey.Min, ixkey.Max)).Is(0)
 }

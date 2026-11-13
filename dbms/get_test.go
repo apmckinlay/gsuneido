@@ -182,7 +182,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	assert.T(t).This(AsStr(row.GetVal(hdr, "k", nil, nil))).Is("3")
 
 	// verify it uses the unique index for the Lookup
-	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
+	tbl := qry.NewTable(tran, "tmp")
 	sels := Sels{qry.NewSel("u", Pack(SuStr("x")))}
 	single, strat, getfn := getIndex(th, tran, tbl, sels, Only)
 	assert.T(t).Msg("single").True(single)
@@ -212,7 +212,7 @@ func TestGetOnlyUniqueIndexEmpty(t *testing.T) {
 	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
-	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
+	tbl := qry.NewTable(tran, "tmp")
 	sels := Sels{qry.NewSel("u", "")}
 	single, strat, getfn := getIndex(th, tran, tbl, sels, Only)
 	assert.T(t).Msg("not single").True(!single)
@@ -356,17 +356,19 @@ func TestGetSchema(t *testing.T) {
 	assert.T(t).Msg("columns tmp foo field").This(val(row, hdr, "field")).Is("-1")
 	row, _ = test("columns", [2]string{"table", "tmp"}, [2]string{"column", "nosuch"})
 	assert.T(t).Msg("columns tmp nosuch").That(row.Eof())
-	row, hdr = test("columns", [2]string{"table", "tables"}, [2]string{"column", "nrows"})
-	assert.T(t).Msg("columns tables nrows (virtual)").
+	row, hdr = test("columns", [2]string{"table", "columns"}, [2]string{"column", "column"})
+	assert.T(t).Msg("columns columns column (virtual)").
 		This(val(row, hdr, "field")).Is("1")
 	row, _ = test("columns", [2]string{"table", "nosuch"}, [2]string{"column", "x"})
 	assert.T(t).Msg("columns nosuch (no panic)").That(row.Eof())
 
-	// indexes - key, unique index, and nonexistent table
+	// indexes - key, unique index, virtual, and nonexistent table
 	row, hdr = test("indexes", [2]string{"table", "tmp"}, [2]string{"columns", "k"})
 	assert.T(t).Msg("indexes tmp k").This(val(row, hdr, "key")).Is("true")
 	row, hdr = test("indexes", [2]string{"table", "tmp"}, [2]string{"columns", "u"})
 	assert.T(t).Msg("indexes tmp u").This(val(row, hdr, "key")).Is("u")
+	row, hdr = test("indexes", [2]string{"table", "indexes"}, [2]string{"columns", "table,columns"})
+	assert.T(t).Msg("indexes indexes (virtual)").This(val(row, hdr, "key")).Is("true")
 	row, _ = test("indexes", [2]string{"table", "nosuch"}, [2]string{"columns", "x"})
 	assert.T(t).Msg("indexes nosuch (no panic)").That(row.Eof())
 

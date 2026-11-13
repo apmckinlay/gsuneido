@@ -78,10 +78,10 @@ func TestFixed(t *testing.T) {
 		"table^(a) where true extend f = 1, g = 2") //TODO remove where true
 	test2("table extend f=1, g=2 where f is 3",
 		"nothing(table)")
-	test2("tables extend x=1 join (columns extend x=2)",
+	test2("table extend x=1 join (table2 extend x=2)",
 		"nothing")
-	test2("tables extend x=1 leftjoin (columns extend x=2)",
-		"tables extend x = 1, column = '', field = ''")
+	test2("table extend x=1 leftjoin (table2 extend x=2)",
+		"table^(a) extend x = 1, d = '', e = ''")
 	test2("table where a = 1 and a = 2",
 		"nothing(table)")
 	test2("(table union table2) where a = 1",

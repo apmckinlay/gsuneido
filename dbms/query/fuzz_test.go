@@ -197,13 +197,12 @@ func TestFuzzSchema(t *testing.T) {
 	fuzzSchemaRunner.Test(t)
 }
 
-// fuzzSchema builds a virtual schema table (see schema.go), excluding history
+// fuzzSchema builds a virtual schema table [db19/schema.go], excluding history
 func fuzzSchema(ft *FT) Query {
 	// build a random table so the schema tables have some content and the
 	// read transaction is set up
 	ft.NewFuzzTable()
-	names := slices.DeleteFunc(slices.Clone(schemaTableNames),
-		func(name string) bool { return name == "history" })
+	names := []string{"tables", "columns", "indexes", "views", "dbstats"}
 	return NewTable(ft.rt, random(names, ft.rnd))
 }
 

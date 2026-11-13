@@ -617,13 +617,13 @@ func TestSchemaSkipScanIter(t *testing.T) {
 	rt := db.NewReadTran(core.AllPerms)
 	ut := db.NewUpdateTran(core.AllPerms)
 	defer ut.Abort()
-	for _, table := range []string{"columns_", "indexes_", "dbstats_"} {
+	for _, table := range []string{"columns", "indexes", "dbstats"} {
 		t.Run(table, func(t *testing.T) {
 			testSchemaSkipScanIter(t, rt, table)
 			testSchemaSkipScanIter(t, ut, table)
 		})
 	}
-	it := rt.IndexIter("indexes_", 0)
+	it := rt.IndexIter("indexes", 0)
 	it.SkipScan(iface.All, index.Range{Org: "", End: "\x00"}, 1)
 	it.Next(rt)
 	assert.T(t).False(it.Eof())
@@ -651,7 +651,7 @@ func testSchemaSkipScanIter(t *testing.T, rt interface {
 		rec := it.GetRecord(rt)
 		a.This(rec.GetStr(0)).Is(name)
 		a.This(rec.GetStr(1)).Is(col)
-		if table == "dbstats_" && col == "b" {
+		if table == "dbstats" && col == "b" {
 			a.This(core.ToInt(rec.GetVal(2))).Is(42)
 			a.This(rec.GetVal(3).(*core.SuObject).ListGet(0)).Is(core.SuStr("median"))
 			top := rec.GetVal(4).(*core.SuObject).ListGet(0).(*core.SuObject)
@@ -659,23 +659,34 @@ func testSchemaSkipScanIter(t *testing.T, rt interface {
 			a.This(top.ListGet(1)).Is(core.SuStr("top"))
 		}
 	}
+	type pair struct{ name, col string }
+	expected := []pair{
+		{"aa", "b"}, {"aa", "c"},
+		{"ab", "b"}, {"ab", "c"},
+		{"ba", "b"}, {"ba", "c"},
+		{"ca", "b"}, {"ca", "c"},
+	}
+	if table == "columns" {
+		expected = append(expected,
+			pair{"columns", "column"},
+			pair{"dbstats", "column"},
+			pair{"dbstats", "common"},
+			pair{"indexes", "columns"},
+		)
+	}
 	it.SkipScan(iface.All, index.Range{Org: pack("b"), End: pack("d")}, 1)
-	for _, name := range []string{"aa", "ab", "ba", "ca"} {
-		for _, col := range []string{"b", "c"} {
-			it.Next(rt)
-			check(name, col)
-		}
+	for _, p := range expected {
+		it.Next(rt)
+		check(p.name, p.col)
 	}
 	it.Next(rt)
 	a.True(it.Eof())
 	it.Prev(rt)
 	a.True(it.Eof())
 	it.Rewind()
-	for _, name := range []string{"ca", "ba", "ab", "aa"} {
-		for _, col := range []string{"c", "b"} {
-			it.Prev(rt)
-			check(name, col)
-		}
+	for i := len(expected) - 1; i >= 0; i-- {
+		it.Prev(rt)
+		check(expected[i].name, expected[i].col)
 	}
 	it.Prev(rt)
 	a.True(it.Eof())

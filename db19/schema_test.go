@@ -35,14 +35,15 @@ func TestTablesNames(t *testing.T) {
 		assert.This(rec.Count()).Is(1)
 	}
 	st := tablesTable{}
-	assert.This(st.nrows(&rt.tran)).Is(2)
+	assert.This(st.nrows(&rt.tran)).Is(2 + len(schemaTables))
 	check(st.lookup(rt, 0, core.Pack(core.SuStr("a"))), "a")
+	check(st.lookup(rt, 0, core.Pack(core.SuStr("tables"))), "tables")
 	assert.This(st.lookup(rt, 0, core.Pack(core.SuStr("missing")))).Is(core.Record(""))
 	it := newTablesIter(rt)
-	it.Next(rt)
-	check(it.GetRecord(rt), "a")
-	it.Next(rt)
-	check(it.GetRecord(rt), "z")
+	for _, name := range []string{"a", "columns", "dbstats", "history", "indexes", "tables", "views", "z"} {
+		it.Next(rt)
+		check(it.GetRecord(rt), name)
+	}
 	it.Next(rt)
 	assert.That(it.Eof())
 }
@@ -94,10 +95,10 @@ func TestSchemaCacheBounded(t *testing.T) {
 	assert.This(db.schemaCache.entries).Is(retained)
 	// An evicted version is usable without being retained again.
 	old := &ReadTran{db: db, meta: entries[0].meta}
-	assert.This(len(old.tablesItems())).Is(1)
+	assert.This(len(old.tablesItems())).Is(1 + len(schemaTables))
 	assert.That(old.schemaEntry() == old.scache)
 	assert.This(db.schemaCache.entries).Is(retained)
-	assert.This(len(entries[0].tables())).Is(1) // eviction does not invalidate entries
+	assert.This(len(entries[0].tables())).Is(1 + len(schemaTables)) // eviction does not invalidate entries
 }
 
 func TestSchemaCacheVersionOrder(t *testing.T) {
@@ -138,10 +139,10 @@ func TestSchemaCacheExpiration(t *testing.T) {
 	assert.This(len(c.entries)).Is(2)
 	assert.That(c.entries[0] == newest) // retained despite its age
 	assert.That(c.entries[1] == active)
-	assert.This(len(old.tables())).Is(1) // expiration does not invalidate references
+	assert.This(len(old.tables())).Is(1 + len(schemaTables)) // expiration does not invalidate references
 	rebuilt := c.get(m1)
 	assert.That(rebuilt != old)
-	assert.This(len(rebuilt.tables())).Is(1)
+	assert.This(len(rebuilt.tables())).Is(1 + len(schemaTables))
 	assert.That(c.entries[0] == newest)
 	assert.This(len(c.entries)).Is(3)
 	assert.That(c.get(m3) == newest)
@@ -161,11 +162,11 @@ func TestSchemaCacheIterators(t *testing.T) {
 	it1.Next(rt)
 	assert.This(it1.GetRecord(rt).GetStr(0)).Is("a")
 	it1.Next(rt)
-	assert.This(it1.GetRecord(rt).GetStr(0)).Is("m")
+	assert.This(it1.GetRecord(rt).GetStr(0)).Is("columns")
 	// iterators have independent positions
 	it2.Next(rt)
 	assert.This(it2.GetRecord(rt).GetStr(0)).Is("a")
-	assert.This(tablesTable{}.nrows(&rt.tran)).Is(3)
+	assert.This(tablesTable{}.nrows(&rt.tran)).Is(3 + len(schemaTables))
 }
 
 func TestSchemaCacheOtherTables(t *testing.T) {
@@ -175,8 +176,8 @@ func TestSchemaCacheOtherTables(t *testing.T) {
 	m = addTable(m, "t")
 	m = m.AddView("v", "t")
 	rt := &ReadTran{db: db, meta: m}
-	assert.This(columnsTable{}.nrows(&rt.tran)).Is(1)
-	assert.This(indexesTable{}.nrows(&rt.tran)).Is(1)
+	assert.This(columnsTable{}.nrows(&rt.tran)).Is(1 + 18)
+	assert.This(indexesTable{}.nrows(&rt.tran)).Is(1 + 6)
 	assert.This(viewsTable{}.nrows(&rt.tran)).Is(1)
 }
 

@@ -88,8 +88,7 @@ func String(q Query) string {
 
 func paren1(q Query) string {
 	switch q.(type) {
-	case *Table, *Tables, *Columns, *Indexes, *Views, *History, *StatsTable,
-		*Nothing, *ProjectNone:
+	case *Table, *Nothing, *ProjectNone:
 		return String(q)
 	}
 	return "(" + String(q) + ")"

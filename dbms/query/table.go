@@ -20,24 +20,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-func NewTable(t QueryTran, name string) Query {
-	var tbl Query
-	switch name {
-	case "tables":
-		tbl = &Tables{}
-	case "columns":
-		tbl = &Columns{}
-	case "indexes":
-		tbl = &Indexes{}
-	case "views":
-		tbl = &Views{}
-	case "history":
-		tbl = &History{}
-	case "dbstats":
-		tbl = &StatsTable{}
-	default:
-		tbl = &Table{name: name}
-	}
+func NewTable(t QueryTran, name string) *Table {
+	tbl := &Table{name: name}
 	tbl.SetTran(t)
 	return tbl
 }
@@ -309,7 +293,10 @@ func (tbl *Table) lookupCost(idx []string) Cost {
 
 func (tbl *Table) lookupCostI(i int) Cost {
 	var levels int
-	if tbl.info.Indexes == nil { // tests
+	if db19.IsSchemaTable(tbl.name) {
+		// schema tables are materialized in memory, not btrees
+		levels = 1
+	} else if tbl.info.Indexes == nil { // tests
 		levels = 1
 		if tbl.info.Nrows > 100 {
 			levels = 2

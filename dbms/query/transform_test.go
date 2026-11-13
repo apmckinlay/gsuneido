@@ -179,16 +179,16 @@ func TestTransform(t *testing.T) {
 		"customer where city isnt 'toon' join 1:n by(id) (trans where cost > 10)")
 
 	// convert leftjoin to join
-	test("(tables leftjoin columns) where column isnt ''",
-		"tables join 1:n by(table) (columns where column isnt '')")
-	test("(tables leftjoin columns) where column is 123",
-		// 1:1 because of `column is 123`
-		"tables join 1:1 by(table) (columns where column is 123)")
+	test("(cus leftjoin task) where tnum isnt ''",
+		"cus join 1:n by(cnum) (task where tnum isnt '')")
+	test("(cus leftjoin task) where tnum is 123",
+		// 1:1 because of `tnum is 123`
+		"cus join 1:1 by(cnum) (task where tnum is 123)")
 	// same due to folding
-	test("(tables leftjoin columns) where column in (123)",
-		"tables join 1:1 by(table) (columns where column is 123)")
-	test("(tables leftjoin columns) where table isnt ''",
-		"tables where table isnt '' leftjoin 1:n by(table) columns")
+	test("(cus leftjoin task) where tnum in (123)",
+		"cus join 1:1 by(cnum) (task where tnum is 123)")
+	test("(cus leftjoin task) where cnum isnt ''",
+		"cus where cnum isnt '' leftjoin 1:n by(cnum) task")
 
 	// distribute project over union
 	test("(hist union trans) project item, cost",

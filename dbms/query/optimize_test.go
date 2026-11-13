@@ -48,22 +48,22 @@ func TestOptimize(t *testing.T) {
 		"comp^(a,b,c) where a is 1 tempindex(c,b)")
 	test("comp where a=1 and b=2 and c=3 sort c, a, b",
 		"comp^(a,b,c) where*1 a is 1 and b is 2 and c is 3")
-	test("tables leftjoin columns",
-		"tables leftjoin 1:n by(table) columns")
-	test("columns leftjoin tables",
-		"columns leftjoin n:1 by(table) tables")
-	test("columns union columns",
-		"columns union-merge columns")
-	test("columns join columns",
-		"columns join 1:1 by(table,column,field) columns")
-	test("tables union tables",
-		"tables union-merge tables")
-	test("tables join tables",
-		"tables join 1:1 by(table,nrows,totalsize) tables")
-	test("views union views",
-		"views union-merge views")
-	test("views join views",
-		"views join 1:1 by(view_name,view_definition) views")
+	test("cus leftjoin task",
+		"cus^(cnum) leftjoin 1:n by(cnum) (task^(tnum) tempindex(cnum))")
+	test("task leftjoin cus",
+		"task^(tnum) leftjoin n:1 by(cnum) cus^(cnum)")
+	test("customer union customer",
+		"customer^(id) union-merge customer^(id)")
+	test("customer join customer",
+		"customer^(id) join 1:1 by(id,name,city) customer^(id)")
+	test("supplier union supplier",
+		"supplier^(supplier) union-merge supplier^(supplier)")
+	test("supplier join supplier",
+		"supplier^(supplier) join 1:1 by(supplier,name,city) supplier^(supplier)")
+	test("hist2 union hist2",
+		"hist2^(date) union-merge hist2^(date)")
+	test("hist2 join hist2",
+		"hist2^(date) join 1:1 by(date,item,id,cost) (hist2^(date) tempindex(date))")
 
 	test("supplier",
 		"supplier^(supplier)")

@@ -23,12 +23,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// This is a new implementation of the schema tables.
-// Instead of implementing the Query interface,
-// it intercepts at the transaction - primarily Lookup and IndexIter
+// This file implements the schema tables.
+// It intercepts at the transaction - primarily Lookup and IndexIter
 // This has the advantage of using the existing [query.Table]
 // which means we get the Where-on-Table optimizations.
-// The "_" suffix names are temporary during development and testing.
 
 func IsSchemaTable(table string) bool {
 	return getSchemaTable(table) != nil
@@ -44,17 +42,17 @@ type schemaTable interface {
 
 func getSchemaTable(table string) schemaTable {
 	switch table {
-	case "tables_":
+	case "tables":
 		return tablesTable{}
-	case "columns_":
+	case "columns":
 		return columnsTable{}
-	case "indexes_":
+	case "indexes":
 		return indexesTable{}
-	case "views_":
+	case "views":
 		return viewsTable{}
-	case "history_":
+	case "history":
 		return historyTable{}
-	case "dbstats_":
+	case "dbstats":
 		return statsTable{}
 	}
 	return nil
@@ -150,55 +148,61 @@ func (t *tran) indexesItems() []indexEntry  { return t.schemaEntry().indexes() }
 func (t *tran) viewsItems() []viewEntry     { return t.schemaEntry().views() }
 
 var tablesSchema = &schema.Schema{
-	Table:   "tables_",
+	Table:   "tables",
 	Columns: []string{"table"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"table"}, Fields: []string{"table"}}},
 }
 
 var columnsSchema = &schema.Schema{
-	Table:   "columns_",
+	Table:   "columns",
 	Columns: []string{"table", "column", "field"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"table", "column"},
 		Fields: []string{"table", "column"}}},
 }
 
 var indexesSchema = &schema.Schema{
-	Table:   "indexes_",
+	Table:   "indexes",
 	Columns: []string{"table", "columns", "key", "fktable", "fkcolumns", "fkmode"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"table", "columns"},
 		Fields: []string{"table", "columns"}}},
 }
 
 var viewsSchema = &schema.Schema{
-	Table:   "views_",
+	Table:   "views",
 	Columns: []string{"view_name", "view_definition"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"view_name"}, Fields: []string{"view_name"}}},
 }
 
 var historySchema = &schema.Schema{
-	Table:   "history_",
+	Table:   "history",
 	Columns: []string{"asof"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"asof"}, Fields: []string{"asof"}}},
 }
 
 var statsSchema = &schema.Schema{
-	Table:   "dbstats_",
+	Table:   "dbstats",
 	Columns: []string{"table", "column", "distinct", "quantiles", "common"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"table", "column"},
 		Fields: []string{"table", "column"}}},
 }
 
-// historyNrows is a constant estimate; counting database states would be too slow.
-const historyNrows = 1000
+var schemaTables = []*schema.Schema{
+	tablesSchema,
+	columnsSchema,
+	indexesSchema,
+	viewsSchema,
+	historySchema,
+	statsSchema,
+}
 
-// SchemaTableAlias maps a "_" schema table name to the name of the schema
-// table it represents, so it reuses that table's permissions.
-// TEMPORARY to keep new "_" tables separate.
-func SchemaTableAlias(table string) string {
-	if IsSchemaTable(table) {
-		return table[:len(table)-1]
+func schemaForTable(t *ReadTran, table string) *schema.Schema {
+	if st := getSchemaTable(table); st != nil {
+		return st.schema()
 	}
-	return table
+	if ts := t.meta.GetRoSchema(table); ts != nil {
+		return &ts.Schema
+	}
+	return nil
 }
 
 // unpackStr decodes a packed field value as a string.
@@ -246,7 +250,7 @@ func (tablesTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	if name == "" {
 		return ""
 	}
-	if t.meta.GetRoSchema(name) == nil {
+	if schemaForTable(t, name) == nil {
 		return ""
 	}
 	return tablesRow(name)
@@ -270,6 +274,9 @@ func newTablesIter(t *ReadTran) *schemaIter[tableEntry, *tableEntry] {
 func buildTables(m *meta.Meta) []tableEntry {
 	items := make([]tableEntry, 0, 32)
 	for sc := range m.Tables() {
+		items = append(items, tableEntry{table: sc.Table})
+	}
+	for _, sc := range schemaTables {
 		items = append(items, tableEntry{table: sc.Table})
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].table < items[j].table })
@@ -335,7 +342,7 @@ func (columnsTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	if table == "" || col == "" {
 		return ""
 	}
-	ts := t.meta.GetRoSchema(table)
+	ts := schemaForTable(t, table)
 	if ts == nil || col == "-" { // "-" columns are not in the schema table
 		return ""
 	}
@@ -358,7 +365,7 @@ func columnsRow(table, column string, field int) core.Record {
 	return rb.Build()
 }
 
-// columnEntry is one row of the columns_ table with its encoded {table, column} key.
+// columnEntry is one row of the columns table with its encoded {table, column} key.
 // The key is eager because it is needed for sorting and range bounds.
 type columnEntry struct {
 	table  string
@@ -391,7 +398,7 @@ func newColumnsIter(t *ReadTran) *schemaIter[columnEntry, *columnEntry] {
 
 func buildColumns(m *meta.Meta) []columnEntry {
 	entries := make([]columnEntry, 0, 32)
-	for sc := range m.Tables() {
+	add := func(sc *schema.Schema) {
 		for field, col := range sc.Columns {
 			if col == "-" {
 				continue
@@ -411,6 +418,12 @@ func buildColumns(m *meta.Meta) []columnEntry {
 					core.Pack(core.SuStr(col))),
 			})
 		}
+	}
+	for sc := range m.Tables() {
+		add(&sc.Schema)
+	}
+	for _, sc := range schemaTables {
+		add(sc)
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
 	return entries
@@ -452,7 +465,7 @@ func (indexesTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 		}
 		cols = parts[1][1:]
 	}
-	ts := t.meta.GetRoSchema(table)
+	ts := schemaForTable(t, table)
 	if ts == nil {
 		return ""
 	}
@@ -485,7 +498,7 @@ func indexesRow(table string, idx *schema.Index) core.Record {
 	return rb.Build()
 }
 
-// indexEntry is one row of the indexes_ table with its encoded {table, columns} key.
+// indexEntry is one row of the indexes table with its encoded {table, columns} key.
 // The key is eager because it is needed for sorting and range bounds.
 type indexEntry struct {
 	table  string
@@ -517,7 +530,7 @@ func newIndexesIter(t *ReadTran) *schemaIter[indexEntry, *indexEntry] {
 
 func buildIndexes(m *meta.Meta) []indexEntry {
 	entries := make([]indexEntry, 0, 32)
-	for sc := range m.Tables() {
+	add := func(sc *schema.Schema) {
 		for i := range sc.Indexes {
 			idx := &sc.Indexes[i]
 			entries = append(entries, indexEntry{
@@ -526,6 +539,12 @@ func buildIndexes(m *meta.Meta) []indexEntry {
 					core.Pack(core.SuStr(str.Join(",", idx.Columns)))),
 			})
 		}
+	}
+	for sc := range m.Tables() {
+		add(&sc.Schema)
+	}
+	for _, sc := range schemaTables {
+		add(sc)
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
 	return entries
@@ -623,8 +642,11 @@ type historyTable struct{}
 func (historyTable) schema() *schema.Schema { return historySchema }
 func (historyTable) nrows(*tran) int        { return historyNrows }
 
+// historyNrows is a constant estimate; counting database states would be too slow.
+const historyNrows = 1000
+
 func (historyTable) lookup(*ReadTran, int, string) core.Record {
-	panic("history_ lookup not implemented")
+	panic("history lookup not implemented")
 }
 
 func (historyTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
@@ -637,7 +659,7 @@ func (historyTable) rangeFrac(*ReadTran, int, string, string) float64 {
 	return .5
 }
 
-// historyIter is an index.IndexIter over the history_ table.
+// historyIter is an index.IndexIter over the history table.
 // It scans database states directly instead of materializing a list,
 // since a database may have a very large number of states.
 type historyIter struct {

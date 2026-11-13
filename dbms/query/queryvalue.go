@@ -85,66 +85,6 @@ func (tbl *Table) ValueGet(key Value) Value {
 	return qryBase(tbl, key)
 }
 
-func (ts *Tables) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("tables")
-	}
-	return qryBase(ts, key)
-}
-
-func (cs *Columns) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("columns")
-	}
-	return qryBase(cs, key)
-}
-
-func (is *Indexes) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("indexes")
-	}
-	return qryBase(is, key)
-}
-
-func (vs *Views) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("views")
-	}
-	return qryBase(vs, key)
-}
-
-func (his *History) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("history")
-	}
-	return qryBase(his, key)
-}
-
-func (st *StatsTable) ValueGet(key Value) Value {
-	switch StrOrEmpty(key) {
-	case "type":
-		return StrVal("table")
-	case "name":
-		return StrVal("dbstats")
-	}
-	return qryBase(st, key)
-}
-
 func (no *Nothing) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
