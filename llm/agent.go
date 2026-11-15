@@ -19,6 +19,7 @@ type Agent struct {
 	toolClient     *ToolClient
 	model          string
 	responseModel  string
+	effort         string
 	prompt         string
 	history        []Message
 	outfn          OutFn
@@ -38,7 +39,7 @@ type Agent struct {
 }
 
 // OutFn is the push callback for streaming output.
-// what is one of "user", "responseModel", "think", "output", "tool", "complete"
+// what is one of "user", "effort", "responseModel", "think", "output", "tool", "complete"
 // approval is non-nil when a tool call requires user approval.
 type OutFn func(what, data string, approval *ToolApproval)
 
@@ -160,6 +161,69 @@ func (agent *Agent) GetModel() string {
 	return agent.model
 }
 
+// Reasoning effort levels supported by OpenRouter.
+const (
+	EffortDefault = "default"
+	EffortNone    = "none"
+	EffortMinimal = "minimal"
+	EffortLow     = "low"
+	EffortMedium  = "medium"
+	EffortHigh    = "high"
+	EffortXHigh   = "xhigh"
+	EffortMax     = "max"
+)
+
+var efforts = map[string]bool{
+	EffortNone:    true,
+	EffortMinimal: true,
+	EffortLow:     true,
+	EffortMedium:  true,
+	EffortHigh:    true,
+	EffortXHigh:   true,
+	EffortMax:     true,
+}
+
+// normalizeEffort maps "default" to the empty provider default.
+func normalizeEffort(level string) string {
+	if level == EffortDefault {
+		return ""
+	}
+	return level
+}
+
+// effortLabel returns the level to show in the conversation,
+// using "default" when no explicit level is set.
+func effortLabel(level string) string {
+	if level == "" {
+		return EffortDefault
+	}
+	return level
+}
+
+// SetEffort sets the reasoning effort level for requests.
+// "default" or an empty level uses the provider's default.
+// Panics if a request is in progress or the level is not recognized.
+func (agent *Agent) SetEffort(level string) {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.inProgress {
+		panic("SetEffort: request in progress")
+	}
+	level = normalizeEffort(level)
+	if level != "" && !efforts[level] {
+		panic("SetEffort: invalid effort level: " + level)
+	}
+	agent.effort = level
+}
+
+// GetEffort returns the reasoning effort level.
+// An empty string means the provider's default.
+func (agent *Agent) GetEffort() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.effort
+}
+
 // GetResponseModel returns the model used by the provider.
 func (agent *Agent) GetResponseModel() string {
 	agent.mu.Lock()
@@ -220,6 +284,7 @@ func (agent *Agent) request(input string) {
 
 	agent.history = append(agent.history, Message{Role: "user", Content: input})
 	agent.logMessage("user", input)
+	agent.emitEffort()
 
 	for {
 		req := agent.buildRequest()
@@ -286,13 +351,18 @@ func truncate(s string) string {
 // buildRequest creates the chat request with current history and tools
 func (agent *Agent) buildRequest() *ChatRequest {
 	req := &ChatRequest{
-		Model:            agent.model,
-		Messages:         agent.history,
-		IncludeReasoning: true,
+		Model:    agent.model,
+		Messages: agent.history,
+		// When an explicit reasoning effort is set, the reasoning parameter
+		// determines inclusion, so avoid the legacy include_reasoning flag.
+		IncludeReasoning: agent.effort == "",
 		Plugins: []Plugin{
 			{ID: "context-compression"},
 			{ID: "response-healing"},
 		},
+	}
+	if agent.effort != "" {
+		req.Reasoning = &Reasoning{Effort: agent.effort}
 	}
 	if agent.toolClient != nil {
 		req.Tools = agent.toolClient.GetTools()
@@ -549,6 +619,16 @@ func (*Agent) needsApproval(toolName string) bool {
 	return strings.HasPrefix(toolName, "suneido_create_") ||
 		strings.HasPrefix(toolName, "suneido_delete_") ||
 		strings.HasPrefix(toolName, "suneido_edit_")
+}
+
+// emitEffort shows the reasoning level used for the request
+// alongside the model in the conversation.
+func (agent *Agent) emitEffort() {
+	agent.mu.Lock()
+	level := agent.effort
+	agent.mu.Unlock()
+	agent.emit("effort", effortLabel(level))
+	agent.logEffort(level)
 }
 
 func (agent *Agent) emitExecToolResults(result string) {

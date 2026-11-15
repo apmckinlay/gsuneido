@@ -23,6 +23,12 @@ type Plugin struct {
 	ID string `json:"id"`
 }
 
+// Reasoning controls reasoning/thinking token usage for models that support it.
+// Effort is one of "none", "minimal", "low", "medium", "high", "xhigh", or "max".
+type Reasoning struct {
+	Effort string `json:"effort,omitempty"`
+}
+
 // ChatRequest represents a chat completion request.
 type ChatRequest struct {
 	Model            string         `json:"model"`
@@ -32,6 +38,7 @@ type ChatRequest struct {
 	Stream           bool           `json:"stream,omitempty"`
 	StreamOptions    *StreamOptions `json:"stream_options,omitempty"`
 	IncludeReasoning bool           `json:"include_reasoning,omitempty"`
+	Reasoning        *Reasoning     `json:"reasoning,omitempty"`
 	Tools            []Tool         `json:"tools,omitempty"`
 	ToolChoice       any            `json:"tool_choice,omitempty"`
 	Plugins          []Plugin       `json:"plugins,omitempty"`

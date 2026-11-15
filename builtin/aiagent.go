@@ -147,6 +147,13 @@ func agent_GetModel(this Value) Value {
 	return SuStr(this.(*suAgent).agent.GetModel())
 }
 
+var _ = method(agent_SetEffort, "(level :string) :void")
+
+func agent_SetEffort(this, level Value) Value {
+	this.(*suAgent).agent.SetEffort(ToStr(level))
+	return nil
+}
+
 var _ = method(agent_GetResponseModel, "() :string")
 
 func agent_GetResponseModel(this Value) Value {

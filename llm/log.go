@@ -105,6 +105,14 @@ func (agent *Agent) logToolResult(msg Message) {
 	agent.logWrite("## {{ ToolResult }}\n\n" + string(b) + "\n\n")
 }
 
+func (agent *Agent) logEffort(level string) {
+	agent.ensureLogFile()
+	if agent.logFile == nil {
+		return
+	}
+	agent.logWrite("## {{ Effort }}\n\n" + effortLabel(level) + "\n\n")
+}
+
 func (agent *Agent) logResponseModel(responseModel string) {
 	agent.ensureLogFile()
 	if agent.logFile == nil {
@@ -182,12 +190,22 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 		historyBody := strings.TrimRight(body, "\r\n")
 		logBody := body
 		switch role {
-		case "Model", "ResponseModel", "Prompt", "Continued":
+		case "Model", "Effort", "ResponseModel", "Prompt", "Continued":
 			logBody = strings.TrimSpace(body)
 		}
 		switch role {
 		case "Model":
 			agent.model = logBody
+		case "Effort":
+			level := normalizeEffort(logBody)
+			if level == "" || efforts[level] {
+				agent.effort = level
+				if outfn != nil {
+					outfn("effort", effortLabel(level), nil)
+				}
+			} else {
+				log.Println("parseConversation invalid effort:", logBody)
+			}
 		case "ResponseModel":
 			agent.responseModel = logBody
 			if outfn != nil {

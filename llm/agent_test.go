@@ -90,7 +90,7 @@ func TestAgentLogThink(t *testing.T) {
 
 	agent := NewAgent(testToolThread(), "", "", "test-model", "", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 
-	agent.emit("think", "reasoning line")
+	agent.emit("think", "effort line")
 	agent.emit("output", "done")
 	agent.closeLogFile()
 
@@ -104,7 +104,7 @@ func TestAgentLogThink(t *testing.T) {
 	content := string(data)
 
 	assert.T(t).True(strings.Contains(content, "## {{ Think }}"))
-	assert.T(t).True(strings.Contains(content, "reasoning line"))
+	assert.T(t).True(strings.Contains(content, "effort line"))
 }
 
 func TestAgentClearHistory(t *testing.T) {
@@ -157,12 +157,95 @@ func TestAgentSetModel(t *testing.T) {
 	assert.T(t).True(strings.Contains(content, "new-model"))
 }
 
+func TestAgentEmitEffort(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir := aiDir
+	aiDir = tmpDir
+	defer func() { aiDir = oldDir }()
+
+	var emitted []string
+	agent := NewAgent(testToolThread(), "", "", "test-model", "test prompt",
+		func(what, data string, _ *ToolApproval) {
+			if what == "effort" {
+				emitted = append(emitted, data)
+			}
+		}, func() {}, func() {})
+
+	agent.emitEffort() // default
+	agent.SetEffort(EffortHigh)
+	agent.emitEffort()
+	agent.SetEffort(EffortLow)
+	agent.emitEffort()
+	agent.SetEffort(EffortDefault)
+	agent.emitEffort()
+	agent.closeLogFile()
+
+	assert.T(t).This(emitted).Is([]string{"default", "high", "low", "default"})
+
+	files, err := os.ReadDir(tmpDir)
+	assert.T(t).This(err).Is(nil)
+	data, err := os.ReadFile(filepath.Join(tmpDir, files[0].Name()))
+	assert.T(t).This(err).Is(nil)
+	content := string(data)
+
+	assert.T(t).True(strings.Contains(content, "## {{ Effort }}"))
+	assert.T(t).True(strings.Contains(content, "high"))
+	assert.T(t).True(strings.Contains(content, "low"))
+	assert.T(t).True(strings.Contains(content, "## {{ Effort }}\n\ndefault"))
+}
+
+func TestAgentSetEffort(t *testing.T) {
+	agent := NewAgent(testToolThread(), "", "", "test-model", "", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
+
+	// default: provider decides
+	assert.T(t).This(agent.GetEffort()).Is("")
+	req := agent.buildRequest()
+	assert.T(t).That(req.Reasoning == nil)
+	assert.T(t).That(req.IncludeReasoning)
+
+	// explicit level
+	agent.SetEffort(EffortHigh)
+	assert.T(t).This(agent.GetEffort()).Is("high")
+	req = agent.buildRequest()
+	assert.T(t).That(req.Reasoning != nil)
+	assert.T(t).This(req.Reasoning.Effort).Is("high")
+	assert.T(t).That(!req.IncludeReasoning)
+
+	// "default" maps back to the provider default
+	agent.SetEffort(EffortDefault)
+	assert.T(t).This(agent.GetEffort()).Is("")
+	req = agent.buildRequest()
+	assert.T(t).That(req.Reasoning == nil)
+
+	// empty also means provider default
+	agent.SetEffort("")
+	assert.T(t).This(agent.GetEffort()).Is("")
+
+	// invalid level
+	assert.T(t).This(func() { agent.SetEffort("bogus") }).
+		Panics("invalid effort level")
+}
+
+func TestEffortJSON(t *testing.T) {
+	data, err := json.Marshal(ChatRequest{Reasoning: &Reasoning{Effort: EffortMedium}})
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).True(strings.Contains(string(data), `"reasoning":{"effort":"medium"}`))
+
+	data, err = json.Marshal(ChatRequest{})
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).True(!strings.Contains(string(data), "reasoning"))
+}
+
 func TestAgentLoadConversation(t *testing.T) {
 	// Create a temp file with conversation content
 	tmpFile := filepath.Join(t.TempDir(), "test.md")
 	content := `## {{ Model }}
 
 test-router
+
+## {{ Effort }}
+
+high
 
 ## {{ ResponseModel }}
 
@@ -189,6 +272,7 @@ What is 2+2?
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 	assert.T(t).This(agent.GetModel()).Is("test-router")
+	assert.T(t).This(agent.GetEffort()).Is("high")
 	assert.T(t).This(agent.GetResponseModel()).Is("provider/model")
 
 	// Verify current prompt is retained (not replaced by file's prompt)
@@ -211,6 +295,36 @@ What is 2+2?
 	assert.T(t).This(agent.history[0].Content).Is(currentPrompt)
 }
 
+func TestAgentLoadConversationEmitsEffort(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "test.md")
+	content := `## {{ Effort }}
+
+high
+
+## {{ User }}
+
+hi
+
+## {{ Assistant }}
+
+hello
+`
+	err := os.WriteFile(tmpFile, []byte(content), 0644)
+	assert.T(t).This(err).Is(nil)
+
+	var efforts []string
+	outfn := func(what, data string, _ *ToolApproval) {
+		if what == "effort" {
+			efforts = append(efforts, data)
+		}
+	}
+	agent := NewAgent(testToolThread(), "", "", "", "", outfn, func() {}, func() {})
+	err = agent.LoadConversation(tmpFile, outfn)
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).This(agent.GetEffort()).Is("high")
+	assert.T(t).This(efforts).Is([]string{"high"})
+}
+
 func TestAgentLoadAndResave(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir := aiDir
@@ -221,6 +335,10 @@ func TestAgentLoadAndResave(t *testing.T) {
 	originalContent := `## {{ Prompt }}
 
 Original prompt.
+
+## {{ Effort }}
+
+medium
 
 ## {{ User }}
 
@@ -263,6 +381,8 @@ Answer.
 	// Verify the current prompt is used (not the file's prompt)
 	// Note: prompt is not logged, only user messages
 	assert.T(t).True(strings.Contains(newContent, "New question"))
+	assert.T(t).True(strings.Contains(newContent, "## {{ Effort }}"))
+	assert.T(t).True(strings.Contains(newContent, "medium"))
 }
 
 func TestAgentLoadConversationWithTools(t *testing.T) {
