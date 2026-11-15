@@ -220,7 +220,6 @@ func (tbl *Table) costFor(index []string, req Require) Cost {
 // scanCost is the cost to iterate an entire table.
 // It is based on BenchmarkTableGetCost
 func scanCost(tableRows, tableBytes int, isPhysicalOrder bool) Cost {
-
 	if tableRows <= 0 || tableBytes <= 0 {
 		return 0
 	}
@@ -228,7 +227,6 @@ func scanCost(tableRows, tableBytes int, isPhysicalOrder bool) Cost {
 	recordSize := float64(tableBytes) / float64(tableRows)
 
 	// 1. Sequential base cost per row (scales with record size).
-	// A 200 B record evaluates exactly to 150 (matching old tableFast).
 	rowCost := scanBaseCost + (scanRowCost * recordSize)
 
 	// 2. Cold random access penalties
