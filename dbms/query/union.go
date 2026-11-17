@@ -249,6 +249,11 @@ func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 
 	// try merge versus lookup
 	fcMerge, vcMerge, appMerge := u.optMerge(mode, req)
+	// Disjoint unordered lookup uses the same source plans as merge.
+	if u.disjoint != "" && req.use == ReqNone && len(req.cols) == 0 &&
+		fcMerge+vcMerge < impossible {
+		return fcMerge, vcMerge, appMerge
+	}
 	// unionLookup interates through source1 not in source2, followed by source2.
 	// For ReqGroup that is only valid when req.cols includes a disjoint column
 	// otherwise the same req.cols values can occur on both sides

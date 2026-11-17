@@ -83,6 +83,10 @@ func (t *Times) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return fixcost1 + fixcost2, varcost1 + varcost2
 	}
 	fixFwd, varFwd := opt(t.source1, t.source2)
+	// Unique lookups use the same source requirements in either direction.
+	if req.use == ReqUnique {
+		return fixFwd, varFwd, false
+	}
 	fixRev, varRev := opt(t.source2, t.source1)
 	fixRev += outOfOrder
 	if fixFwd+varFwd < fixRev+varRev {
