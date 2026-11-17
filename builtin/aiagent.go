@@ -4,7 +4,9 @@
 package builtin
 
 import (
+	"fmt"
 	"log"
+	"path/filepath"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/llm"
@@ -120,10 +122,57 @@ func toolapproval_After(this Value) Value {
 	return StrVal(this.(*suToolApproval).approval.After)
 }
 
-var _ = method(agent_Input, "(input :string) :void")
+var _ = method(agent_Input, "(input :string, files = #()) :void")
 
-func agent_Input(this, input Value) Value {
-	this.(*suAgent).agent.Input(ToStr(input))
+func agent_Input(th *Thread, this Value, args []Value) Value {
+	input := ToStr(args[0])
+	files, ok := args[1].ToContainer()
+	if !ok {
+		files = SuObjectOf(args[1])
+	}
+	if files.NamedSize() != 0 {
+		panic("AiAgent.Input: files must be a list of file names")
+	}
+	var attachments []llm.ContentPart
+	var names []string
+	totalSize := 0
+	for i := 0; i < files.ListSize(); i++ {
+		file := ToStr(files.ListGet(i))
+		if file == "" {
+			continue
+		}
+		path, err := sandboxPath("AiAgent.Input", file)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr(err.Error())
+		}
+		attachment, size, err := llm.ReadAttachment(path)
+		if err != nil {
+			th.ReturnThrow = true
+			return StrCat("AiAgent.Input: ", filepath.Base(file), ": ", err.Error())
+		}
+		totalSize += size
+		if totalSize > llm.MaxTotalAttachmentSize {
+			th.ReturnThrow = true
+			return SuStr("AiAgent.Input: attachments exceed the 25 MB total limit")
+		}
+		attachments = append(attachments, attachment)
+		names = append(names, filepath.Base(file))
+	}
+	if len(names) > 0 {
+		if input != "" {
+			input += "\n\n"
+		}
+		if len(names) == 1 {
+			input += "Attached file: " + names[0]
+		} else {
+			input += "Attached files (in attachment order):"
+			for i, name := range names {
+				input += fmt.Sprintf("\n%d. %s", i+1, name)
+			}
+		}
+	}
+	this.(*suAgent).agent.Input(input, attachments...)
 	return nil
 }
 

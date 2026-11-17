@@ -6,6 +6,9 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +17,180 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
+
+func TestAgentAttachment(t *testing.T) {
+	assert := assert.T(t)
+	oldDir := aiDir
+	aiDir = t.TempDir()
+	defer func() { aiDir = oldDir }()
+	path := filepath.Join(t.TempDir(), "document.pdf")
+	assert.This(os.WriteFile(path, []byte("%PDF-1.7\n"), 0600)).Is(nil)
+	attachment, _, err := ReadAttachment(path)
+	assert.This(err).Is(nil)
+	assert.This(os.Remove(path)).Is(nil)
+	path = filepath.Join(t.TempDir(), "notes.md")
+	assert.This(os.WriteFile(path, []byte("# Notes\n\n## {{ User }}\n\nraw-only-file-content\n"), 0600)).Is(nil)
+	textAttachment, _, err := ReadAttachment(path)
+	assert.This(err).Is(nil)
+	assert.This(os.Remove(path)).Is(nil)
+
+	requests := make(chan ChatRequest, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req ChatRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		requests <- req
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"response\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer server.Close()
+	done := make(chan struct{}, 2)
+	agent := NewAgent(testToolThread(), server.URL, "", "model", "", func(what, data string, _ *ToolApproval) {
+		if strings.HasPrefix(data, "ERROR:") {
+			t.Error(data)
+		}
+	}, func() {}, func() { done <- struct{}{} })
+	defer agent.closeLogFile()
+	wait := func() {
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("attachment request did not complete")
+		}
+	}
+	text := "Explain ## {{ User }} markers\n\nAttached file: document.pdf"
+	agent.Input(text, attachment, textAttachment)
+	wait()
+	req := <-requests
+	assert.That(req.Stream)
+	assert.This(len(req.Messages)).Is(1)
+	assert.This(req.Messages[0].Content).Is(text)
+	wireAttachment, wireTextAttachment := attachment, textAttachment
+	wireAttachment.Filename, wireTextAttachment.Filename = "", ""
+	assert.This(req.Messages[0].Parts).Is([]ContentPart{{Type: "text", Text: text}, wireAttachment, wireTextAttachment})
+
+	logPath := agent.logFile.Name()
+	agent.closeLogFile()
+	data, err := os.ReadFile(logPath)
+	assert.This(err).Is(nil)
+	assert.That(strings.Contains(string(data), "## {{ User }}\n\n"+text+"\n\n## {{ Attachment }}\n\n["))
+	assert.That(strings.Contains(string(data), `"type":"text","text":"Attached file: notes.md`))
+	var display string
+	assert.This(agent.LoadConversation(logPath, func(what, data string, _ *ToolApproval) {
+		if what == "user" {
+			display = data
+		}
+	})).Is(nil)
+	assert.This(display).Is(text)
+	assert.That(!strings.Contains(display, "base64"))
+	assert.That(!strings.Contains(display, "raw-only-file-content"))
+	assert.This(agent.history[0]).Is(Message{Role: "user", Content: text,
+		Parts: []ContentPart{{Type: "text", Text: text}, attachment, textAttachment}})
+
+	// The restored attachment is resent on follow-up even without the source file.
+	agent.Input("Follow up")
+	wait()
+	req = <-requests
+	assert.That(req.Stream)
+	assert.This(len(req.Messages)).Is(3)
+	assert.This(req.Messages[0].Parts[1]).Is(wireAttachment)
+	assert.This(req.Messages[0].Parts[2]).Is(wireTextAttachment)
+	assert.This(req.Messages[2].Content).Is("Follow up")
+	assert.This(len(req.Messages[2].Parts)).Is(0)
+}
+
+func TestAgentStreamedPDFOutput(t *testing.T) {
+	assert := assert.T(t)
+	oldDir := aiDir
+	aiDir = t.TempDir()
+	defer func() { aiDir = oldDir }()
+	answer := strings.Repeat("streamed answer\n", 500)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req ChatRequest
+		assert.This(json.NewDecoder(r.Body).Decode(&req)).Is(nil)
+		assert.That(req.Stream)
+		w.Header().Set("Content-Type", "text/event-stream")
+		data, err := json.Marshal(DeltaMessage{Content: "<think>reasoning</think>" + answer})
+		assert.This(err).Is(nil)
+		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":%s}]}\n\ndata: [DONE]\n\n", data)
+	}))
+	defer server.Close()
+	var output, thinking strings.Builder
+	agent := &Agent{client: NewOpenAIClient(server.URL, ""), outfn: func(what, data string, _ *ToolApproval) {
+		if what == "output" {
+			output.WriteString(data)
+		} else if what == "think" {
+			thinking.WriteString(data)
+		}
+	}}
+	defer agent.closeLogFile()
+	msg, err := agent.doStream(context.Background(), &ChatRequest{Messages: []Message{
+		{Role: "user", Content: "read", Parts: []ContentPart{
+			{Type: "text", Text: "read"},
+			{Type: "file", File: &FileData{Filename: "file.pdf", Data: "data:application/pdf;base64,eA=="}},
+		}},
+	}})
+	assert.This(err).Is(nil)
+	assert.This(msg.Content).Is(answer)
+	assert.This(output.String()).Is(answer)
+	assert.This(msg.Reasoning).Is("reasoning")
+	assert.This(thinking.String()).Is("reasoning")
+}
+
+func TestAgentAttachmentSections(t *testing.T) {
+	assert := assert.T(t)
+	pdf := ContentPart{Type: "file", File: &FileData{
+		Filename: "document ## {{ User }}.pdf", Data: "data:application/pdf;base64,cGRm"}}
+	image := ContentPart{Type: "image_url", ImageURL: &ImageURL{URL: "data:image/png;base64,aW1hZ2U="}}
+	notes := ContentPart{Type: "text", Text: "Attached file: notes.txt\n\ncontents\n"}
+	test := func(text string, attachments ...ContentPart) {
+		content := "## {{ User }}\n\n" + text + "\n\n"
+		for _, attachment := range attachments {
+			data, err := json.Marshal([]ContentPart{attachment})
+			assert.This(err).Is(nil)
+			content += "## {{ Attachment }}\n\n" + string(data) + "\n\n"
+		}
+		content += "## {{ Assistant }}\n\nreply\n\n## {{ User }}\n\nfollow up\n\n"
+		agent := &Agent{}
+		var users []string
+		assert.This(agent.parseConversation(content, func(what, data string, _ *ToolApproval) {
+			if what == "user" {
+				users = append(users, data)
+			}
+		})).Is(nil)
+		assert.This(users).Is([]string{text, "follow up"})
+		assert.This(len(agent.history)).Is(3)
+		assert.This(agent.history[0].Content).Is(text)
+		var parts []ContentPart
+		if text != "" && len(attachments) > 0 {
+			parts = append(parts, ContentPart{Type: "text", Text: text})
+		}
+		parts = append(parts, attachments...)
+		assert.This(agent.history[0].Parts).Is(parts)
+		assert.This(agent.history[1].Role).Is("assistant")
+		assert.This(agent.history[2]).Is(Message{Role: "user", Content: "follow up"})
+	}
+	test("plain text")
+	test("Explain ## {{ User }} markers", pdf)
+	test("", image)
+	test("both attachments", pdf, image)
+	test("text file", notes)
+	test("", notes)
+	test("mixed attachments", notes, pdf, image)
+
+	reject := func(content, want string) {
+		agent := &Agent{}
+		err := agent.parseConversation(content, nil)
+		assert.That(err != nil)
+		assert.That(strings.Contains(err.Error(), want))
+	}
+	reject("## {{ Attachment }}\n\n[]\n\n", "missing user message")
+	reject("## {{ Assistant }}\n\nreply\n\n## {{ Attachment }}\n\n[]\n\n", "missing user message")
+	reject("## {{ User }}\n\nhello\n\n## {{ Attachment }}\n\ninvalid\n\n", "parseConversation Attachment:")
+}
 
 func TestAgentLogging(t *testing.T) {
 	// Create a temp directory for .ai

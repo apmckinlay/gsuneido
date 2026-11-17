@@ -85,6 +85,8 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	}
 
 	scanner := bufio.NewScanner(responseBody)
+	// Parsed PDFs may contain large text blocks and embedded images in one event.
+	scanner.Buffer(make([]byte, 4096), 64*1024*1024)
 	seenData := false
 	var nonSSE strings.Builder
 	for scanner.Scan() {

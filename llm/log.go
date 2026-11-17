@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -16,6 +17,11 @@ import (
 var aiDir = ".ai"
 
 const rawLog = false
+
+type loggedAttachment struct {
+	ContentPart
+	Filename string `json:"filename,omitempty"`
+}
 
 func (agent *Agent) ensureLogFile() {
 	if agent.logFile != nil {
@@ -76,6 +82,28 @@ func (agent *Agent) logThink(content string) {
 		return
 	}
 	agent.logWrite("## {{ Think }}\n\n" + strings.Trim(content, "\r\n") + "\n\n")
+}
+
+func (agent *Agent) logAttachments(msg Message) {
+	// Skip only the prompt part, not text-file attachments that follow it.
+	attachments := msg.Parts[msg.attachmentStart():]
+	if len(attachments) == 0 {
+		return
+	}
+	logged := make([]loggedAttachment, 0, len(attachments))
+	for _, part := range attachments {
+		logged = append(logged, loggedAttachment{ContentPart: part, Filename: part.Filename})
+	}
+	data, _ := json.Marshal(logged)
+	agent.logMessage("Attachment", string(data))
+}
+
+func (agent *Agent) logAnnotations(annotations []json.RawMessage) {
+	if len(annotations) == 0 {
+		return
+	}
+	data, _ := json.Marshal(annotations)
+	agent.logMessage("Annotations", string(data))
 }
 
 func (agent *Agent) flushThink() {
@@ -174,8 +202,11 @@ func (agent *Agent) LoadConversation(path string, outfn OutFn) error {
 	return agent.parseConversation(string(data), outfn)
 }
 
+var sectionRx = regexp.MustCompile(`(?m)^## \{\{ `)
+
 func (agent *Agent) parseConversation(content string, outfn OutFn) error {
-	for section := range strings.SplitSeq(content, "## {{ ") {
+	sections := sectionRx.Split(content, -1)
+	for _, section := range sections {
 		if section == "" {
 			continue
 		}
@@ -216,6 +247,22 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 			if outfn != nil {
 				outfn("user", body, nil)
 			}
+		case "Attachment":
+			if len(agent.history) == 0 || agent.history[len(agent.history)-1].Role != "user" {
+				return fmt.Errorf("parseConversation Attachment: missing user message")
+			}
+			var parts []loggedAttachment
+			if err := json.Unmarshal([]byte(body), &parts); err != nil {
+				return fmt.Errorf("parseConversation Attachment: %w", err)
+			}
+			msg := &agent.history[len(agent.history)-1]
+			if len(msg.Parts) == 0 && msg.Content != "" {
+				msg.Parts = append(msg.Parts, ContentPart{Type: "text", Text: msg.Content})
+			}
+			for _, part := range parts {
+				part.ContentPart.Filename = part.Filename
+				msg.Parts = append(msg.Parts, part.ContentPart)
+			}
 		case "Think":
 			if outfn != nil {
 				outfn("think", body, nil)
@@ -225,6 +272,16 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 			if outfn != nil {
 				outfn("output", body, nil)
 			}
+		case "Annotations":
+			if len(agent.history) == 0 || agent.history[len(agent.history)-1].Role != "assistant" {
+				return fmt.Errorf("parseConversation Annotations: missing assistant message")
+			}
+			var annotations []json.RawMessage
+			if err := json.Unmarshal([]byte(body), &annotations); err != nil {
+				return fmt.Errorf("parseConversation Annotations: %w", err)
+			}
+			msg := &agent.history[len(agent.history)-1]
+			msg.Annotations = mergeAnnotations(msg.Annotations, annotations)
 		case "Prompt", "Continued":
 			// skip - use current prompt, Continued is just a marker
 		case "AssistantTool":
@@ -263,6 +320,7 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 			log.Println("ERROR: parseConversation unknown role:", role)
 		}
 	}
+	agent.pruneAttachments()
 	if outfn != nil {
 		outfn("complete", "", nil)
 	}

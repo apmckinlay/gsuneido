@@ -4,13 +4,17 @@
 // Package llm provides a simple interface for OpenAI-compatible endpoints.
 package llm
 
+import "encoding/json"
+
 // Message represents a single message in a conversation.
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content"`
-	Reasoning  string     `json:"reasoning,omitempty"`
-	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
+	Role        string            `json:"role"`
+	Content     string            `json:"content"`
+	Parts       []ContentPart     `json:"-"`
+	Reasoning   string            `json:"reasoning,omitempty"`
+	ToolCalls   []ToolCall        `json:"tool_calls,omitempty"`
+	ToolCallID  string            `json:"tool_call_id,omitempty"`
+	Annotations []json.RawMessage `json:"annotations,omitempty"`
 }
 
 // StreamOptions controls streaming behavior.
@@ -97,9 +101,10 @@ type ChunkChoice struct {
 
 // DeltaMessage represents the delta content in a streaming chunk.
 type DeltaMessage struct {
-	Role             string     `json:"role,omitempty"`
-	Content          string     `json:"content,omitempty"`
-	ReasoningContent string     `json:"reasoning_content,omitempty"`
-	Reasoning        string     `json:"reasoning,omitempty"`
-	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
+	Role             string            `json:"role,omitempty"`
+	Content          string            `json:"content,omitempty"`
+	ReasoningContent string            `json:"reasoning_content,omitempty"`
+	Reasoning        string            `json:"reasoning,omitempty"`
+	ToolCalls        []ToolCall        `json:"tool_calls,omitempty"`
+	Annotations      []json.RawMessage `json:"annotations,omitempty"`
 }

@@ -111,7 +111,15 @@ func (agent *Agent) resetHistory() {
 	}
 }
 
-func (agent *Agent) Input(input string) {
+func (agent *Agent) Input(input string, attachments ...ContentPart) {
+	msg := Message{Role: "user", Content: input}
+	if len(attachments) > 0 {
+		msg.Parts = make([]ContentPart, 0, len(attachments)+1)
+		if input != "" {
+			msg.Parts = append(msg.Parts, ContentPart{Type: "text", Text: input})
+		}
+		msg.Parts = append(msg.Parts, attachments...)
+	}
 	agent.mu.Lock()
 	if agent.inProgress {
 		agent.mu.Unlock()
@@ -120,7 +128,7 @@ func (agent *Agent) Input(input string) {
 	agent.inProgress = true
 	agent.responseModel = ""
 	agent.mu.Unlock()
-	go agent.request(input)
+	go agent.request(msg)
 }
 
 // Interrupt stops the current request
@@ -264,7 +272,7 @@ func (agent *Agent) ClearHistory() {
 }
 
 // request sends the request and streams the response to outfn
-func (agent *Agent) request(input string) {
+func (agent *Agent) request(input Message) {
 	defer func() {
 		agent.mu.Lock()
 		agent.inProgress = false
@@ -282,33 +290,35 @@ func (agent *Agent) request(input string) {
 		agent.mu.Unlock()
 	}
 
-	agent.history = append(agent.history, Message{Role: "user", Content: input})
-	agent.logMessage("user", input)
+	agent.history = append(agent.history, input)
+	agent.logMessage("user", input.Content)
+	agent.logAttachments(input)
 	agent.emitEffort()
 
 	for {
 		req := agent.buildRequest()
 
-		content, reasoning, toolCalls, err := agent.doStream(ctx, req)
+		msg, err := agent.doStream(ctx, req)
 		if err != nil {
 			agent.emit("output", "ERROR: "+err.Error())
 			agent.emit("complete", "")
 			return
 		}
+		msg.Reasoning = truncate(msg.Reasoning)
 
 		// Clear reasoning from previous assistant messages (already sent once)
 		agent.clearReasoning()
 
 		// Handle tool calls
-		if len(toolCalls) > 0 && agent.toolClient != nil {
-			agent.processToolCalls(ctx, content, reasoning, toolCalls)
+		if len(msg.ToolCalls) > 0 && agent.toolClient != nil {
+			agent.processToolCalls(ctx, msg)
 			continue // Continue the loop to get next response
 		}
 
 		// No tool calls, we're done
-		agent.history = append(agent.history,
-			Message{Role: "assistant", Content: content, Reasoning: truncate(reasoning)})
-		agent.logMessage("assistant", content)
+		agent.history = append(agent.history, msg)
+		agent.logMessage("assistant", msg.Content)
+		agent.logAnnotations(msg.Annotations)
 		agent.emit("complete", "")
 		return
 	}
@@ -350,6 +360,7 @@ func truncate(s string) string {
 
 // buildRequest creates the chat request with current history and tools
 func (agent *Agent) buildRequest() *ChatRequest {
+	agent.pruneAttachments()
 	req := &ChatRequest{
 		Model:    agent.model,
 		Messages: agent.history,
@@ -372,29 +383,32 @@ func (agent *Agent) buildRequest() *ChatRequest {
 }
 
 // doStream performs the streaming request and returns accumulated content and reasoning
-func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
-	content, reasoning string, toolCalls []ToolCall, err error) {
+func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (msg Message, err error) {
 
+	msg.Role = "assistant"
 	var contentBuilder, reasoningBuilder strings.Builder
 	toolCallsState := make([]*streamToolCall, 0, 2)
 	inThink := false
 
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
+		if len(chunk.Choices) > 0 {
+			msg.Annotations = mergeAnnotations(msg.Annotations, chunk.Choices[0].Delta.Annotations)
+		}
 		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsState, &inThink)
 	})
 	if err != nil {
-		return
+		return Message{}, err
 	}
 
-	toolCalls = make([]ToolCall, 0, len(toolCallsState))
+	msg.Content, msg.Reasoning = contentBuilder.String(), reasoningBuilder.String()
 	for _, st := range toolCallsState {
 		if st == nil {
 			continue
 		}
 		st.call.Function.Arguments = st.args.String()
-		toolCalls = append(toolCalls, st.call)
+		msg.ToolCalls = append(msg.ToolCalls, st.call)
 	}
-	return contentBuilder.String(), reasoningBuilder.String(), toolCalls, nil
+	return msg, err
 }
 
 type streamToolCall struct {
@@ -477,55 +491,49 @@ func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsStat
 // processContentText handles the content text, tracking think blocks
 func (agent *Agent) processContentText(text string, content *strings.Builder,
 	reasoning *strings.Builder, inThink *bool) error {
-	if *inThink {
-		if idx := strings.Index(text, "</think"); idx >= 0 {
-			if idx > 0 {
-				reasoning.WriteString(text[:idx])
-				agent.emit("think", text[:idx])
+	for text != "" {
+		tag := "<think"
+		if *inThink {
+			tag = "</think"
+		}
+		idx := strings.Index(text, tag)
+		segment := text
+		if idx >= 0 {
+			segment = text[:idx]
+		}
+		if segment != "" {
+			if *inThink {
+				reasoning.WriteString(segment)
+				agent.emit("think", segment)
+			} else {
+				content.WriteString(segment)
+				agent.emit("output", segment)
 			}
-			*inThink = false
+		}
+		if idx < 0 {
+			break
+		}
+		*inThink = !*inThink
+		if !*inThink {
 			agent.flushThink()
-			return nil
 		}
-		if text == "" {
-			return nil
+		end := strings.IndexByte(text[idx:], '>')
+		if end < 0 {
+			break
 		}
-		reasoning.WriteString(text)
-		agent.emit("think", text)
-	} else if idx := strings.Index(text, "<think"); idx >= 0 {
-		if idx > 0 {
-			content.WriteString(text[:idx])
-			agent.emit("output", text[:idx])
-		}
-		*inThink = true
-		if gtIdx := strings.Index(text[idx:], ">"); gtIdx >= 0 {
-			after := text[idx+gtIdx+1:]
-			if after != "" {
-				reasoning.WriteString(after)
-				agent.emit("think", after)
-			}
-		}
-	} else if text != "" {
-		content.WriteString(text)
-		agent.emit("output", text)
+		text = text[idx+end+1:]
 	}
 	return nil
 }
 
 // processToolCalls processes tool calls and adds results to history
-func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning string, toolCallsList []ToolCall) {
+func (agent *Agent) processToolCalls(ctx context.Context, assistantMsg Message) {
 	// Add assistant message with tool calls to history
-	assistantMsg := Message{
-		Role:      "assistant",
-		Content:   content,
-		Reasoning: truncate(reasoning),
-		ToolCalls: toolCallsList,
-	}
 	agent.history = append(agent.history, assistantMsg)
 	agent.logAssistantToolCalls(assistantMsg)
 
 	// Process each tool call
-	for _, tc := range toolCallsList {
+	for _, tc := range assistantMsg.ToolCalls {
 		agent.executeSingleToolCall(ctx, tc)
 	}
 }
@@ -648,7 +656,9 @@ func (agent *Agent) emit(what, data string) {
 		return
 	}
 	agent.flushThink()
-	data = truncate(data)
+	if what != "output" {
+		data = truncate(data)
+	}
 	if what == "tool" {
 		data = capTrailingNewlines(data, 2)
 	}
