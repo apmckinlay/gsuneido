@@ -368,7 +368,8 @@ func (su *Summarize) optIdx(mode Mode) (Cost, Cost, any) {
 
 func (su *Summarize) optMap(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := su.Nrows()
-	if req.use != ReqNone || su.hint == sumLarge ||
+	// Without grouping, seq reads the same source without the map overhead.
+	if len(su.by) == 0 || req.use != ReqNone || su.hint == sumLarge ||
 		(nrows > mapThreshold && su.hint != sumSmall) {
 		return impossible, impossible, nil
 	}

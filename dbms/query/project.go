@@ -451,6 +451,10 @@ func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	// non-unique: merge incoming req with own ReqGroup(p.columns)
 	seqFix, seqVar, seqApp := p.optSeq(mode, req)
+	// With a requirement, map uses the same source plan plus map overhead.
+	if req.use != ReqNone && seqFix+seqVar < impossible {
+		return seqFix, seqVar, seqApp
+	}
 	mapFix, mapVar, mapApp := p.optMap(mode, req)
 	if seqFix+seqVar <= mapFix+mapVar {
 		return seqFix, seqVar, seqApp
