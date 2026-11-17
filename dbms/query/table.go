@@ -175,6 +175,13 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return 0, tbl.costFor(index, req),
 			tableApproach{index: index, mode: mode}
 	}
+	// trackIndexUsage is deliberately called in optimize
+	// (i.e. for each approach strategy considered)
+	// to make it insensitive to the current physical index
+	// and its resulting approach strategy.
+	// Only tracking the chosen approach strategy e.g. in SetApproach
+	// tends to lock in the current physical index.
+	tbl.trackIndexUsage(req)
 	best := newBest[[]string]()
 	for i, idx := range tbl.indexes {
 		if req.use == ReqUnique && !tbl.uniqueForLookup(i) {
@@ -189,6 +196,26 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	return 0, best.varcost, tableApproach{index: best.data, mode: mode}
+}
+
+const smallTable = 16 * 1024
+
+func (tbl *Table) trackIndexUsage(req Require) {
+	if req.use == ReqUnique ||
+		tbl.info.Size < smallTable ||
+		len(tbl.indexes) == 1 ||
+		len(req.cols) == 0 {
+		return
+	}
+	nrows := int(req.frac * float32(tbl.info.Nrows))
+	if nrows <= 2 {
+		return
+	}
+	for i, idx := range tbl.indexes {
+		if req.SatisfiedBy(idx) {
+			tbl.tran.BusyAddScan(tbl.name, i, nrows)
+		}
+	}
 }
 
 // uniqueForLookup returns whether a Lookup on this index yields at most one row.

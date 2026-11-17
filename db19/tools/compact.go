@@ -6,6 +6,7 @@ package tools
 import (
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"sync"
 
@@ -28,9 +29,14 @@ import (
 
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
+// (similar to a copying garbage collector)
 // In the process it concurrently does a full check of the database.
 // To keep table data and indexes contiguous (not interleaved)
 // it runs primarily single threaded, only index checking is concurrent.
+// It also uses information collected in busycols.txt during operation
+// to collects stats about "busy" columns
+// and to select the most scanned index for physical order (faster)
+// and move it to first (indexes[0])
 func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -46,7 +52,7 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 
 	state := src.GetState()
-	busy := stats.LoadBusy()
+	busy, scans := stats.LoadBusy()
 	stats := make(stats.StatsTally)
 
 	type schemaSize struct {
@@ -80,7 +86,7 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 		if sc.sc.Table == StatsTableName {
 			continue
 		}
-		compactTable(state, src, sc.sc, dst, channel, busy, stats)
+		compactTable(state, src, sc.sc, dst, channel, busy, scans, stats)
 	}
 	close(channel)
 	wg.Wait()
@@ -120,7 +126,8 @@ type indexJob struct {
 	sum   uint64
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob, busy stats.Busy, stats stats.StatsTally) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
+	channel chan<- indexJob, busy stats.Busy, scans stats.Scans, stats stats.StatsTally) {
 	defer func() {
 		if e := recover(); e != nil {
 			core.Fatal(ts.Table+":", e)
@@ -129,7 +136,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	ts.Check(state.Meta.GetRoSchema)
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
-	ixi := info.SmallestKeyIndex(ts.Indexes)
+	ixi := compactIndex(ts.Indexes, info.Nrows, scans[ts.Table])
 	statsCols := buildStatsCols(ts.Table, ts.Columns, busy, stats)
 	sum := uint64(0)
 	size := 0
@@ -166,12 +173,47 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 		channel <- indexJob{store: src.Store,
 			tsi: &ts.Indexes[i], ix: info.Indexes[i], nrows: nrows, sum: sum}
 	}
+	// Keep the source schema (also used by the check workers) unchanged.
+	cp := *ts
+	ts = &cp
+	ts.Indexes = slices.Clone(ts.Indexes)
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")
 	}
-	indexes := buildIndexes(ts, list, dst, nrows, ixi)
+	// Index zero remembers the physical order
+	if ixi != 0 {
+		ix := ts.Indexes[ixi]
+		copy(ts.Indexes[1:ixi+1], ts.Indexes[:ixi])
+		ts.Indexes[0] = ix
+	}
+	indexes := buildIndexes(ts, list, dst, nrows)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	dst.AddNewTable(ts, ti)
+}
+
+func compactIndex(indexes []schema.Index, nrows int, scans map[string]int) int {
+	if len(indexes) <= 1 {
+		return 0
+	}
+	best := 0
+	bestCount := scans[indexes[0].ColStr()]
+	for i, ix := range indexes {
+		ixs := ix.ColStr()
+		count := scans[ixs]
+		if count > bestCount {
+			best = i
+			bestCount = count
+		}
+	}
+	// we use nrows as a threshold, because if a table isn't scanned even once
+	// during the usual week between compacts
+	// then it probably isn't worth switching physical indexes
+	// since that forces compact to read by a non-physical index which is slower
+	if bestCount < max(100, nrows) ||
+		float64(bestCount) <= 1.15*float64(scans[indexes[0].ColStr()]) {
+		return 0 // keep the current
+	}
+	return best
 }
 
 type statsCol struct {

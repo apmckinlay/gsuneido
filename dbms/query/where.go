@@ -89,7 +89,8 @@ type Where struct {
 	srcIndex []string // set by setApproach, used by Lookup
 	wFixed   Fixed
 
-	wfrac float64
+	wfrac   float64
+	minFrac float64 // smallest idxSel indexRangeFrac
 }
 
 type optInited byte
@@ -567,7 +568,35 @@ func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if req.use == ReqUnique {
 		return w.optWhereLookup(mode, req)
 	}
+	// trackIndexUsage is deliberately called in optimize
+	// (i.e. for each approach strategy considered)
+	// to make it insensitive to the current physical index
+	// and its resulting approach strategy.
+	// Only tracking the chosen approach strategy e.g. in SetApproach
+	// tends to lock in the current physical index.
+	w.trackIndexUsage(req)
 	return w.optWhereIdx(mode, req)
+}
+
+func (w *Where) trackIndexUsage(req Require) {
+	if w.singleton || w.tbl.info.Size < smallTable || len(w.tbl.indexes) == 1 {
+		return
+	}
+	nrows := int(float64(req.frac) * w.minFrac * float64(w.tbl.info.Nrows))
+	if nrows <= 2 {
+		return
+	}
+	for i, idx := range w.source.Indexes() {
+		if len(req.cols) > 0 && req.SatisfiedByWithFixed(idx, w.fixed) {
+			w.t.BusyAddScan(w.tbl.name, i, nrows)
+			continue
+		}
+		isel := w.getIdxSel(idx)
+		if isel != nil &&
+			isel.indexRangeFrac < 1 && isel.indexRangeFrac <= 4*w.minFrac {
+			w.t.BusyAddScan(w.tbl.name, i, nrows)
+		}
+	}
 }
 
 func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {

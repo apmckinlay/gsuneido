@@ -208,7 +208,7 @@ func (ts *Schema) SetupNewIndexes(nold int) []schema.Index {
 
 // SetBestKeys determines the BestKey for each index
 // that requires the fewest additional columns.
-// On ties, prefers the key with fewer columns (matches SmallestKeyIndex).
+// On ties, prefers the key with fewer columns.
 // This should be done before IxSpecs.
 // WARNING: this affects the stored index entries
 // so it should only be used for empty indexes.

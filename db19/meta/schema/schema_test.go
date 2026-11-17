@@ -178,12 +178,7 @@ func TestDumpString(t *testing.T) {
 			{Mode: 'i', Columns: []string{"c"}},
 		},
 	}
-	// firstIdx=0 => same as DumpString
-	assert.This(sc.DumpString(0)).Is("test (a,b,c) key(a) key(b) index(c)")
-	// firstIdx=1 => second key first
-	assert.This(sc.DumpString(1)).Is("test (a,b,c) key(b) key(a) index(c)")
-	// firstIdx=2 => index first
-	assert.This(sc.DumpString(2)).Is("test (a,b,c) index(c) key(a) key(b)")
+	assert.This(sc.DumpString()).Is("test (a,b,c) key(a) key(b) index(c)")
 }
 
 func TestCheckLower(t *testing.T) {

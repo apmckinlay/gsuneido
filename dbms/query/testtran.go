@@ -268,6 +268,9 @@ func (t testTran) Num() int {
 func (t testTran) BusyAdd(string, int) {
 }
 
+func (t testTran) BusyAddScan(string, int, int) {
+}
+
 func (t testTran) Stats() stats.Stats {
 	return t.stats
 }

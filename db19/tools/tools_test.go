@@ -4,6 +4,7 @@
 package tools_test
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -28,6 +29,74 @@ var columns = []string{"one", "two", "three", "four"}
 var data = [][]string{
 	{"a", "b", "c", "d"},
 	{"e", "f", "g", "h"},
+}
+
+func TestCompactScanOrder(t *testing.T) {
+	assert.TestOnlyIndividually(t)
+	t.Chdir(t.TempDir())
+	makeSuTran := db19.MakeSuTran
+	db19.MakeSuTran = func(*db19.UpdateTran) *core.SuTran {
+		return core.NewSuTran(nil, true)
+	}
+	defer func() { db19.MakeSuTran = makeSuTran }()
+	db, err := db19.CreateDatabase(dbName)
+	assert.T(t).This(err).Is(nil)
+	db19.StartConcur(db, 50*time.Millisecond)
+	query.DoAdminTest(db, "create parent (id,code) key(id) key(code)")
+	query.DoAdminTest(db, "create child (id,parent) key(id) index(parent) in parent(id)")
+	for i := range 20 {
+		ut := db.NewUpdateTran(core.AllPerms)
+		query.DoAction(nil, ut, fmt.Sprintf("insert {id: %d, code: %d} into parent", i, 20-i))
+		query.DoAction(nil, ut, fmt.Sprintf("insert {id: %d, parent: %d} into child", 19-i, i))
+		ut.Commit()
+	}
+	db.Close()
+	compact := func(busy string, first string) {
+		t.Helper()
+		if busy != "" {
+			assert.T(t).This(os.WriteFile("busycols.txt", []byte(busy), 0644)).Is(nil)
+		}
+		_, _, _, _, err := tools.Compact(dbName)
+		assert.T(t).This(err).Is(nil)
+		assert.T(t).This(db19.CheckDatabase(dbName, true)).Is(nil)
+		db, err := db19.OpenDb(dbName, stor.Read, false)
+		assert.T(t).This(err).Is(nil)
+		defer db.Close()
+		assert.T(t).This(db.GetState().Meta.GetRoSchema("parent").Indexes[0].Columns).
+			Is([]string{first})
+		assert.T(t).This(db.GetState().Meta.GetRoSchema("child").Indexes[0].Columns).
+			Is([]string{"parent"})
+		rt := db.NewReadTran(core.AllPerms)
+		defer rt.Abort()
+		for _, table := range []string{"parent", "child"} {
+			iter := rt.IndexIter(table, 0)
+			prev, n := uint64(0), 0
+			for iter.Next(rt); !iter.Eof(); iter.Next(rt) {
+				off := iter.CurOff()
+				assert.T(t).That(off > prev)
+				prev = off
+				n++
+			}
+			assert.T(t).This(n).Is(20)
+		}
+	}
+	compact("100\tparent\tcode\n100\tchild\tparent\n", "code")
+	_, _, err = tools.DumpDatabase(dbName, "dump.tmp")
+	assert.T(t).This(err).Is(nil)
+	_, _, err = tools.LoadDatabase("dump.tmp", "loaded.tmp", "", "")
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).This(db19.CheckDatabase("loaded.tmp", true)).Is(nil)
+	loaded, err := db19.OpenDb("loaded.tmp", stor.Read, false)
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).This(loaded.GetState().Meta.GetRoSchema("parent").Indexes[0].Columns).
+		Is([]string{"code"})
+	assert.T(t).This(loaded.GetState().Meta.GetRoSchema("child").Indexes[0].Columns).
+		Is([]string{"parent"})
+	loaded.Close()
+	compact("", "code")
+	compact("2\tparent\tid\n", "code")
+	compact("100\tparent\tcode\n100\tparent\tid\n", "code")
+	compact("200\tparent\tid\n100\tparent\tcode\n", "id")
 }
 
 func TestTools(t *testing.T) {

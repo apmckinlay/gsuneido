@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -117,18 +115,18 @@ func BenchmarkExtend(b *testing.B) {
 	}
 }
 
-func TestExtendForwardBug(t *testing.T) {
-	assert.TestOnlyIndividually(t)
-	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
-	if err != nil {
-		panic(err.Error())
-	}
-	MakeSuTran = func(qt QueryTran) *SuTran {
-		return nil
-	}
-	tran := db.NewReadTran(AllPerms)
-	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
-	q, _, _ = Setup(q, ReadMode, tran)
-	for row := q.Get(nil, Next); !row.Eof(); row = q.Get(nil, Next) {
-	}
-}
+// func TestExtendForwardBug(t *testing.T) {
+// 	assert.TestOnlyIndividually(t)
+// 	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	MakeSuTran = func(qt QueryTran) *SuTran {
+// 		return nil
+// 	}
+// 	tran := db.NewReadTran(AllPerms)
+// 	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
+// 	q, _, _ = Setup(q, ReadMode, tran)
+// 	for row := q.Get(nil, Next); !row.Eof(); row = q.Get(nil, Next) {
+// 	}
+// }

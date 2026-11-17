@@ -29,6 +29,43 @@ func (tr *tableSetTran) CheckPerm(string, core.TablePerm) {
 func (tr *tableSetTran) GetSchema(string) *Schema  { return tr.schema }
 func (tr *tableSetTran) GetInfo(string) *meta.Info { return tr.info }
 
+func TestTable_scanBusy(t *testing.T) {
+	info := &meta.Info{Nrows: 1000, Size: smallTable}
+	tran := &scanTran{QueryTran: &tableSetTran{
+		schema: &Schema{Columns: []string{"a", "b", "c"}, Indexes: []Index{
+			{Mode: 'k', Columns: []string{"a"}, Fields: []string{"a"}},
+			{Mode: 'i', Columns: []string{"b"}, Fields: []string{"b", "a"}},
+			{Mode: 'i', Columns: []string{"b", "c"}, Fields: []string{"b", "c", "a"}},
+		}},
+		info: info,
+	}, scans: make(map[int]int)}
+	tbl := NewTable(tran, "t")
+	test := func(req Require, weight int, indexes ...int) {
+		t.Helper()
+		clear(tran.scans)
+		tbl.optimize(CursorMode, req)
+		a := assert.T(t).Msg(req)
+		a.This(len(tran.scans)).Is(len(indexes))
+		for _, i := range indexes {
+			a.This(tran.table).Is("t")
+			a.This(tran.scans[i]).Is(weight)
+		}
+	}
+	test(OrderReq([]string{"b"}, 1), 1000, 1, 2)
+	test(GroupReq([]string{"a", "b"}, 1, 1), 1000, 1)
+	test(OrderReq([]string{"b"}, .25), 250, 1, 2)
+	test(OrderReq([]string{"b"}, .002), 0) // two rows
+	test(OrderReq([]string{"b"}, .003), 3, 1, 2)
+	test(OrderReq([]string{"c"}, 1), 0) // no matching index
+	test(NoneReq(1), 0)
+	test(UniqueReq([]string{"a"}, 1), 0)
+	info.Size = smallTable - 1
+	test(OrderReq([]string{"b"}, 1), 0)
+	info.Size = smallTable
+	tbl.indexes = tbl.indexes[:1]
+	test(OrderReq([]string{"a"}, 1), 0)
+}
+
 func TestTableGetFilter(t *testing.T) {
 	a := assert.T(t)
 	db := heapDb()
@@ -162,7 +199,7 @@ func TestTableOptimize(t *testing.T) {
 	// supplier: key on {supplier}, index on {city}
 	// indexes: [[supplier], [city,supplier]], allKeys: [[supplier]]
 
-	// ReqNone — primary index
+	// ReqNone — physical (first) index
 	test("supplier", NoneReq(1), []string{"supplier"})
 
 	// ReqOrder — match key

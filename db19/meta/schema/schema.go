@@ -27,6 +27,7 @@ type Schema struct {
 	Columns []string
 	// Derived are the rules (capitalized) and _lower!
 	Derived []string
+	// Indexes[0] is the physical order (as of the last compact)
 	Indexes []Index
 }
 
@@ -65,23 +66,22 @@ const (
 )
 
 func (sc *Schema) String() string {
-	return sc.string(false, true, false, 0)
+	return sc.string(false, true, false)
 }
 
 // String2 includes fkToHere information.
 // It is used by Database.Schema(table)
 func (sc *Schema) String2() string {
-	return sc.string(true, true, true, 0)
+	return sc.string(true, true, true)
 }
 
 // DumpString does not include fkToHere or deleted columns.
-// It outputs the index at firstIdx first.
 // This is used by dump so the load can assume the data is sorted by index 0.
-func (sc *Schema) DumpString(firstIdx int) string {
-	return sc.string(false, false, true, firstIdx)
+func (sc *Schema) DumpString() string {
+	return sc.string(false, false, true)
 }
 
-func (sc *Schema) string(fktohere, delcols, emptycols bool, firstIdx int) string {
+func (sc *Schema) string(fktohere, delcols, emptycols bool) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
@@ -100,13 +100,7 @@ func (sc *Schema) string(fktohere, delcols, emptycols bool, firstIdx int) string
 		sb.WriteString(") ")
 	}
 	sep := ""
-	for n := range len(sc.Indexes) {
-		i := n
-		if n == 0 {
-			i = firstIdx
-		} else if n <= firstIdx {
-			i = n - 1
-		}
+	for i := range sc.Indexes {
 		sb.WriteString(sep)
 		sb.WriteString(sc.Indexes[i].string(fktohere))
 		sep = " "
@@ -144,6 +138,10 @@ func (ix *Index) string(fktohere bool) string {
 		s += str.Join("", toHere)
 	}
 	return s
+}
+
+func (ix *Index) ColStr() string {
+	return strings.Join(ix.Columns, ",")
 }
 
 // FindIndex returns a pointer to the Index with the given columns

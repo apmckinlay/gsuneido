@@ -216,14 +216,13 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	sc.Check(state.Meta.GetRoSchema)
 	hasdel := sc.HasDeleted()
 	info := state.Meta.GetRoInfo(table)
-	ixi := info.SmallestKeyIndex(sc.Indexes)
-	schema := sc.DumpString(ixi)
+	schema := sc.DumpString()
 	if !multi {
 		schema = str.AfterFirst(schema, " ")
 	}
 	w.WriteString(schema + "\n")
 	sum := uint64(0)
-	nrows := info.Indexes[ixi].CheckBtree(func(off uint64) {
+	nrows := info.Indexes[0].CheckBtree(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
 		if hasdel {
@@ -234,10 +233,10 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	})
 	writeInt(w, 0) // end of table records
 	if nrows != info.Nrows {
-		panic(fmt.Sprintln("dump", table, sc.Indexes[ixi].Columns,
+		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
 			"count", nrows, "should equal info", info.Nrows))
 	}
-	ics.checkOtherIndexes(db.Store, sc, info, ixi, nrows, sum) // concurrent
+	ics.checkOtherIndexes(db.Store, sc, info, nrows, sum) // concurrent
 	return nrows
 }
 
@@ -283,7 +282,7 @@ func dumpViews(state *DbState, w WriterPlus) int {
 }
 
 // ------------------------------------------------------------------
-// Concurrent checking of additional indexes. Also used by compact.
+// Concurrent checking of additional indexes
 
 func newIndexCheckers() *indexCheckers {
 	ics := indexCheckers{work: make(chan indexCheck, 32), // ???
@@ -316,9 +315,9 @@ type indexCheck struct {
 }
 
 func (ics *indexCheckers) checkOtherIndexes(st *stor.Stor, sc *meta.Schema,
-	info *meta.Info, skipIdx, count int, sum uint64) {
+	info *meta.Info, count int, sum uint64) {
 	for i := range info.Indexes {
-		if i == skipIdx {
+		if i == 0 { // skip first index
 			continue
 		}
 		select {

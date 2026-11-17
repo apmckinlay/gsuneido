@@ -12,6 +12,69 @@ import (
 	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
+type tempIndexOptSource struct {
+	*QueryMock
+	fixcost, varcost Cost
+	calls            int
+}
+
+func (s *tempIndexOptSource) optimize(Mode, Require) (Cost, Cost, any) {
+	s.calls++
+	if s.calls == 1 {
+		return s.fixcost, s.varcost, "direct"
+	}
+	return 0, 100, "source"
+}
+
+func TestTempIndexPruning(t *testing.T) {
+	cols := []string{"a"}
+	test := func(req Require, nrows int, fixcost, varcost Cost,
+		pruned, tempindex bool) {
+		t.Helper()
+		s := &tempIndexOptSource{
+			QueryMock: &QueryMock{
+				ColumnsResult: cols,
+				HeaderResult:  SimpleHeader(cols),
+				FixedResult:   Fixed{},
+				KeysResult:    [][]string{cols},
+				IndexesResult: [][]string{cols},
+				NrowsN:        nrows,
+			},
+			fixcost: fixcost,
+			varcost: varcost,
+		}
+		f, v, ap := optTempIndex(s, ReadMode, req)
+		a := assert.T(t).Msg(req)
+		a.This(s.calls == 1).Is(pruned)
+		_, ti := ap.(*tiApproach)
+		a.This(ti).Is(tempindex)
+		if !ti {
+			a.This(f).Is(fixcost)
+			a.This(v).Is(varcost)
+			a.This(ap).Is("direct")
+		}
+	}
+	// For 100 rows: base 1000 + build 48300 + 50 rows read at 100 each.
+	test(OrderReq(cols, .5), 100, 0, 54300, true, false)
+	test(OrderReq(cols, .5), 100, 0, 54301, false, false)
+	test(OrderReq(cols, .5), 100, 100, 54200, true, false)
+	test(OrderReq(cols, .5), 100, impossible, impossible, false, true)
+	test(OrderReq(cols, .5), 0, 0, 1000, true, false)
+	test(OrderReq(cols, .5), 1, 0, 1050, true, false)
+	test(OrderReq(cols, 1.0/1024), 100, 0, 49309, true, false)
+	// Lookup requests have frac zero, but can still benefit from a temp index.
+	test(UniqueReq(cols, 1000), 100, 0, 249300, true, false)
+	test(UniqueReq(cols, 1000), 100, 0, 500000, false, true)
+	test(GroupReq(cols, .5, 1000), 100, 0, 254300, true, false)
+	test(GroupReq(cols, .5, 1000), 100, 0, 500000, false, true)
+
+	old := ticostAdj
+	defer func() { ticostAdj = old }()
+	ticostAdj = 5000
+	test(OrderReq(cols, .5), 100, 0, 59300, true, false)
+	test(OrderReq(cols, .5), 100, 0, 59301, false, false)
+}
+
 func TestTempIndexEmptyRecord(t *testing.T) {
 	db := heapDb()
 	defer db.Close()

@@ -10,7 +10,9 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -24,6 +26,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -51,8 +54,9 @@ type Database struct {
 	closed    atomic.Bool
 	corrupted atomic.Bool
 
-	stats stats.Stats
-	busy  stats.BusyTally
+	stats    stats.Stats
+	busy     stats.BusyTally
+	busyOnce sync.Once
 
 	// schemaCache holds recent schema-table materializations, keyed by
 	// schema HAMT identity. See schema.go.
@@ -550,6 +554,11 @@ func (db *Database) AlterDrop(schema *schema.Schema) bool {
 			}
 		})
 	})
+	if result && len(schema.Indexes) > 0 {
+		// indexes are tracked by ordinal, so drop any scan weights
+		// recorded against the old ordinals
+		db.busy.ResetScans(schema.Table)
+	}
 	return result
 }
 
@@ -723,9 +732,48 @@ func ReadStats(db *Database) stats.Stats {
 	return stats.UnpackStats(data)
 }
 
+const busyInterval = 2 * time.Hour
+
 // BusyAdd adds a column with a given weight to the BusyTally.
 func (db *Database) BusyAdd(col string, weight int) {
+	db.busyOnce.Do(db.initBusy)
 	db.busy.Add(col, weight)
+}
+
+func (db *Database) busyAddScan(table string, index, cost int) {
+	db.busyOnce.Do(db.initBusy)
+	db.busy.AddScan(table, index, cost)
+}
+
+func (db *Database) initBusy() {
+	go func() {
+		ticker := time.NewTicker(busyInterval)
+		for range ticker.C {
+			db.saveBusy()
+		}
+	}()
+	startTime := time.Now()
+	exit.Add("busy", func() { // for testing/development
+		if time.Since(startTime) < busyInterval {
+			db.saveBusy()
+		}
+	})
+}
+
+func (db *Database) saveBusy() {
+	meta := db.GetState().Meta
+	getIndexes := func(table string) [][]string {
+		ts := meta.GetRoSchema(table)
+		if ts == nil {
+			return nil
+		}
+		indexes := make([][]string, len(ts.Indexes))
+		for i, ix := range ts.Indexes {
+			indexes[i] = ix.Columns
+		}
+		return indexes
+	}
+	db.busy.Save(getIndexes)
 }
 
 func (db *Database) Stats() stats.Stats {

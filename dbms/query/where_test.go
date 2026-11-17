@@ -23,6 +23,81 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+type scanTran struct {
+	QueryTran
+	scans map[int]int
+	table string
+}
+
+func (t *scanTran) BusyAdd(string, int) {
+}
+
+func (t *scanTran) BusyAddScan(table string, index, cost int) {
+	t.table = table
+	t.scans[index] += cost
+}
+
+func TestWhere_scanBusy(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (a,b,c,d) key(a) index(b) index(c)")
+	for i := range 100 {
+		db.act(fmt.Sprintf("insert {a: %d, b: %d} into t", i, i))
+	}
+	rt := db.NewReadTran(AllPerms)
+	defer rt.Abort()
+	// fake a table size large enough to be worth tracking
+	tran := &scanTran{QueryTran: sizeTran{QueryTran: rt}, scans: make(map[int]int)}
+	test := func(expr string, req Require, expected ...int) {
+		t.Helper()
+		clear(tran.scans)
+		q := ParseQuery("t where "+expr, tran, nil)
+		q, _, _ = SetupReq(q, CursorMode, tran, req)
+		w := q.(*Where)
+		assert.T(t).This(len(tran.scans)).Is(len(expected))
+		// independently compute the estimated rows the scans should avoid
+		var nrows int
+		if len(expected) > 0 {
+			minFrac := 1.0
+			for _, isel := range w.idxSels {
+				minFrac = min(minFrac, isel.indexRangeFrac)
+			}
+			assert.T(t).Msg(expr).This(w.minFrac).Is(minFrac)
+			nrows = int(float64(req.frac) * minFrac * float64(w.tbl.info.Nrows))
+			assert.T(t).Msg(expr).That(nrows > 2)
+		}
+		for i, cost := range tran.scans {
+			assert.T(t).Msg(expr).This(tran.table).Is("t")
+			assert.T(t).Msg(expr).That(slices.Contains(expected, i))
+			assert.T(t).Msg(expr).This(cost).Is(nrows)
+		}
+		th := &Thread{}
+		for !q.Get(th, Next).Eof() {
+		}
+		q.Rewind()
+		for !q.Get(th, Prev).Eof() {
+		}
+		// execution must not tally the candidates again
+		assert.T(t).This(len(tran.scans)).Is(len(expected))
+		for _, cost := range tran.scans {
+			assert.T(t).This(cost).Is(nrows)
+		}
+	}
+	orderA := OrderReq([]string{"a"}, 1)
+	// a and b constrain preferred indexes, c can filter on its appended key a
+	test("a >= 20 and b >= 40", orderA, 0, 1, 2)
+	test("b >= 20", orderA, 0, 1) // a is ordered, b is selective
+	// Without index constraints, only the requested ordering earns credit.
+	test("d >= 2", orderA, 0)
+	test("d >= 2", OrderReq([]string{"b"}, 1), 1)
+	test("d >= 2", NoneReq(1))
+	test("d >= 2", OrderReq([]string{"a"}, .25), 0)
+	test("d >= 2", OrderReq([]string{"a"}, .002))    // two rows
+	test("d >= 2", OrderReq([]string{"a"}, .003), 0) // three rows
+	test("a in (1,3)", orderA)                       // points estimate <= 2 rows, not worth tracking
+	test("a is 2", orderA)                           // singleton
+}
+
 func TestWhere_trace(t *testing.T) {
 	tran := testTran{stats: stats.Stats{
 		"customer": {Count: 100, Columns: map[string]stats.ColStats{

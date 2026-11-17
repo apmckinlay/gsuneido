@@ -33,6 +33,7 @@ func (w *Where) perIndex() []*idxSel {
 	}
 	colFracs := w.getColFracs(w.colSpans)
 	w.colFracs = colFracs
+	w.minFrac = 1
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	// Build all candidates first so a later singleton avoids prefixFrac probes.
@@ -62,9 +63,11 @@ func (w *Where) perIndex() []*idxSel {
 		exprCols[i] = e.Columns() // allocates, so only do it once
 	}
 	minFrac := 1.0
+	wFrac := 1.0
 	for _, isel := range idxSels {
 		isel.prefixFrac = w.prefixFrac(isel)
 		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
+		minFrac = min(minFrac, isel.indexRangeFrac)
 		isel.hasIndexFilter = w.coversIndexExpr(isel, exprCols)
 		if trace.WhereOpt.On() {
 			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
@@ -77,10 +80,11 @@ func (w *Where) perIndex() []*idxSel {
 			return other.prefixLen > isel.prefixLen &&
 				set.HasSubset(other.index[:other.prefixLen], isel.index[:isel.prefixLen])
 		}) {
-			minFrac = min(minFrac, frac)
+			wFrac = min(wFrac, frac)
 		}
 	}
-	w.wfrac = minFrac
+	w.minFrac = minFrac
+	w.wfrac = wFrac
 	trace.WhereOpt.Println("    wfrac", w.wfrac)
 	return idxSels
 }

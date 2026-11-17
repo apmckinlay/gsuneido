@@ -121,7 +121,11 @@ func (t *tran) GetStore() *stor.Stor {
 }
 
 func (t *tran) BusyAdd(col string, weight int) {
-	t.db.busy.Add(col, weight)
+	t.db.BusyAdd(col, weight)
+}
+
+func (t *tran) BusyAddScan(table string, index, cost int) {
+	t.db.busyAddScan(table, index, cost)
 }
 
 func (t *tran) Stats() stats.Stats {

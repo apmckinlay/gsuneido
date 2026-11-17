@@ -186,6 +186,7 @@ func checkKey(ixspec ixkey.Spec, key string, rec core.Record) {
 	}
 }
 
+// CheckOtherIndex is also used by Dump and Compact
 func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay,
 	nrows int, sumPrev uint64, full bool, state *DbState) {
 	defer func() {

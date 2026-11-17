@@ -341,6 +341,7 @@ type QueryTran interface {
 	IndexIter(table string, iIndex int) index.IndexIter
 	Num() int
 	BusyAdd(col string, weight int)
+	BusyAddScan(table string, index, cost int)
 	Stats() stats.Stats
 }
 
