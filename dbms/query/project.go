@@ -692,7 +692,7 @@ func (p *Project) dedupRow(th *Thread, row Row) (Row, bool) {
 	} else {
 		if !p.warned && p.dedup.Size() > mapWarn {
 			p.warned = true
-			Warning("project-map large >", mapWarn)
+			Warning("project-map large >", mapWarn, String(p))
 		}
 		return row, false
 	}
