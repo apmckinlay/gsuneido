@@ -32,25 +32,23 @@ var data = [][]string{
 
 func TestTools(t *testing.T) {
 	assert.TestOnlyIndividually(t)
+	t.Chdir(t.TempDir()) // isolate database files and busycols.txt
 	createDb()
 	defer os.Remove(dbName)
 	_, _, err := tools.DumpDatabase(dbName, "dump_"+dbName)
 	ck(err)
-	defer os.Remove("dump_" + dbName)
 	_, _, err = tools.LoadDatabase("dump_"+dbName, "loaded_"+dbName, "", "")
 	ck(err)
-	defer os.Remove("loaded" + dbName)
 	ck(db19.CheckDatabase("loaded_"+dbName, true))
-	defer os.Remove("loaded_" + dbName)
-	tools.DumpDatabase("loaded_"+dbName, "dump2_"+dbName)
-	defer os.Remove("dump2_" + dbName)
+	_, _, err = tools.DumpDatabase("loaded_"+dbName, "dump2_"+dbName)
+	ck(err)
 	compare("dump_"+dbName, "dump2_"+dbName)
-	tools.Compact(dbName)
-	defer os.Remove(dbName + ".bak")
+	_, _, _, _, err = tools.Compact(dbName)
+	ck(err)
 	ck(db19.CheckDatabase(dbName, true))
 	compareDb(dbName, "loaded_"+dbName)
-	tools.DumpDatabase(dbName, "dump3_"+dbName)
-	defer os.Remove("dump3_" + dbName)
+	_, _, err = tools.DumpDatabase(dbName, "dump3_"+dbName)
+	ck(err)
 	compare("dump_"+dbName, "dump3_"+dbName)
 }
 

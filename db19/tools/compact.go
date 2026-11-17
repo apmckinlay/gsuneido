@@ -223,6 +223,9 @@ func addStats(rec core.Record, stats []statsCol) {
 }
 
 func createStatsTable(dst *Database, stats stats.StatsTally) {
+	if stats.IsEmpty() {
+		return
+	}
 	stats.Complete()
 	var rb core.RecordBuilder
 	rb.Add(stats)

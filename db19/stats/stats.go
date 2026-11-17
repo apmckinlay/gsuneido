@@ -83,6 +83,16 @@ func (stats StatsTally) Complete() {
 	}
 }
 
+// IsEmpty returns true if there are no columns with data to pack
+func (stats StatsTally) IsEmpty() bool {
+	for _, st := range stats {
+		if _, count := filterStatsCols(st); count != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // PackSize returns the size of the byte slice that Encode will produce
 func (stats StatsTally) PackSize(*uint64) int {
 	strlen := func(s string) int {
