@@ -90,24 +90,20 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	seenData := false
 	var nonSSE strings.Builder
 	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if !strings.HasPrefix(line, "data: ") {
-			nonSSE.WriteString(trimmed)
+		line := scanner.Bytes()
+		data, ok := bytes.CutPrefix(line, []byte("data: "))
+		if !ok {
+			nonSSE.Write(bytes.TrimSpace(line))
 			continue
 		}
 		seenData = true
 
-		data := strings.TrimPrefix(line, "data: ")
-		if data == "[DONE]" {
+		if bytes.Equal(data, []byte("[DONE]")) {
 			break
 		}
 
 		var chunk ChatCompletionChunk
-		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+		if err := json.Unmarshal(data, &chunk); err != nil {
 			return fmt.Errorf("unmarshal chunk: %w", err)
 		}
 
