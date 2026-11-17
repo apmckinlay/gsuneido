@@ -455,8 +455,18 @@ func optTempIndex(q Query, mode Mode, req Require) (
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
 
-	best := optTempIndexBest(q, mode, req)
 	indexedCost := indexedFixCost + indexedVarCost
+	if indexedCost < impossible {
+		nrows, _ := q.Nrows()
+		// Omitting source and field costs gives a lower bound for every candidate.
+		f, v := ticost(0, q, nil, nrows, float64(req.frac), tiAllCost)
+		minCost := f + v + tiLookupCost(q, req)
+		if indexedCost <= minCost {
+			traceQO("indexed", indexedCost, "<= tempindex minimum", minCost)
+			return indexedFixCost, indexedVarCost, indexedApp
+		}
+	}
+	best := optTempIndexBest(q, mode, req)
 	if indexedCost <= best.cost() {
 		traceQO("indexed", indexedCost, "<=", best.cost())
 		return indexedFixCost, indexedVarCost, indexedApp
@@ -513,15 +523,19 @@ func optTempIndexBest(q Query, mode Mode, req Require) best[tiApproach] {
 		optTempIndexFor(&best, q, mode, req, nrows, req.cols)
 	}
 
-	// for ReqUnique or ReqGroup with nseeks, add per-lookup cost on temp index
-	if u == ReqUnique || (u == ReqGroup && req.nseeks > 0) {
+	best.varcost += tiLookupCost(q, req)
+	return best
+}
+
+func tiLookupCost(q Query, req Require) Cost {
+	if req.use == ReqUnique || (req.use == ReqGroup && req.nseeks > 0) {
 		perLookup := tiMultiLookupCost
 		if len(q.Header().Fields) == 1 {
 			perLookup = tiSingleLookupCost
 		}
-		best.varcost += Cost(req.nseeks) * perLookup
+		return Cost(req.nseeks) * perLookup
 	}
-	return best
+	return 0
 }
 
 // tempIndexKey finds the smallest key (by unfixed count) that's covered by cols.
