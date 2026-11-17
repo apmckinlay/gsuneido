@@ -388,6 +388,9 @@ func (db *Database) buildIndexes(table string,
 	}
 	rt := db.NewReadTran(core.AllPerms)
 	ti := rt.meta.GetRoInfo(table)
+	if ti == nil {
+		panic("nonexistent table: " + table)
+	}
 	if ti.Nrows == 0 {
 		return nil
 	}
