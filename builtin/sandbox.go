@@ -74,7 +74,42 @@ func sandboxPath(op, name string) (string, error) {
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("%s: path outside sandbox", op)
 	}
+	if !withinRealRoot(root, full) {
+		return "", fmt.Errorf("%s: path outside sandbox", op)
+	}
 	return full, nil
+}
+
+// withinRealRoot checks that symlinks do not lead outside the sandbox root.
+// The path may not exist yet (e.g. a file about to be created),
+// so the deepest existing ancestor is resolved instead.
+func withinRealRoot(root, full string) bool {
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	existing := full
+	for {
+		real, err := filepath.EvalSymlinks(existing)
+		if err == nil {
+			rel, err := filepath.Rel(realRoot, real)
+			return err == nil && rel != ".." &&
+				!strings.HasPrefix(rel, ".."+string(filepath.Separator))
+		}
+		if !os.IsNotExist(err) {
+			return false
+		}
+		// A dangling symlink must not be treated as a missing path,
+		// since creating through it would write outside the root.
+		if _, lerr := os.Lstat(existing); lerr == nil {
+			return false
+		}
+		parent := filepath.Dir(existing)
+		if parent == existing {
+			return false
+		}
+		existing = parent
+	}
 }
 
 func hasDotDot(name string) bool {
