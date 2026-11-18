@@ -397,25 +397,19 @@ var _ = builtin(CreateAcceleratorTable, "(accels, unused = 0) :number")
 
 func CreateAcceleratorTable(a, _ Value) Value {
 	var accels []stAccel
-	if s, ok := a.ToStr(); ok { // DEPRECATED
-		assert.That(len(s)%int(nAccel) == 0)
-		n := len(s) / int(nAccel)
-		assert.That(n != 0)
-		accels = make([]stAccel, n)
-		copy(unsafe.Slice((*byte)(unsafe.Pointer(&accels[0])), len(s)), s)
-	} else if ob, ok := a.ToContainer(); ok {
-		n := ob.ListSize()
-		accels = make([]stAccel, n)
-		for i := range n {
-			x := ob.ListGet(i)
-			accels[i] = stAccel{
-				fVirt: byte(getInt(x, "fVirt")),
-				key:   int16(getInt(x, "key")),
-				cmd:   int16(getInt(x, "cmd")),
-			}
-		}
-	} else {
+	ob, ok := a.ToContainer()
+	if !ok {
 		panic("CreateAcceleratorTable: invalid argument")
+	}
+	n := ob.ListSize()
+	accels = make([]stAccel, n)
+	for i := range n {
+		x := ob.ListGet(i)
+		accels[i] = stAccel{
+			fVirt: byte(getInt(x, "fVirt")),
+			key:   int16(getInt(x, "key")),
+			cmd:   int16(getInt(x, "cmd")),
+		}
 	}
 	rtn, _, err := syscall.SyscallN(createAcceleratorTable,
 		uintptr(unsafe.Pointer(&accels[0])),
