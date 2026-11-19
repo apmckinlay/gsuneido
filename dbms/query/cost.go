@@ -68,6 +68,7 @@ const (
 const (
 	whereOffsetCost = 50  // per index entry without materializing the key
 	whereKeyCost    = 100 // per index entry with key materialization
+	bestNearTie     = 10  // percent above the cheapest Where index plan
 )
 
 // wherePessimisticGuard floors selectivity estimates to avoid overly

@@ -615,6 +615,34 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		bloomSel *idxSel
 	}
 	best := newBest[bestIdx]()
+	scanRank := func(isel *idxSel) (skip bool, prefix int) {
+		if isel != nil {
+			return isel.skipLen > 0, isel.prefixLen
+		}
+		return false, 0
+	}
+	// Near-ties are broken by structural coverage, which is more reliable
+	// than small differences in estimated cost.
+	// Bloom filters are probabilistic and have a build cost that only pays off
+	// if the selectivity estimates are right, so they never win a near-tie
+	// against a plain index plan (they must be strictly cheaper).
+	// Only the main index's coverage counts, not the Bloom's.
+	best.prefer = func(next, cur bestIdx) bool {
+		if (next.bloomSel != nil) != (cur.bloomSel != nil) {
+			return next.bloomSel == nil
+		}
+		nc := next.idxSel.coveredCount()
+		cc := cur.idxSel.coveredCount()
+		if nc != cc {
+			return nc > cc
+		}
+		ns, np := scanRank(next.idxSel)
+		cs, cp := scanRank(cur.idxSel)
+		if ns != cs {
+			return !ns
+		}
+		return np > cp
+	}
 	nrows, _ := w.tbl.Nrows()
 	for _, idx := range w.source.Indexes() {
 		if !req.SatisfiedByWithFixed(idx, w.fixed) {
@@ -954,22 +982,24 @@ func (w *Where) splitExpr(is *idxSel) (indexFilter, dataFilter ast.Expr) {
 	return andExpr(ie), andExpr(de)
 }
 
-// coversIndexExpr returns whether splitExpr would give a non-nil indexFilter.
-// It avoids building the expressions. exprCols is Columns() for each w.expr.Exprs
-func (w *Where) coversIndexExpr(is *idxSel, exprCols [][]string) bool {
-	for _, ecols := range exprCols {
+// setIndexCoverage mirrors splitExpr without building the filter expressions.
+// exprCols is Columns() for each w.expr.Exprs.
+// It may set coveredExprs and hasIndexFilter.
+func (w *Where) setIndexCoverage(is *idxSel, exprCols [][]string) {
+	for ei, ecols := range exprCols {
 		if len(ecols) == 1 && !slices.Contains(w.unspanable, ecols[0]) {
 			if i := slices.Index(is.index, ecols[0]); i >= 0 &&
 				(i < is.prefixLen ||
 					(i >= is.skipStart && i < is.skipStart+is.skipLen)) {
+				is.coveredExprs = append(is.coveredExprs, ei)
 				continue // covered by index range
 			}
 		}
 		if set.HasSubset(is.index, ecols) {
-			return true
+			is.coveredExprs = append(is.coveredExprs, ei)
+			is.hasIndexFilter = true
 		}
 	}
-	return false
 }
 
 func andExpr(exprs []ast.Expr) ast.Expr {

@@ -17,6 +17,7 @@ func TestBestUpdateRandom(t *testing.T) {
 
 	// impossible candidates are always ignored
 	b := newBest[int]()
+	b.prefer = func(_, _ int) bool { panic("random selection must ignore preferences") }
 	b.update(impossible, impossible, -1)
 	assert.T(t).That(b.none())
 
@@ -53,6 +54,34 @@ func TestBestUpdateRandom(t *testing.T) {
 		}
 	}
 	assert.T(t).That(sawHigher)
+}
+
+func TestBestUpdateNearTie(t *testing.T) {
+	test := func(wantCost, wantRank int, candidates ...[2]int) {
+		t.Helper()
+		b := newBest[int]()
+		b.prefer = func(next, cur int) bool { return next > cur }
+		for _, c := range candidates {
+			b.update(1, c[0]-1, c[1])
+		}
+		assert.T(t).This(b.fixcost).Is(1)
+		assert.T(t).This(b.varcost).Is(wantCost - 1)
+		assert.T(t).This(b.data).Is(wantRank)
+	}
+	test(110, 2, [2]int{100, 1}, [2]int{110, 2})
+	test(110, 2, [2]int{110, 2}, [2]int{100, 1})
+	test(100, 2, [2]int{100, 1}, [2]int{100, 2})
+	test(100, 2, [2]int{105, 2}, [2]int{100, 2})
+	test(100, 2, [2]int{100, 2}, [2]int{105, 2})
+	test(110, 3, [2]int{100, 1}, [2]int{105, 2}, [2]int{110, 3}, [2]int{111, 4})
+	test(105, 3, [2]int{111, 4}, [2]int{100, 1}, [2]int{105, 3})
+	test(impossible-1, 1, [2]int{impossible - 1, 1}, [2]int{impossible, 2})
+
+	b := newBest[int]()
+	b.update(0, 100, 1)
+	b.update(0, 100, 2)
+	b.update(0, 99, 3)
+	assert.T(t).This(b.data).Is(3)
 }
 
 func TestMinimizeKeys(t *testing.T) {

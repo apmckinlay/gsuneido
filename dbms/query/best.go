@@ -22,31 +22,51 @@ type best[T any] struct {
 	fixcost Cost
 	varcost Cost
 	data    T
-	nseen   int // only used when randomBest is non-nil
+	nseen   int  // only used when randomBest is non-nil
+	lowest  Cost // lowest cost seen, even if a preferred candidate wins
+	prefer  func(new, cur T) bool
 }
 
 func newBest[T any]() best[T] {
-	return best[T]{fixcost: impossible, varcost: impossible}
+	return best[T]{fixcost: impossible, varcost: impossible, lowest: impossible}
 }
 
-// update returns true if req is the new lowest-cost candidate.
+// update considers a candidate, breaking near-ties with prefer when set.
 func (b *best[T]) update(fixcost, varcost Cost, data T) {
+	cost := fixcost + varcost
 	if randomBest != nil {
-		if fixcost+varcost >= impossible {
+		if cost >= impossible {
 			return
 		}
 		b.nseen++
 		// reservoir sampling: replace current with probability 1/nseen
 		if b.nseen == 1 || randomBest.IntN(b.nseen) == 0 {
-			b.fixcost = fixcost
-			b.varcost = varcost
-			b.data = data
+			b.fixcost, b.varcost, b.data = fixcost, varcost, data
 		}
 		return
 	}
-	if fixcost+varcost < b.fixcost+b.varcost {
-		*b = best[T]{fixcost: fixcost, varcost: varcost, data: data}
+	cur := b.cost()
+	if b.prefer == nil {
+		if cost >= cur {
+			return
+		}
+	} else {
+		if cost >= impossible {
+			return
+		}
+		b.lowest = min(b.lowest, cost)
+		limit := b.lowest + b.lowest*bestNearTie/100
+		if cost > limit {
+			return
+		}
+		if cur < impossible && cur <= limit {
+			if cost < cur && b.prefer(b.data, data) ||
+				cost >= cur && !b.prefer(data, b.data) {
+				return
+			}
+		}
 	}
+	b.fixcost, b.varcost, b.data = fixcost, varcost, data
 }
 
 func (b *best[T]) cost() Cost {

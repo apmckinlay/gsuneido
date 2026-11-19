@@ -68,7 +68,7 @@ func (w *Where) perIndex() []*idxSel {
 		isel.prefixFrac = w.prefixFrac(isel)
 		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
 		minFrac = min(minFrac, isel.indexRangeFrac)
-		isel.hasIndexFilter = w.coversIndexExpr(isel, exprCols)
+		w.setIndexCoverage(isel, exprCols)
 		if trace.WhereOpt.On() {
 			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
 				"indexFilterFrac", isel.indexFilterFrac, "hasDataFilter", isel.hasDataFilter,

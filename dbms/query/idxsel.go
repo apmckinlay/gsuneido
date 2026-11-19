@@ -34,6 +34,7 @@ type idxSel struct {
 	// hasDataFilter is where expressions that are not covered by the index
 	hasDataFilter  bool
 	hasIndexFilter bool
+	coveredExprs   []int // predicate positions for range and index filters
 
 	// indexRangeFrac is the fraction of the index
 	// that is selected by the prefix and skip pointRange
@@ -45,6 +46,15 @@ type idxSel struct {
 	// that is selected by the indexFilter
 	// It reduces the number of data rows that need to be filtered.
 	indexFilterFrac float64
+}
+
+// coveredCount returns the number of predicates covered by the index
+// range or index filter. It is nil safe (no idxSel means nothing is covered).
+func (is *idxSel) coveredCount() int {
+	if is == nil {
+		return 0
+	}
+	return len(is.coveredExprs)
 }
 
 func (is *idxSel) HasSkipScan() bool {

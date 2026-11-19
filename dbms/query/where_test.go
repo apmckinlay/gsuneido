@@ -1140,41 +1140,112 @@ func BenchmarkWhere_optimizeOverlap(b *testing.B) {
 	}
 }
 
-func TestWhere_coversIndexExpr(t *testing.T) {
+func TestWhere_indexCoverage(t *testing.T) {
 	schema := NewAdminParser(`comp (a,b,c,d) key(a,b,c) key(d)`).Schema()
 	setFields(&schema)
 	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
 		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
-	test := func(where string, expected bool) {
+	test := func(where string, expectedFilter bool, expectedCount int) {
 		t.Helper()
 		w := ParseQuery("comp where "+where, tran, nil).(*Where)
 		w.optInit()
-		exprCols := make([][]string, len(w.expr.Exprs))
-		for i, e := range w.expr.Exprs {
-			exprCols[i] = e.Columns()
-		}
 		assert.T(t).That(len(w.idxSels) > 0)
 		for _, isel := range w.idxSels {
 			// must agree with splitExpr
 			indexFilter, _ := w.splitExpr(isel)
 			assert.T(t).Msg(where, isel.index).
-				This(w.coversIndexExpr(isel, exprCols)).Is(indexFilter != nil)
+				This(isel.hasIndexFilter).Is(indexFilter != nil)
 			if isel.index[0] == "a" {
 				assert.T(t).Msg(where, isel.index).
-					This(w.coversIndexExpr(isel, exprCols)).Is(expected)
+					This(isel.hasIndexFilter).Is(expectedFilter)
+				assert.T(t).Msg(where, isel.index).
+					This(isel.coveredCount()).Is(expectedCount)
 			}
 		}
 	}
-	test("a is 1", false)
-	test("a is 1 and b > 5", false)         // b is in the index range
-	test("a is 1 and c > 5", false)         // skip scan makes c part of the range
-	test("a > 1 and b > 5 and c > 5", true) // c is beyond the range
-	test("a is 1 and F(c)", true)           // unspanable, single column in index
-	test("a is 1 and d > 5", false)         // d is not in the index
-	test("a is 1 and b is c", true)         // multiple columns, all in the index
-	test("a is 1 and b is d", false)        // multiple columns, one not in the index
-	test("a is 1 and F(a)", true)           // unspanable on a range column
-	test("a is 1 and F(d) and c > 5", false)
+	test("a is 1", false, 1)
+	test("a is 1 and b > 5", false, 2)         // b is in the index range
+	test("a is 1 and c > 5", false, 2)         // skip scan makes c part of the range
+	test("a > 1 and b > 5 and c > 5", true, 3) // c is beyond the range
+	test("a is 1 and F(c)", true, 2)           // unspanable, single column in index
+	test("a is 1 and d > 5", false, 1)         // d is not in the index
+	test("a is 1 and b is c", true, 2)         // multiple columns, all in the index
+	test("a is 1 and b is d", false, 1)        // multiple columns, one not in the index
+	test("a is 1 and F(a)", true, 2)           // unspanable on a range column
+	test("a is 1 and F(d) and c > 5", false, 2)
+}
+
+func TestWhere_indexNearTie(t *testing.T) {
+	schema := NewAdminParser(`comp (a,b,c,d,e) key(a,b,c,d,e) key(a,c,b,d)`).Schema()
+	setFields(&schema)
+	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
+	test := func(where string, preferredCost, winner int) {
+		t.Helper()
+		w := ParseQuery("comp where "+where, tran, nil).(*Where)
+		w.optInit()
+		nrows, _ := w.tbl.Nrows()
+		costs := []Cost{preferredCost, 10000}
+		for i, isel := range w.idxSels {
+			scan := w.tbl.costFor(isel.index, NoneReq(1))
+			full := WhereCost(nrows, float64(scan), 1, 1, isel.indexFilterFrac,
+				isel.hasIndexFilter, isel.hasDataFilter)
+			isel.indexRangeFrac = float64(costs[i]) / float64(full)
+		}
+		f, v, ap := w.optWhereIdx(CursorMode, NoneReq(1))
+		a := assert.T(t).Msg(where)
+		a.This(ap.(*whereApproach).idxSel).Is(w.idxSels[winner])
+		a.This(f).Is(0)
+		a.This(v).Is(costs[winner])
+		a.This(ap.(*whereApproach).cost).Is(f + v)
+	}
+	test("a is 1 and F(e)", 10500, 0)                       // more covered predicates
+	test("a is 1 and b is 5 and c > 5", 10500, 0)           // no skip scan
+	test("a is 1 and b is 5 and c > 5 and d > 5", 10500, 0) // longer prefix
+	test("a is 1 and b is 5 and c > 5", 11100, 1)           // outside the band
+	test("a is 1", 10500, 1)                                // same preference, lower cost
+}
+
+func TestWhere_bloomNearTie(t *testing.T) {
+	schema := NewAdminParser(`comp (a,b,c) key(a,b) key(a,c)`).Schema()
+	setFields(&schema)
+	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
+	// Bloom plans must be strictly cheaper than the plain plan to win,
+	// whether or not they cover additional predicates.
+	// bloomFrac is the Bloom's indexRangeFrac, mainFrac is the main index's.
+	test := func(where string, mainFrac, bloomFrac float64, wantBloom, atMostNearTie bool) {
+		t.Helper()
+		w := ParseQuery("comp where "+where, tran, nil).(*Where)
+		w.optInit()
+		main, bloom := w.idxSels[0], w.idxSels[1]
+		main.indexRangeFrac, bloom.indexRangeFrac = mainFrac, bloomFrac
+		nrows, _ := w.tbl.Nrows()
+		scan := float64(w.tbl.costFor(main.index, NoneReq(1)))
+		plain := WhereCost(nrows, scan, 1, main.indexRangeFrac, main.indexFilterFrac,
+			main.hasIndexFilter, main.hasDataFilter)
+		bf, bv := WhereCost2(nrows, scan, 1, bloom.indexRangeFrac, bloom.indexFilterFrac,
+			main.indexRangeFrac, main.indexFilterFrac, w.combinedIndexFrac(main, bloom),
+			bloom.hasIndexFilter, main.hasIndexFilter, main.hasDataFilter)
+		a := assert.T(t).Msg(where)
+		a.This(bf+bv < plain).Is(wantBloom)
+		a.This(bf+bv <= plain+plain*bestNearTie/100).Is(atMostNearTie)
+		f, v, ap := w.optWhereIdx(ReadMode, OrderReq(main.index, 1))
+		approach := ap.(*whereApproach)
+		a.This(approach.idxSel).Is(main)
+		a.This(approach.bloomSel != nil).Is(wantBloom)
+		a.This(approach.cost).Is(f + v)
+		if wantBloom {
+			a.This(f).Is(bf)
+			a.This(v).Is(bv)
+		} else {
+			a.This(f).Is(0)
+			a.This(v).Is(plain)
+		}
+	}
+	test("a > 1", .3, .299, false, true)           // Bloom only repeats the main predicate.
+	test("a > 1 and c > 5", .3, .299, false, true) // near-tie, Bloom covers more but loses
+	test("a > 1 and c > 5", .3, .01, true, true)   // Bloom is much cheaper, wins on cost
 }
 
 type overlapTran struct {
