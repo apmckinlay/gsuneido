@@ -30,17 +30,9 @@ func checkSchemaPerm(perms *Perms, action SchemaPerm) {
 }
 
 func checkForSystemTable(table string) {
-	if isSystemTable(table) {
+	if db19.IsSystemTable(table) {
 		panic("can't modify system table: " + table)
 	}
-}
-
-func isSystemTable(table string) bool {
-	switch table {
-	case "tables", "columns", "indexes", "views", "history", "dbstats":
-		return true
-	}
-	return false
 }
 
 //-------------------------------------------------------------------

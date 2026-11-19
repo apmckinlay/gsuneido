@@ -58,6 +58,19 @@ func db_ClearStats(th *Thread, args []Value) Value {
 	panic("Database.ClearStats only supported for local database")
 }
 
+var _ = staticMethod(db_RegenStats, "() :void")
+
+// db_RegenStats regenerates dbstats for the columns already in dbstats.
+func db_RegenStats(th *Thread, args []Value) Value {
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		if err := dbms.RegenStats(); err != "" {
+			panic("Database.RegenStats: " + err)
+		}
+		return nil
+	}
+	panic("Database.RegenStats only supported for local database")
+}
+
 var _ = staticMethod(db_Connections, "() :object")
 
 func db_Connections(th *Thread, args []Value) Value {

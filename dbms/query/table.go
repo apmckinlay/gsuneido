@@ -154,8 +154,8 @@ func (tbl *Table) Fixed() Fixed {
 }
 
 func (tbl *Table) Updateable() string {
-	if db19.IsSchemaTable(tbl.name) {
-		return "" // schema tables are virtual, so they can't be updated
+	if db19.IsSystemTable(tbl.name) {
+		return ""
 	}
 	return tbl.name
 }

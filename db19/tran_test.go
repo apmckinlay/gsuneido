@@ -591,7 +591,7 @@ func TestSchemaSkipScanIter(t *testing.T) {
 	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	defer db.Close()
-	db.stats = make(stats.Stats)
+	st := make(stats.Stats)
 	for _, table := range []string{"aa", "ab", "ba", "ca"} {
 		db.Create(&schema.Schema{
 			Table:   table,
@@ -602,13 +602,14 @@ func TestSchemaSkipScanIter(t *testing.T) {
 				{Mode: 'i', Columns: []string{"c"}},
 			},
 		})
-		db.stats[table] = stats.TableStats{Columns: map[string]stats.ColStats{
+		st[table] = stats.TableStats{Columns: map[string]stats.ColStats{
 			"a": {Cardinality: 1},
 			"b": {Cardinality: 42, Quantiles: []string{core.Pack(core.SuStr("median"))},
 				Tops: []stats.Top{{Value: core.Pack(core.SuStr("top")), Frac: .5}}},
 			"c": {Cardinality: 3},
 		}}
 	}
+	db.SetStats(st)
 	db.Create(&schema.Schema{
 		Table:   "zz",
 		Columns: []string{"a"},

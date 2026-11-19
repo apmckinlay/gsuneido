@@ -54,7 +54,7 @@ type Database struct {
 	closed    atomic.Bool
 	corrupted atomic.Bool
 
-	stats    stats.Stats
+	stats    atomic.Pointer[stats.Stats]
 	busy     stats.BusyTally
 	busyOnce sync.Once
 
@@ -148,7 +148,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 			return nil, err
 		}
 	}
-	db.stats = ReadStats(db)
+	db.SetStats(ReadStats(db))
 	return db, nil
 }
 
@@ -779,12 +779,21 @@ func (db *Database) saveBusy() {
 	db.busy.Save(getIndexes)
 }
 
+// Stats returns the current stats. The result must be treated as immutable.
 func (db *Database) Stats() stats.Stats {
-	return db.stats
+	if p := db.stats.Load(); p != nil {
+		return *p
+	}
+	return nil
 }
 
 // ClearStats discards the in-memory query optimizer statistics.
 func (db *Database) ClearStats() {
-	// potential race, but acceptable since only for manual testing
-	db.stats = nil
+	db.stats.Store(nil)
+}
+
+// SetStats replaces the in-memory query optimizer statistics.
+// It is used after regenerating the persistent stats table.
+func (db *Database) SetStats(st stats.Stats) {
+	db.stats.Store(&st)
 }

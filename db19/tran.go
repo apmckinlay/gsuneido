@@ -40,6 +40,9 @@ type tran struct {
 // CheckPerm panics if the transaction's permissions do not allow action on table.
 // Nil permissions deny all access; use core.AllPerms for unrestricted access.
 func (t *tran) CheckPerm(table string, action core.TablePerm) {
+	if action == core.PermWrite && IsSystemTable(table) {
+		panic("can't modify system table: " + table)
+	}
 	if !t.perms.TableActAllowed(table, action) {
 		panic("not authorized: " + table)
 	}

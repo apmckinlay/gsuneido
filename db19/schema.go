@@ -32,6 +32,11 @@ func IsSchemaTable(table string) bool {
 	return getSchemaTable(table) != nil
 }
 
+// IsSystemTable includes virtual schema tables and the persisted stats table.
+func IsSystemTable(table string) bool {
+	return table == StatsTableName || IsSchemaTable(table)
+}
+
 type schemaTable interface {
 	schema() *schema.Schema
 	nrows(*tran) int

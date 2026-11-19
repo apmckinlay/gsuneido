@@ -143,6 +143,9 @@ func LoadDbTable(table, from, privateKey, passphrase string,
 
 func loadDbTable(table, from, privateKey, passphrase string,
 	db *Database) (n int, err error) {
+	if table == StatsTableName {
+		return 0, fmt.Errorf("can't modify system table: %s", table)
+	}
 	if db.IsCorrupted() {
 		return 0, fmt.Errorf("load not allowed when database is locked")
 	}

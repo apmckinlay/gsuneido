@@ -268,6 +268,13 @@ func createStatsTable(dst *Database, stats stats.StatsTally) {
 	if stats.IsEmpty() {
 		return
 	}
+	ts, ti := buildStatsTable(dst, stats)
+	dst.AddNewTable(ts, ti)
+}
+
+// buildStatsTable writes the stats record and builds the stats table schema
+// and info. It does not add the table to the database.
+func buildStatsTable(dst *Database, stats stats.StatsTally) (*meta.Schema, *meta.Info) {
 	stats.Complete()
 	var rb core.RecordBuilder
 	rb.Add(stats)
@@ -293,5 +300,5 @@ func createStatsTable(dst *Database, stats stats.StatsTally) {
 	ov := index.OverlayFor(bt)
 
 	ti := meta.NewInfo(ts.Table, []*index.Overlay{ov}, 1, bi.Size())
-	dst.AddNewTable(ts, ti)
+	return ts, ti
 }

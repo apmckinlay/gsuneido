@@ -82,6 +82,15 @@ func (dbms *DbmsLocal) ClearStats() {
 	dbms.db.ClearStats()
 }
 
+// RegenStats regenerates the persistent stats for the existing stats columns.
+// It returns an error message, or "" on success.
+func (dbms *DbmsLocal) RegenStats() string {
+	if err := tools.RegenStats(dbms.db); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
 func (*DbmsLocal) Connections() Value {
 	return connections()
 }
