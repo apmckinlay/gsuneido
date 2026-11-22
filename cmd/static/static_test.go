@@ -151,7 +151,7 @@ func useNodeVec(t *testing.T, names []string, nTbl, nEta int) {
 	nLibNames = len(names) - nTbl - nEta
 }
 
-func TestSetVariantBits(t *testing.T) {
+func TestSetupVariants(t *testing.T) {
 	useNodes(t, map[string]entry{
 		"alpha": {id: 0}, "beta": {id: 1}, "Gamma": {id: 2}, "Delta": {id: 3},
 		"Rule_alpha": {id: 4}, "Field_beta": {id: 5}, "GammaControl": {id: 6},
@@ -186,21 +186,6 @@ func TestSetVariantBits(t *testing.T) {
 	assert.T(t).That(!ok) // a bare "Control" has no basename
 }
 
-func TestSetupVariantsTrigger(t *testing.T) {
-	useNodes(t, map[string]entry{
-		"customer": {id: 0}, "orders": {id: 1}, "Trigger_customer": {id: 2},
-	})
-	useNodeVec(t, []string{"customer", "orders", "Trigger_customer"}, 2, 0)
-	savedEdges := edges
-	t.Cleanup(func() { edges = savedEdges })
-	edges = make([][]uint16, 3)
-
-	setupVariants()
-
-	assert.T(t).This(edges[0]).Is([]uint16{2})
-	assert.T(t).This(edges[1]).Is(nil)
-}
-
 func TestScanIdentifiersIgnoresVariants(t *testing.T) {
 	useNodes(t, map[string]entry{
 		"Foo":        {id: 0, bits: hasControl | hasFormat},
@@ -220,6 +205,14 @@ func TestScanIdentifiersIgnoresAlias(t *testing.T) {
 	})
 	assert.T(t).This(scanIdentifiers("Test", "function () { Foo }")).Is(nil)
 	assert.T(t).This(scanIdentifiers("Test", "function () { FooControl }")).Is([]uint16{0})
+}
+
+func TestScanIdentifiersExcludesNames(t *testing.T) {
+	useNodes(t, map[string]entry{
+		"Params": {id: 0},
+		"Foo":    {id: 1},
+	})
+	assert.T(t).This(scanIdentifiers("Test", "function () { Params; Foo }")).Is([]uint16{1})
 }
 
 func TestAddEdges(t *testing.T) {
@@ -289,6 +282,22 @@ func TestScanStringControlFormat(t *testing.T) {
 
 	assert.T(t).This(scanIdentifiers("Test", `function () { "Foo Bar" }`)).
 		Is([]uint16{1, 2})
+}
+
+func TestScanStringExcludesVariant(t *testing.T) {
+	useNodes(t, map[string]entry{
+		"Foo":        {id: 0, bits: hasControl | hasFormat},
+		"FooControl": {id: 1},
+		"FooFormat":  {id: 2},
+	})
+	savedTables := nTables
+	t.Cleanup(func() { nTables = savedTables })
+	nTables = 0
+	excludeNames["FooControl"] = struct{}{}
+	t.Cleanup(func() { delete(excludeNames, "FooControl") })
+
+	assert.T(t).This(scanIdentifiers("Test", `function () { "Foo" }`)).
+		Is([]uint16{2})
 }
 
 func TestSkipName(t *testing.T) {

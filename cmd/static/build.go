@@ -81,11 +81,33 @@ func addNode(name string) {
 	nodeVec = append(nodeVec, name)
 }
 
+var excludeTables = map[string]struct{}{"Accountinglib": {}, "apmlib": {},
+	"autoupdate_lib": {}, "autoupdate_test_betacadjavalib": {},
+	"autoupdate_test_betacadlib": {}, "autoupdate_test_betausjavalib": {},
+	"autoupdate_test_betauslib": {}, "autoupdate_test_curcadlib": {},
+	"autoupdate_test_curuslib": {}, "autoupdate_test_lib": {},
+	"axislib": {}, "axoncurrentcadlib": {}, "axoncurrentuslib": {},
+	"axonlib": {}, "axonmedialib": {}, "axonservicelib": {},
+	"betacadlib": {}, "betacadlinuxlib": {}, "betauslib": {},
+	"betauslinuxlib": {}, "caronlib": {}, "carslib": {},
+	"configlib": {}, "Contrib": {}, "demobookoptions": {},
+	"demobookoptionsjslib": {}, "demobookoptionswebgui": {},
+	"emailfwdbetalib": {}, "emailfwdlib": {}, "etalib": {},
+	"etaprlib": {}, "ewlib": {}, "ftweblib": {}, "groupslib": {},
+	"invenlib": {}, "joblib": {}, "Kenlib": {}, "Kenlibwebgui": {},
+	"leadslib": {}, "mylib": {}, "pcmiler": {}, "polib": {},
+	"prcadlib": {}, "prereleaselib": {}, "prlib": {}, "pruslib": {},
+	"salesdemo": {}, "stdlib": {}, "sujslib": {}, "sujswebgui": {},
+	"suneidoholdinglib": {}, "Test_lib": {}, "ticketlib": {},
+	"towlib": {}, "vclib": {}, "weblib": {}, "wolib": {}}
+
 // tableNames adds every table name in suneido.db to the node map,
-// assigning each a consecutive id.
+// assigning each a consecutive id. Tables in excludeTables are skipped.
 func tableNames(db *db19.Database) {
 	for sc := range db.GetState().Meta.Tables() {
-		addNode(sc.Table)
+		if _, ok := excludeTables[sc.Table]; !ok {
+			addNode(sc.Table)
+		}
 	}
 }
 
@@ -187,11 +209,12 @@ func setupVariants() {
 		suffix(name, "Format", hasFormat)
 	}
 	// a table references its trigger, so the trigger is reachable from the table
-	for id := range nTables {
-		if e, ok := nodeMap["Trigger_"+nodeVec[id]]; ok && e.id != alias {
-			addEdges(uint16(id), []uint16{e.id})
-		}
-	}
+	// BUT currently triggers run on the server with full permissions
+	// for id := range nTables {
+	// 	if e, ok := nodeMap["Trigger_"+nodeVec[id]]; ok && e.id != alias {
+	// 		addEdges(uint16(id), []uint16{e.id})
+	// 	}
+	// }
 }
 
 // scanLibraries calls fn for each library definition (group is -1)
@@ -223,6 +246,7 @@ func skipName(name string) bool {
 	return strings.HasSuffix(name, ".js") ||
 		strings.HasSuffix(name, ".css") ||
 		strings.HasSuffix(name, "Test") ||
+		strings.HasSuffix(name, "Tests") ||
 		strings.Contains(name, "__webgui")
 }
 
@@ -235,6 +259,15 @@ func scanTable(rt *db19.ReadTran, table string, fn func(core.Record)) {
 }
 
 //-------------------------------------------------------------------
+
+var excludeNames = map[string]struct{}{"Params": {}, "Working": {},
+	"Reporter": {}, "InfoControl": {}, "QueryFormat": {}}
+
+// excluded returns true if name should not be treated as a reference.
+func excluded(name string) bool {
+	_, ok := excludeNames[name]
+	return ok
+}
 
 var stamps []uint32
 var stamp uint32
@@ -251,6 +284,9 @@ func scanSrc(name, src string, ids []uint16) []uint16 {
 	walkRefs(parse(name, src), func(typ, value string) {
 		switch typ {
 		case "global":
+			if excluded(value) {
+				return
+			}
 			if e, ok := nodeMap[value]; ok && e.id != alias && markSeen(e.id) {
 				ids = append(ids, e.id)
 			}
@@ -272,7 +308,7 @@ func scanString(src string, ids []uint16) []uint16 {
 		if item.Token == tok.Eof {
 			return ids
 		}
-		if item.Token != tok.Identifier {
+		if item.Token != tok.Identifier || excluded(item.Text) {
 			continue
 		}
 		e, ok := nodeMap[item.Text]
@@ -288,6 +324,9 @@ func scanString(src string, ids []uint16) []uint16 {
 					continue
 				}
 				name := v.prefix + item.Text + v.suffix
+				if excluded(name) {
+					continue
+				}
 				if ve, ok := nodeMap[name]; ok &&
 					ve.id != alias && markSeen(ve.id) {
 					ids = append(ids, ve.id)
