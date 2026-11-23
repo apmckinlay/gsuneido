@@ -45,6 +45,10 @@ func run(from, to string, minCount int, sortByCount bool) {
 		fmt.Printf("Tables (%d): %s\n", len(ids), names(ids))
 		return
 	}
+	if to == "between" {
+		printBetween(starts)
+		return
+	}
 	target, ok := nodeMap[to]
 	if !ok || target.id == alias {
 		fmt.Fprintf(os.Stderr, "unknown node %q\n", to)
@@ -145,6 +149,77 @@ func sortByName(ids []uint16) {
 	slices.SortFunc(ids, func(a, b uint16) int {
 		return strings.Compare(nodeVec[a], nodeVec[b])
 	})
+}
+
+type nodeCount struct {
+	id    uint16
+	count int
+}
+
+// printBetween prints the nodes with the highest counts, where each node on the
+// shortest path from a start to each reachable table is counted.
+func printBetween(starts []uint16) {
+	for _, e := range betweenCounts(starts) {
+		fmt.Printf("%s: %d\n", nodeVec[e.id], e.count)
+	}
+}
+
+// betweenCounts counts each node on the shortest path from a start to each
+// table reachable from it, returning at most the top 100 sorted by descending
+// count then name.
+func betweenCounts(starts []uint16) []nodeCount {
+	counts := make([]int, nextId)
+	for _, start := range starts {
+		countPaths(start, counts)
+	}
+	entries := make([]nodeCount, 0, nextId)
+	for id, count := range counts {
+		if count > 0 {
+			entries = append(entries, nodeCount{uint16(id), count})
+		}
+	}
+	slices.SortFunc(entries, func(a, b nodeCount) int {
+		if a.count != b.count {
+			return b.count - a.count
+		}
+		return strings.Compare(nodeVec[a.id], nodeVec[b.id])
+	})
+	const top = 100
+	if len(entries) > top {
+		entries = entries[:top]
+	}
+	return entries
+}
+
+// countPaths does a BFS from start, then increments counts for every node on
+// the shortest path from start to each reachable table.
+func countPaths(start uint16, counts []int) {
+	stamp++
+	queue = queue[:0]
+	prev[start] = start
+	markSeen(start)
+	queue = append(queue, start)
+	var reached []uint16
+	for i := 0; i < len(queue); i++ {
+		id := queue[i]
+		if int(id) < nTables {
+			reached = append(reached, id)
+		}
+		for _, next := range edges[id] {
+			if markSeen(next) {
+				prev[next] = id
+				queue = append(queue, next)
+			}
+		}
+	}
+	for _, table := range reached {
+		for id := table; ; id = prev[id] {
+			counts[id]++
+			if id == start {
+				break
+			}
+		}
+	}
 }
 
 // startsFor returns the starting nodes for a from reference.

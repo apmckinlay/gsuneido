@@ -25,6 +25,13 @@ func main() {
 		repl()
 		return
 	}
+	if len(args) == 1 && args[0] == "between" {
+		db := buildGraph()
+		defer db.Close()
+		printCounts()
+		run("roots", "between", -1, false)
+		return
+	}
 	if len(args) == 1 {
 		db := buildGraph()
 		defer db.Close()
@@ -48,13 +55,15 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   static
   static {name}
+  static between
   static {from} to {to}
   static {from} to counts^{min}
   static repl
 
 {from} is "roots", "tables", or a node name
-{to} is "tables", "counts", or a node name
+{to} is "tables", "counts", "between", or a node name
 {name} prints its incoming and outgoing edges
+between prints the top 100 nodes on the most shortest paths to tables
 counts is sorted by name
 counts^ is sorted by count
 counts^{min} also only shows entries with a count of at least {min}`)

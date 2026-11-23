@@ -113,6 +113,24 @@ func TestPathTo(t *testing.T) {
 	assert.T(t).This(pathTo(4, 3)).Is(nil)
 }
 
+func TestBetweenCounts(t *testing.T) {
+	useNodes(t, map[string]entry{
+		"t0": {id: 0}, "t1": {id: 1}, "t2": {id: 2},
+		"r0": {id: 3}, "r1": {id: 4}, "l0": {id: 5},
+	})
+	useNodeVec(t, []string{"t0", "t1", "t2", "r0", "r1", "l0"}, 3, 2)
+	savedEdges := edges
+	t.Cleanup(func() { edges = savedEdges })
+	edges = [][]uint16{
+		3: {5},
+		5: {0, 1},
+		4: {2},
+	}
+	assert.T(t).This(betweenCounts([]uint16{3, 4})).Is([]nodeCount{
+		{5, 2}, {3, 2}, {4, 1}, {0, 1}, {1, 1}, {2, 1},
+	})
+}
+
 func TestEdgesFor(t *testing.T) {
 	useNodes(t, map[string]entry{
 		"a": {id: 0}, "b": {id: 1}, "c": {id: 2}, "d": {id: 3}, "Alias": {id: alias},

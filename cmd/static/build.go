@@ -247,7 +247,8 @@ func skipName(name string) bool {
 		strings.HasSuffix(name, ".css") ||
 		strings.HasSuffix(name, "Test") ||
 		strings.HasSuffix(name, "Tests") ||
-		strings.Contains(name, "__webgui")
+		strings.Contains(name, "__webgui") ||
+		strings.HasPrefix(name, "Update_20")
 }
 
 // scanTable calls fn for every record in table.
