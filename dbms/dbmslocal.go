@@ -160,6 +160,11 @@ func (*DbmsLocal) Exec(th *Thread, v Value) Value {
 	defer UseMainSuneido(th)()
 	trace.Dbms.Println("Exec", v)
 	fname := execName(v)
+	if p := th.Perms(); !p.ServerEvalAllowed(fname) {
+		panic("ServerEval: not permitted: " + fname)
+	}
+	perms := th.SetPerms(AllPerms)
+	defer th.SetPerms(perms)
 	if before, after, ok := strings.Cut(fname, "."); ok {
 		ob := Global.GetName(th, before)
 		m := after

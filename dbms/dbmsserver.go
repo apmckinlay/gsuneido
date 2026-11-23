@@ -528,10 +528,6 @@ func cmdErase(ss *serverSession) {
 
 func cmdExec(ss *serverSession) {
 	ob := ss.GetVal()
-	fname := execName(ob)
-	if p := ss.thread.Perms(); !p.ServerEvalAllowed(fname) {
-		panic("ServerEval: not permitted: " + fname)
-	}
 	v := ss.sc.dbms.Exec(ss.thread, ob)
 	ss.PutResult(v)
 }
