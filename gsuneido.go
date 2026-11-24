@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -444,12 +443,11 @@ func repl() {
 	}
 	prompt(built)
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
-	r := bufio.NewReader(os.Stdin)
 	for {
 		prompt("~~~")
 		src := ""
 		for {
-			line, err := r.ReadString('\n')
+			line, err := builtin.ReadStdinLine()
 			line = strings.TrimRight(line, " \t\r\n")
 			if line == "q" || (err != nil && (err != io.EOF || src == "")) {
 				return

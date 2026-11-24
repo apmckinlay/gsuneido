@@ -318,6 +318,19 @@ func Readline(rdr io.Reader, errPrefix string) Value {
 }
 
 func readline(rdr io.Reader, errPrefix string) (Value, int) {
+	s, nr, err := readLineBytes(rdr, MaxLine)
+	if err == io.EOF && nr == 0 {
+		return False, nr
+	}
+	if err != nil && err != io.EOF {
+		panic(errPrefix + err.Error())
+	}
+	return StrVal(strings.TrimRight(s, "\r")), nr
+}
+
+// readLineBytes consumes through the newline without reading ahead. A zero
+// limit keeps the entire line; a positive limit caps only the returned text.
+func readLineBytes(rdr io.Reader, limit int) (string, int, error) {
 	nr := 0
 	var sb strings.Builder
 	b := make([]byte, 1)
@@ -326,25 +339,16 @@ func readline(rdr io.Reader, errPrefix string) (Value, int) {
 		if n > 0 {
 			nr++
 			if b[0] == '\n' {
-				break
+				return sb.String(), nr, nil
 			}
-			if sb.Len() < MaxLine {
+			if limit == 0 || sb.Len() < limit {
 				sb.WriteByte(b[0])
 			}
 		}
-		if err == io.EOF {
-			if sb.Len() == 0 {
-				return False, nr
-			}
-			break
-		}
 		if err != nil {
-			panic(errPrefix + err.Error())
+			return sb.String(), nr, err
 		}
 	}
-	s := sb.String()
-	s = strings.TrimRight(s, "\r")
-	return StrVal(s), nr
 }
 
 // appender is a workaround for a Windows bug

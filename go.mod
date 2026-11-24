@@ -8,7 +8,8 @@ require (
 	github.com/kljensen/snowball v0.10.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20261011100332-faecfb24eb49
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/term v0.48.0
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.16.0
 	pgregory.net/rapid v1.3.0

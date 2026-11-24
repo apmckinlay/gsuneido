@@ -41,6 +41,7 @@ var sigClass = map[string]string{
 	"perm":        "Perm",
 	"rnd":         "Random",
 	"sqs":         "Query",
+	"stdio":       "Stdio",
 	"suneido":     "Suneido",
 	"thread":      "Thread",
 	"typechecker": "TypeChecker",
