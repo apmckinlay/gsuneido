@@ -14,7 +14,7 @@ import (
 // i.e. string.Eval()
 func EvalString(th *Thread, s string) Value {
 	s = strings.Trim(s, " \t\r\n")
-	if isGlobal(s) {
+	if IsGlobal(s) {
 		// optimize if just a global name
 		return Global.GetName(th, s)
 	}
@@ -26,6 +26,6 @@ func EvalString(th *Thread, s string) Value {
 // benchmark shows Suneido regex is faster than Go regexp for this
 var rxGlobal = regex.Compile(`\A[A-Z][_a-zA-Z0-9]*?[!?]?\Z`)
 
-func isGlobal(s string) bool {
+func IsGlobal(s string) bool {
 	return rxGlobal.Matches(s)
 }
