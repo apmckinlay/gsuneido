@@ -144,12 +144,6 @@ func db_SessionId(th *Thread, args []Value) Value {
 	return StrVal(th.SessionId(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_TempDest, "() :number")
-
-func db_TempDest() Value {
-	return Zero
-}
-
 var _ = staticMethod(db_Transactions, "() :object")
 
 func db_Transactions(th *Thread, args []Value) Value {
