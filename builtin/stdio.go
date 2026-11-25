@@ -17,7 +17,7 @@ import (
 	utilexit "github.com/apmckinlay/gsuneido/util/exit"
 )
 
-// DEPRECATED use WriteStdout
+// DEPRECATED use Stdio.Write
 var _ = builtin(PrintStdout, "(string :string) :void")
 
 func PrintStdout(_ *Thread, args []Value) Value {
